@@ -278,6 +278,8 @@ class API:
                 of the same name exists in different nest levels. By default it is None.
         '''
         self.logger.info("Settings update requested")
+        self.logger.debug(f"Key: {key} | Value: {value} | Parent Key: {parent_key}")
+
         res: dict[str, Any] = self.settings.update_search(key, value, main_key=parent_key)
 
         if res["status"] == "success":
