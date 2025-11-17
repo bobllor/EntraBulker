@@ -15,7 +15,9 @@ export type OptionProps = {
 
 export type OptionBaseProps = {
     title: string,
+    tooltipText?: string,
     options?: Array<OptionProps>,
+    element?: JSX.Element,
 }
 
 export type ReaderType = "opco" | "settings" | "excel";

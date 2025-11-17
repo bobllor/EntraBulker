@@ -1,28 +1,29 @@
 import { JSX } from "react";
 import { OptionBaseProps, OptionProps } from "../types";
+import { ToolTip } from "../../ui/ToolTip";
 
-
-export default function OptionBase({options = [], title}: OptionBaseProps): JSX.Element{
+export default function OptionBase({options = [], tooltipText, title, element}: OptionBaseProps): JSX.Element{
     return (
         <>
-        <div className="overflow-y-auto">
             <div className="border-b-2 m-2 p-2 flex items-center">
                 <h2 className="text-lg">
                     {title}
                 </h2>
+                {tooltipText && <ToolTip text={tooltipText} />}
             </div>
-            {options.length > 0 && options.map((opt, i) => (
-                <div 
-                key={i}
-                className={getClassName(opt.justify)}>
-                    <div className="flex flex-col">
-                        {opt.label}
-                        {opt.optElement && opt.optElement}
+            <div className="overflow-y-auto h-[inherit]">
+                {options.length > 0 && !element ? options.map((opt, i) => (
+                    <div 
+                    key={i}
+                    className={getClassName(opt.justify)}>
+                        <div className="flex flex-col">
+                            {opt.label}
+                            {opt.optElement && opt.optElement}
+                        </div>
+                        {opt.element}
                     </div>
-                    {opt.element}
-                </div>
-            ))}
-        </div>
+                )) : options.length < 1 && element ? element : <></>}
+            </div>
         </>
     )
 }

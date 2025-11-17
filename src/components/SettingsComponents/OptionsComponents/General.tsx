@@ -7,9 +7,9 @@ import "../../../pywebview";
 import { SettingsData, useSettingsContext } from "../../../context/SettingsContext";
 import { setOutputDir, setTextGenerationState, updateFormattingKey } from "../functions";
 import DropDown, { DropDownObject } from "../../ui/DropDown";
-import { Formatting, FormatType } from "../../../pywebviewTypes";
 
 const title: string = "General";
+const tooltipText: string = "General settings for the program.";
 
 export default function General(): JSX.Element{
     const {apiSettings, setApiSettings} = useSettingsContext();
@@ -58,7 +58,7 @@ export default function General(): JSX.Element{
 
     return (
         <>
-            <OptionBase options={options} title={title} />
+            <OptionBase options={options} title={title} tooltipText={tooltipText} />
         </>
     )
 }
@@ -66,11 +66,13 @@ export default function General(): JSX.Element{
 function OutputFolder(outputDir: string): JSX.Element{
     const maxLength: number = 20;
     const label: string = "Value: ";
+
     return (
         <>
             <span
+            className="text-ellipsis"
             title={outputDir.length >= maxLength ? outputDir : ""}>
-                {outputDir.length < maxLength ? label + outputDir : label + outputDir.slice(0, 20) + "..."}
+                {label + outputDir}
             </span>        
         </>
     )

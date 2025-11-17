@@ -26,24 +26,32 @@ export default function OpcoRow(
         setOpcoOptions: setOpcoOptions,
     });
 
+    const keyIsLong: boolean = opco.opcoKey.length >= 16;
+    const valueIsLong: boolean = opco.value.length >= 16;
+
     return (
         <>
             <tr
             ref={rowRef}>
                 <td>
                     <input 
+                    className="text-ellipsis"
                     type="text"
                     name="key"
                     readOnly={inputEditable}
-                    title={opco.opcoKey == DEFAULT_KEY && isEditable ? `Key ${opco.opcoKey} cannot be edited` : ""}
+                    title={
+                        opco.opcoKey == DEFAULT_KEY && isEditable ? `Key ${opco.opcoKey} cannot be edited` 
+                        : keyIsLong && !isEditable ? opco.opcoKey : ""
+                    }
                     onChange={e => handleOpcoChange(e, opco, setOpcoOptions, "key")}
                     defaultValue={opco.opcoKey}/>
                 </td>
                 <td>
-                    <input 
+                    <input
                     type="text"
                     name="value"
                     readOnly={isEditable ? false : true}
+                    title={valueIsLong && !isEditable ? opco.value : ""}
                     onChange={e => handleOpcoChange(e, opco, setOpcoOptions, "value")}
                     defaultValue={opco.value}/>
                 </td>

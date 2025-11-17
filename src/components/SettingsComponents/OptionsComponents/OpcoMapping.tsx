@@ -10,6 +10,7 @@ import "../../../pywebview";
 import { FaCheck, FaEdit, FaTimes } from "react-icons/fa";
 
 const title: string = "Operating Company";
+const tooltipText: string = "Mapping of operating company to a domain name.";
 
 export default function OpcoMapping(): JSX.Element{
     const [opcoOptions, setOpcoOptions] = useState<Array<OpcoMap>>([]);
@@ -38,15 +39,18 @@ export default function OpcoMapping(): JSX.Element{
 
     return (
         <>
-            <OptionBase title={title} />
-            {opcoOptions.length == 0 
-                ? <div>No entries TODO: add the spinner here</div>
-                :
-                <>
+            <OptionBase title={title} tooltipText={tooltipText} element={
+                opcoOptions.length == 0 
+                ? 
+                <div>
+                    {/* one entry will always exist, it is only empty on initial load */}
+                    TODO: add the spinner here
+                </div>
+                : <>
                     <form
+                    className="p-2"
                     onSubmit={e => {
                                 e.preventDefault();
-
                                 // update the base ref after calling this.
                                 if(opcoKeysRef.current.has(inputData.keyOpco)){
                                     toastError(`Key ${inputData.keyOpco} already exists`);
@@ -63,6 +67,7 @@ export default function OpcoMapping(): JSX.Element{
                                 });
                             }
                         }>
+                        {/* The opco submission entry */}
                         {Object.keys(inputData).map((name, i) => (
                             <input 
                             key={i}
@@ -84,6 +89,7 @@ export default function OpcoMapping(): JSX.Element{
                         <input type="submit"/>
                     </form>
                     <div className="flex">
+                        {/* Table editing logic */}
                         <div className="p-1 w-20 hover:bg-gray-500 flex items-center justify-center"
                         title={!isEditable ? "Edit table" : "Confirm changes"}
                         onClick={() => {
@@ -97,7 +103,7 @@ export default function OpcoMapping(): JSX.Element{
                                 setIsEditable(prev => !prev);
                             }
                         }>
-                            {!isEditable ? <FaEdit color="blue" /> : <FaCheck color="green" />}
+                            {!isEditable ? <FaEdit color="#286db2" /> : <FaCheck color="green" />}
                         </div>
                         {isEditable && 
                             <div 
@@ -114,6 +120,7 @@ export default function OpcoMapping(): JSX.Element{
                             </div>
                         }
                     </div>
+                    {/* The table */}
                     <table className="w-full text-center border-1 table-fixed">
                         <thead>
                             <tr>
@@ -137,7 +144,7 @@ export default function OpcoMapping(): JSX.Element{
                         </tbody>
                     </table>
                 </>
-            }
+            }/>
         </>
     )
 }
@@ -168,10 +175,8 @@ async function updateOpcoMapping(
             let flattenedOpcoMap: Record<string, string> = {};
             // flattening the opco for the backend call
             opcoOptions.forEach((opco) => {
-                const newOpco: OpcoMap = opco;
-
-                const newKey: string = newOpco.opcoKey;
-                const newVal: string = newOpco.value;
+                const newKey: string = opco.opcoKey.toLowerCase();
+                const newVal: string = opco.value.toLowerCase();
 
                 flattenedOpcoMap[newKey] = newVal;
             })

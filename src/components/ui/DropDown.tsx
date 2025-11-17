@@ -1,5 +1,6 @@
 import React, { JSX } from "react";
 import { FormatCase, FormatStyle, FormatType } from "../../pywebviewTypes";
+import { generateId } from "../../utils";
 
 export default function DropDown({obj, objId, defaultValue, func}: DropDownProps): JSX.Element{
     return (
@@ -10,7 +11,9 @@ export default function DropDown({obj, objId, defaultValue, func}: DropDownProps
             defaultValue={defaultValue}
             onChange={(e) => handleOnChangeSelect(e, objId, func)}>
                 {obj.map((ele) => (
-                    <option value={ele.value}>{ele.text}</option>
+                    <option 
+                    key={generateId()}
+                    value={ele.value}>{ele.text}</option>
                 ))}
             </select>
         </>

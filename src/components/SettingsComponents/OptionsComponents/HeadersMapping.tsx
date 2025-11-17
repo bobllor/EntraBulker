@@ -20,14 +20,16 @@ const CurrentValue = (currVal: string) => {
 
     return (
         <span
+        className="text-ellipsis"
         title={currVal.length > maxLength ? currVal : ""}>
-            {currVal.length < maxLength ? label + currVal : label + currVal.slice(0,9) + "..."}
+            {label + currVal}
         </span>
     )
 }
 
 const title: string = "Headers";
 const readerType: ReaderType = "excel";
+const tooltipText: string = "Changes the column names of the Excel file for parsing.";
 
 export default function HeadersMapping(): JSX.Element{ 
     const {headers} = useSettingsContext();
@@ -47,7 +49,7 @@ export default function HeadersMapping(): JSX.Element{
 
     return (
         <>
-            <OptionBase options={options} title={title} />
+            <OptionBase options={options} title={title} tooltipText={tooltipText} />
         </>
     )
 }
