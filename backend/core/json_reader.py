@@ -51,7 +51,7 @@ class Reader:
 
         self._defaults = defaults
         if defaults:
-            self._validate_defaults(defaults)
+            self.validate_defaults(defaults)
     
     def get_content(self) -> dict[str, Any]:
         '''Returns the dictionary contents.'''
@@ -316,7 +316,7 @@ class Reader:
         
         return new_content
     
-    def _validate_defaults(self, data_to_check: dict[str, Any]):
+    def validate_defaults(self, data_to_check: dict[str, Any]):
         '''Validates a JSON file for any incorrect values or missing keys from
         a given data dictionary. 
 
