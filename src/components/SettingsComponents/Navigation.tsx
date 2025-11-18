@@ -2,7 +2,7 @@ import React, { JSX, useRef } from "react";
 import { SettingsButton } from "./types";
 import Button from "./NavigationComponents/Button";
 import { FaTimes } from "react-icons/fa";
-import { useDismissRoute } from "../../hookUtils";
+import { useDismissRoute } from "../../hooks";
 
 export default function Navigation({
     buttons, selectedSetting, setSelectedSetting, setShowSetting}: NavigationProps): JSX.Element{

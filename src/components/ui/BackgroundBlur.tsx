@@ -1,5 +1,5 @@
 import React, { JSX, useRef } from "react";
-import { useDismissRoute } from "../../hookUtils";
+import { useDismissRoute } from "../../hooks";
 
 export default function BackgroundBlur({setComponentState}: {setComponentState: React.Dispatch<React.SetStateAction<boolean>>}): JSX.Element{
     const bgDivRef = useRef<HTMLDivElement>(null);
