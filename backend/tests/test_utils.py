@@ -45,7 +45,7 @@ def test_generate_text():
     for i, text in enumerate(texts):
         res: dict[str, Any] = utils.generate_text(text=text, username=username, name=name, password=password)
         exp_text: str = exp_texts[i]
-        new_text: str = res["content"]["text"]
+        new_text: str = res["content"]
 
         if exp_text != new_text:
             raise AssertionError(f"Failed to generate text replacement: got {new_text} expected {exp_text}")
@@ -60,7 +60,7 @@ def test_generate_text_args():
 
     exp_test: str = text.replace("[USERNAME]", username).replace("[PASSWORD]", password)
 
-    assert res["content"]["text"] == exp_test
+    assert res["content"] == exp_test
 
 def test_invalid_name():
     name: str = utils.format_name(" ")
