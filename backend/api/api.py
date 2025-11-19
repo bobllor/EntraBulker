@@ -1,7 +1,7 @@
 from core.json_reader import Reader
 from core.parser import Parser
 from core.azure_writer import AzureWriter
-from support.types import GenerateCSVProps, ManualCSVProps, APISettings, Formatting
+from support.types import GenerateCSVProps, ManualCSVProps, APISettings, Formatting, TemplateMap, Response
 from base64 import b64decode
 from io import BytesIO
 from logger import Log
@@ -45,7 +45,7 @@ class API:
             "excel": self.excel,
         }
 
-    def generate_azure_csv(self, content: GenerateCSVProps | pd.DataFrame) -> dict[str, str]: 
+    def generate_azure_csv(self, content: GenerateCSVProps | pd.DataFrame) -> Response: 
         '''Generates the Azure CSV file for bulk accounts.
         
         Parameters
@@ -53,7 +53,9 @@ class API:
             content: GenerateCSVProps
                 A dictionary containing the content to read and parse the Excel file. 
         '''
+        res: Response = utils.generate_response(message="")
         df: pd.DataFrame = None
+
         if isinstance(content, dict):
             delimited: list[str] = content['b64'].split(',')
             file_name: str = content['fileName']
@@ -119,15 +121,23 @@ class API:
         writer.set_usernames(usernames)
         writer.set_passwords([utils.generate_password(20) for _ in range(len(names))])
 
-        csv_name: str = f"{utils.get_date()}-az-bulk.csv"
+        curr_date: str = utils.get_date()
+        csv_name: str = f"{curr_date}-az-bulk.csv"
         writer.write(Path(self.get_reader_value("settings", "output_dir")) / csv_name)
 
         self.logger.info(f"Generated {csv_name} at {self.get_reader_value('settings', 'output_dir')}")
+        
+        if res["message"] == "":
+            res["message"] = "Generated CSV"
 
-        return utils.generate_response(
-            status='success', 
-            message=f'Generated CSV file',
-        )
+        templates: TemplateMap = self.settings.get("template")
+        if templates["enabled"]:
+            temp_res: Response = self._generate_template(templates["text"], writer, curr_date)
+
+            res["status"] = temp_res["status"]
+            res["message"] += temp_res["message"]
+        
+        return res
     
     def generate_manual_csv(self, content: list[ManualCSVProps]) -> dict[str, str]:
         '''Generates the Azure CSV file for bulk accounts through the manual input.
@@ -138,6 +148,8 @@ class API:
                 A list of dictionaries to convert into a DataFrame for a CSV.
                 Each dictionary represents a row to be added.
         '''
+        res: Response = utils.generate_response(message="")
+
         self.logger.debug(f"Manual generation data: {content}")
         names: list[str] = []
         opcos: list[str] = []
@@ -178,12 +190,39 @@ class API:
         writer.set_block_sign_in(len(names), [])
         writer.set_names(names)
 
-        csv_name: str = f"{utils.get_date()}-az-bulk.csv"
+        curr_date: str = utils.get_date()
+        csv_name: str = f"{curr_date}-az-bulk.csv"
         writer.write(Path(self.get_reader_value("settings", "output_dir")) / csv_name)
 
         self.logger.info(f"Manual generated {csv_name} at {self.get_reader_value('settings', 'output_dir')}")
 
-        return utils.generate_response(status='success', message='Generated CSV file')
+        if res["message"] == "":
+            res["message"] = "Generated manual CSV"
+
+        templates: TemplateMap = self.settings.get("template")
+        if templates["enabled"]:
+            temp_res: Response = self._generate_template(templates["text"], writer, curr_date)
+
+            res["status"] = temp_res["status"]
+            res["message"] += temp_res["message"]
+
+        return res
+
+    def _generate_template(self, text: str, writer: AzureWriter, date: str) -> Response:
+        res: Response = utils.generate_response(message="")
+        template_res: Response = writer.write_template(
+            self.settings.get("output_dir"), 
+            text=text, 
+            start_date=date,
+        )
+
+        if template_res["status"] == "error":
+            res["status"] = "error"
+            res["message"] = ", failed to generate template files"
+        elif template_res["status"] == "success":
+            res["message"] = " and template files"
+        
+        return res
     
     def get_reader_value(self, reader: Literal["settings", "opco", "excel"], key: str) -> Any:
         '''Gets the values from any Reader keys. If the key does not exist,

@@ -105,7 +105,7 @@ class AzureWriter:
 
         df.to_csv(path, mode="a", index=False)
     
-    def write_template(self, out: Path | str, *, text: str) -> Response:
+    def write_template(self, out: Path | str, *, text: str, start_date: str = None) -> Response:
         '''Writes the template text for each user. A Response is returned with the standard keys and
         `output_dir`, being the folder of the created files.
         
@@ -118,12 +118,15 @@ class AzureWriter:
         Parameters
         ----------
             out: Path | str
-                The output path for the files created for the templates.
+                The output path for the files. This is the parent folder that the
+                `templates` folder is generated in.
 
             text: str
                 The text used in the template.
         '''
-        start_date: str = utils.get_date()
+        if start_date is None:
+            start_date = utils.get_date()
+
         folder_name: str = f"templates-{start_date}"
 
         path: Path = out / "templates" if isinstance(out, Path) else Path(out) / "templates"
