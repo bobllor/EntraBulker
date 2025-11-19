@@ -9,7 +9,7 @@ const TextComponent = ({name, readerType}: {name: string, readerType: ReaderType
     onSubmit={e => onSubmitText(e, readerType)}>
         <input
         name={name}
-        className="border-2 rounded-xl py-1 px-2 outline-none"
+        className="border-1 rounded-xl py-1 px-2 outline-none"
         type="text" />
     </form>
 )
