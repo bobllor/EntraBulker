@@ -8,9 +8,12 @@ import OpcoRow from "./OpcoRow";
 import { toastError } from "../../../toastUtils";
 import "../../../pywebview";
 import { FaCheck, FaEdit, FaTimes } from "react-icons/fa";
+import Button from "../../ui/Button";
+import { ToolTip } from "../../ui/ToolTip";
 
 const title: string = "Operating Company";
 const tooltipText: string = "Mapping of operating company to a domain name.";
+const inputLabel: InputLabelProps = {keyOpco: "Operating Company", valueOpco: "Domain"};
 
 export default function OpcoMapping(): JSX.Element{
     const [opcoOptions, setOpcoOptions] = useState<Array<OpcoMap>>([]);
@@ -48,7 +51,7 @@ export default function OpcoMapping(): JSX.Element{
                 </div>
                 : <>
                     <form
-                    className="p-2"
+                    className="p-2 h-fit"
                     onSubmit={e => {
                                 e.preventDefault();
                                 // update the base ref after calling this.
@@ -63,30 +66,42 @@ export default function OpcoMapping(): JSX.Element{
                                 addOpcoEntry(e, setOpcoOptions).then((status) => {
                                     if(status){
                                         setUpdateBaseRef(true);
+                                        setInputData(prev => ({...prev, keyOpco: "", valueOpco: ""}));
                                     }
                                 });
                             }
                         }>
                         {/* The opco submission entry */}
-                        {Object.keys(inputData).map((name, i) => (
-                            <input 
-                            key={i}
-                            type="text"
-                            onChange={e => {
-                                const input: HTMLInputElement = e.currentTarget;
-                                const value: string = input.value.toLowerCase();
+                        <div
+                        className="flex flex-col justify-center items-center gap-1">
+                            {Object.keys(inputData).map((name, i) => (
+                                <React.Fragment
+                                key={name}>
+                                    <label
+                                    htmlFor={name}
+                                    className="capitalize">
+                                        {inputLabel[name as keyof InputLabelProps]}:
+                                    </label>
+                                    <input 
+                                    className="border-1 outline-0 rounded-xl py-1 px-2 w-[30%]"
+                                    type="text"
+                                    onChange={e => {
+                                        const input: HTMLInputElement = e.currentTarget;
+                                        const value: string = input.value.toLowerCase();
 
-                                setInputData(prev => {
-                                    if(input.getAttribute("name")!.includes("key")){
-                                        return {...prev, keyOpco: value};
-                                    }
+                                        setInputData(prev => {
+                                            if(input.getAttribute("name")!.includes("key")){
+                                                return {...prev, keyOpco: value};
+                                            }
 
-                                    return {...prev, valueOpco: value};
-                                })
-                            }}
-                            name={name} />
-                        ))}
-                        <input type="submit"/>
+                                            return {...prev, valueOpco: value};
+                                        })
+                                    }}
+                                    name={name} />
+                                </React.Fragment>
+                            ))}
+                            <Button text="Submit" type="submit" paddingX={5}/>
+                        </div>
                     </form>
                     <div className="flex gap-1">
                         {/* Table editing logic */}
@@ -123,15 +138,19 @@ export default function OpcoMapping(): JSX.Element{
                         }
                     </div>
                     {/* The table */}
-                    <table className="w-full text-center table-fixed">
+                    <table className="w-full text-center table-fixed mb-30">
                         <thead className="border-t-1 border-b-1">
                             <tr>
                                 <th>Operating Company</th>
                                 <th>Domain</th>
-                                <th className="w-10">{/*empty element, used for Trash in OpcoRow */}</th>
+                                <th className="w-10">
+                                    <div className="flex justify-center items-center">
+                                        <ToolTip text="To modify rows, enter edit mode." />
+                                    </div>
+                                </th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="">
                             {opcoOptions.map((opco, i) => (
                                 <React.Fragment
                                 key={opco.id}>
@@ -139,7 +158,6 @@ export default function OpcoMapping(): JSX.Element{
                                     defaultResetProp={{resetDefault: resetDefault, setResetDefault: setResetDefault}}
                                     isEditable={isEditable} setOpcoOptions={setOpcoOptions}
                                     partialResetProp={{status: partialUpdate, setStatus: setPartialUpdate}}
-                                    setUpdateBaseRef={setUpdateBaseRef}
                                     baseOpco={baseOpcoRef.current[i]}/>
                                 </React.Fragment>
                             ))}
@@ -197,3 +215,8 @@ async function updateOpcoMapping(
 
         return hasChanged;
 }
+
+type InputLabelProps = {
+    keyOpco: string, 
+    valueOpco: string,
+};

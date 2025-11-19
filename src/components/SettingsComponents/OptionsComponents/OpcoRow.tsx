@@ -9,7 +9,7 @@ import { FaTrash } from "react-icons/fa";
 const DEFAULT_KEY: string = "default";
 
 export default function OpcoRow(
-    {opco, baseOpco, isEditable, setOpcoOptions, defaultResetProp, setUpdateBaseRef, partialResetProp}: OpcoRowProps): JSX.Element{
+    {opco, baseOpco, isEditable, setOpcoOptions, defaultResetProp, partialResetProp}: OpcoRowProps): JSX.Element{
     // the key for default should not be editable.
     // this is only applicable to the key, as the default key cannot be edited but the value can.
     let inputEditable: boolean = isEditable && opco.opcoKey != DEFAULT_KEY ? false : true;
@@ -32,12 +32,12 @@ export default function OpcoRow(
     return (
         <>
             <tr
-            className="border-b-1 hover:bg-blue-300/40"
+            className={`border-b-1 border-black hover:bg-blue-300/40 ${isEditable ? "text-black" : "text-gray-500"}`}
             ref={rowRef}>
                 <td>
                     <input 
                     className={`text-ellipsis ${opco.opcoKey == DEFAULT_KEY && isEditable ? "cursor-not-allowed" : ""}
-                    outline-none p-1`}
+                    outline-none`}
                     type="text"
                     name="key"
                     readOnly={inputEditable}
@@ -50,7 +50,7 @@ export default function OpcoRow(
                 </td>
                 <td>
                     <input
-                    className={`text-ellipsis outline-none p-1`}
+                    className={`text-ellipsis outline-none`}
                     type="text"
                     name="value"
                     readOnly={isEditable ? false : true}
@@ -59,8 +59,8 @@ export default function OpcoRow(
                     defaultValue={opco.value}/>
                 </td>
                 <td 
-                className={`${isEditable && "hover:bg-gray-500"} mr-1
-                p-1 h-[inherit] border-1`}
+                className={`${isEditable && "hover:bg-gray-500"} mr-1 border-black
+                h-[inherit] border-1`}
                 onClick={() => { 
                     if(opco.opcoKey == DEFAULT_KEY){
                         toastError("Cannot delete default key");
@@ -136,6 +136,5 @@ type OpcoRowProps = {
     defaultResetProp: {resetDefault: boolean, setResetDefault: React.Dispatch<React.SetStateAction<boolean>>},
     partialResetProp: {status: boolean, setStatus: React.Dispatch<React.SetStateAction<boolean>>},
     setOpcoOptions: React.Dispatch<React.SetStateAction<Array<OpcoMap>>>,
-    setUpdateBaseRef: React.Dispatch<React.SetStateAction<boolean>>,
     isEditable: boolean,
 }
