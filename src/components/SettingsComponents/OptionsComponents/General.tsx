@@ -4,38 +4,44 @@ import { OptionProps } from "../types";
 import SliderButton from "../../ui/SliderButton";
 import Button from "../../ui/Button";
 import "../../../pywebview";
-import { SettingsData, useSettingsContext } from "../../../context/SettingsContext";
-import { setOutputDir, setTextGenerationState, updateFormattingKey } from "../functions";
+import { useSettingsContext } from "../../../context/SettingsContext";
+import { setSetting, setOutputDir, setTextGenerationState, updateFormattingKey } from "../functions";
 import DropDown, { DropDownObject } from "../../ui/DropDown";
 
 const title: string = "General";
 const tooltipText: string = "General settings for the program.";
+const formatTypeArray: Array<DropDownObject> = [
+    {value: "period", text: "Period"},
+    {value: "no space", text: "No Space"},
+];
+const formatStyleArray: Array<DropDownObject> = [
+    {value: "first last", text: "First Last"},
+    {value: "f last", text: "F. Last"},
+    {value: "first l", text: "First L."},
+];
+const formatCaseArray: Array<DropDownObject> = [
+    {value: "lower", text: "Lowercase"},
+    {value: "upper", text: "Uppercase"},
+    {value: "title", text: "Title Case"},
+];
 
 export default function General(): JSX.Element{
     const {apiSettings, setApiSettings} = useSettingsContext();
-    const formatTypeArray: Array<DropDownObject> = [
-        {value: "period", text: "Period"},
-        {value: "no space", text: "No Space"},
-    ];
-    const formatStyleArray: Array<DropDownObject> = [
-        {value: "first last", text: "First Last"},
-        {value: "f last", text: "F. Last"},
-        {value: "first l", text: "First L."},
-    ];
-    const formatCaseArray: Array<DropDownObject> = [
-        {value: "lower", text: "Lowercase"},
-        {value: "upper", text: "Uppercase"},
-        {value: "title", text: "Title Case"},
-    ];
 
     const options: Array<OptionProps> = [
         {
             label: "Output Folder", 
             element: <Button text="Select Folder" paddingX={2} paddingY={2} 
                 func={() => setOutputDir(setApiSettings)} type="button" />, 
-            optElement: OutputFolder(apiSettings.output_dir),
+            optElement: <OutputFolder outputDir={apiSettings.output_dir} />,
         },
-        {label: "Flatten CSV", element: <></>},
+        {
+            label: "Flatten CSV", 
+            element: <SliderButton status={apiSettings.flatten_csv}
+                func={(status: boolean) => setSetting("flatten_csv", !status, () => {
+                    setApiSettings(prev => ({...prev, flatten_csv: !status}));
+                })} />,
+        },
         {
             label: "Format Type", 
             element: <DropDown obj={formatTypeArray} 
@@ -53,7 +59,11 @@ export default function General(): JSX.Element{
                 objId="format_case" defaultValue={apiSettings.format.format_case} 
                 func={(key: string, value: any) => {updateFormattingKey(key, value, setApiSettings)}} />
         },
-        {label: "Generate Text", element: GenerateTextSlider(apiSettings.template.enabled, setApiSettings)},
+        {
+            label: "Generate Text", 
+            element: <SliderButton status={apiSettings.template.enabled}
+                func={(status: boolean) => setTextGenerationState(status, setApiSettings)}/>,
+        },
     ]
 
     return (
@@ -63,7 +73,7 @@ export default function General(): JSX.Element{
     )
 }
 
-function OutputFolder(outputDir: string): JSX.Element{
+function OutputFolder({outputDir}: {outputDir: string}): JSX.Element{
     const maxLength: number = 20;
     const label: string = "Value: ";
 
@@ -75,13 +85,5 @@ function OutputFolder(outputDir: string): JSX.Element{
                 {label + outputDir}
             </span>        
         </>
-    )
-}
-
-function GenerateTextSlider(templateStatus: boolean, setApiSettings: SettingsData["setApiSettings"]): JSX.Element{
-    return (
-        <SliderButton 
-        initialStatus={templateStatus} 
-        func={(state: boolean) => setTextGenerationState(state, setApiSettings)} />
     )
 }
