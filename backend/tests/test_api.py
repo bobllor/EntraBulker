@@ -253,6 +253,32 @@ def test_generate_csv_formatter(tmp_path: Path, api: API, df: pd.DataFrame):
         if username not in usernames:
             raise AssertionError(f"Got formatted {username}, not found in {usernames}")
 
+def test_generate_csv_flatten(tmp_path: Path, api: API, df: pd.DataFrame):
+    parser: Parser = Parser(df)
+    parser.validate_headers(DEFAULT_HEADER_MAP)
+    
+    parser.apply(DEFAULT_HEADER_MAP["name"], func=utils.format_name)
+    
+    parser_dfs: list[pd.DataFrame] = [parser.get_df(), parser.get_df()]
+    upload_id: str = "asd123flelo"
+
+    for parser_df in parser_dfs:
+        res: Response = api.generate_azure_csv(parser_df, upload_id)
+
+        if res["status"] != "success":
+            raise AssertionError(f"Failed to generate CSV: {res}")
+    
+    csv_file: Path = ttils.get_csv(tmp_path, drop_first_row=True)
+    csv_len: int = 0
+
+    with open(csv_file, "r") as f:
+        # subtraction required due to the headers
+        csv_len = len(f.readlines()) - 1
+
+    csv_df: pd.DataFrame = pd.read_csv(csv_file)
+
+    assert len(csv_df) == csv_len
+
 def test_get_value(api: API):
     excel_val: Any = api.get_reader_value("excel", "name")
     settings_val: Any = api.get_reader_value("settings", "output_dir")

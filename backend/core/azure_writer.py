@@ -3,6 +3,9 @@ from support.vars import AZURE_HEADERS, AZURE_VERSION
 from logger import Log
 from support.types import Response
 from pathlib import Path
+import tempfile as tf
+import uuid
+import os
 import pandas as pd
 import support.utils as utils
 
@@ -83,27 +86,56 @@ class AzureWriter:
         self._headers_data[AZURE_HEADERS["first_name"]] = first_names
         self._headers_data[AZURE_HEADERS["last_name"]] = last_names
     
-    def write(self, out: Path | str) -> None:
-        '''Write to a CSV file.
+    def write(self, out: Path | str, *, skip_version: bool = False) -> Response:
+        '''Write to a CSV file. It will always append to the file.
         
         Parameter
         ---------
             out: Path | str
                 A StrPath that is the output of the file. All directories will be created
                 if the directories does not exist.
+            
+            skip_version: bool = False
+                If true, skip adding the version on the first row.
         '''
+        res: Response = utils.generate_response(message="Successfully generated CSV file")
         path: Path = out if isinstance(out, Path) else Path(out)
+
+        self.logger.debug(f"Given CSV output path: {path} | Skip Version: {skip_version}")
 
         if not path.parent.exists():
             path.mkdir(parents=True, exist_ok=True)
-        
-        # azure version must be specified on the first row.
-        with open(path, "w") as file:
-            file.write(AZURE_VERSION+"\n")
-        
-        df: pd.DataFrame = pd.DataFrame(self._headers_data)
 
-        df.to_csv(path, mode="a", index=False)
+        # azure version must be specified on the first row.
+        try:
+            with tf.NamedTemporaryFile("a", delete=False) as file:
+                self.logger.info(f"Creating temporary file {file.name}")
+                temp_path: Path = Path(file.name)
+                keep_headers: bool = True
+
+                if not skip_version: 
+                    file.write(AZURE_VERSION+"\n")
+                    file.flush()
+
+                if path.exists():
+                    with open(path, "r") as f:
+                        csv_content: str = f.read()
+
+                    keep_headers = False 
+                    file.write(csv_content)
+                    file.flush()
+
+                df: pd.DataFrame = pd.DataFrame(self._headers_data)
+                df.to_csv(temp_path, mode="a", index=False, header=keep_headers)
+
+                os.replace(temp_path, path)
+        except Exception as e:
+            self.logger.critical(f"Failed to write CSV file: {e}")
+
+            res["message"] = "An unknown error occurred while generating the CSV, the error has been logged"
+            res["status"] = "error"
+    
+        return res
     
     def write_template(self, out: Path | str, *, text: str, start_date: str = None) -> Response:
         '''Writes the template text for each user. A Response is returned with the standard keys and
@@ -124,13 +156,15 @@ class AzureWriter:
             text: str
                 The text used in the template.
         '''
+        # allows us to write to the same output folder.
         if start_date is None:
             start_date = utils.get_date()
-
         folder_name: str = f"templates-{start_date}"
 
         path: Path = out / "templates" if isinstance(out, Path) else Path(out) / "templates"
         path = path / folder_name
+
+        self.logger.debug(f"Template output path: {path}")
 
         if not path.exists():
             path.mkdir(parents=True, exist_ok=True)
@@ -153,8 +187,11 @@ class AzureWriter:
         for i, name in enumerate(names): 
             username: str = usernames[i]
             password: str = passwords[i]
+            uid: str = uuid.uuid4().hex
 
-            file_name: str = f"{i+1}{name}-{start_date}.txt"
+            uid = uid[:int(len(uid)/4)]
+
+            file_name: str = f"{name}-{uid}.txt"
 
             # NOTE: calculated values are with a Response return will always be in the key "content".
             text_res: Response = utils.generate_text(text=text, username=username, name=name, password=password)
@@ -169,9 +206,14 @@ class AzureWriter:
                 res["status"] = "error"
                 res["message"] = text_res["message"] + f" Fails count: {failed_count}"
                 continue
-
-            with open(path / file_name, "w") as file:
+            
+            with tf.NamedTemporaryFile("w", delete=False) as file:
+                temp_file: Path = Path(file.name)
                 file.write(text_res["content"])
+
+                os.replace(temp_file, path / file_name)
+
+        self.logger.info(f"Successful template writes: {text_count} | Failed template writes: {failed_count}")
 
         return res
     

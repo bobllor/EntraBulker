@@ -6,12 +6,20 @@ from base64 import b64decode
 from io import BytesIO
 from logger import Log
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 from support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, DEFAULT_SETTINGS_MAP
 import support.utils as utils
 import pandas as pd
 
 ReaderType = Literal["excel", "opco", "settings"]
+AzureFileState = TypedDict(
+    "AzureFileState", 
+    {
+        "upload_id": str,
+        "csv_file_name": str,
+        "skip_version_row": bool,
+    }
+)
 
 class API:
     def __init__(self, *, 
@@ -45,15 +53,27 @@ class API:
             "excel": self.excel,
         }
 
-    def generate_azure_csv(self, content: GenerateCSVProps | pd.DataFrame) -> Response: 
+        # state tracking for generate_azure_csv
+        self._auto_azure_state: AzureFileState = {
+            "upload_id": "", 
+            "csv_file_name": "",
+            "skip_version_row": False,
+        }
+
+    def generate_azure_csv(self, content: GenerateCSVProps | pd.DataFrame, upload_id: str = None) -> Response: 
         '''Generates the Azure CSV file for bulk accounts.
         
         Parameters
         ----------
             content: GenerateCSVProps
-                A dictionary containing the content to read and parse the Excel file. 
+                A dictionary containing the content to read and parse the Excel file. For testing purposes,
+                a DataFrame can also be passed. 
+            
+            upload_id: str, default None
+                The upload ID for each file. It is used to keep track of each file and write to the
+                correct file. This is only relevant if flatten CSV is enabled.
         '''
-        res: Response = utils.generate_response(message="")
+        res: Response = utils.generate_response(message="Generated CSV")
         df: pd.DataFrame = None
 
         if isinstance(content, dict):
@@ -123,12 +143,22 @@ class API:
 
         curr_date: str = utils.get_date()
         csv_name: str = f"{curr_date}-az-bulk.csv"
-        writer.write(Path(self.get_reader_value("settings", "output_dir")) / csv_name)
+
+        if upload_id != self._auto_azure_state["upload_id"]:
+            self._auto_azure_state["upload_id"] = upload_id
+            self._auto_azure_state["csv_file_name"] = csv_name
+            self._auto_azure_state["skip_version_row"] = False
+        else:
+            csv_name = self._auto_azure_state["csv_file_name"]
+            
+        writer.write(Path(self.get_reader_value("settings", "output_dir")) 
+            / csv_name, skip_version=self._auto_azure_state["skip_version_row"])
+
+        # only applicable if flatten_csv is true. multi-file operations are not affected by this.
+        # NOTE: flatten csv condition is only used in the front end. it is not used in the backend
+        self._auto_azure_state["skip_version_row"] = True
 
         self.logger.info(f"Generated {csv_name} at {self.get_reader_value('settings', 'output_dir')}")
-        
-        if res["message"] == "":
-            res["message"] = "Generated CSV"
 
         templates: TemplateMap = self.settings.get("template")
         if templates["enabled"]:
@@ -213,6 +243,15 @@ class API:
 
             res["status"] = temp_res["status"]
             res["message"] += temp_res["message"]
+
+            # NOTE: the only error here is if the text is too long.
+            if temp_res["status"] == "error":
+                self.logger.warning(f"{res['message']}, text trimmed to 1250 characters from {len(templates['text'])}")
+
+                # max char is 1250, and only triggers if the text is > 1250.
+                self.update_setting("text", templates["text"][:1250], "template")
+        
+        self.logger.debug(f"Response: {res}")
 
         return res
 

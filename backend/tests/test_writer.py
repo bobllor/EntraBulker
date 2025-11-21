@@ -4,7 +4,7 @@ from support.vars import DEFAULT_OPCO_MAP
 from support.types import Response
 import support.utils as utils
 
-names: list[str] = ["John Doe", "Jane Doe"]
+names: list[str] = ["John Doe", "Jane Doe", "Krane Doe"]
 usernames: list[str] = utils.generate_usernames(names, ["" for _ in range(len(names))], DEFAULT_OPCO_MAP)
 passwords: list[str] = [utils.generate_password(20) for _ in range(len(names))]
 
@@ -24,19 +24,23 @@ def test_write_text(tmp_path: Path):
     
     output_dir: Path = Path(res["output_dir"])
 
-    for i, file in enumerate(sorted(output_dir.iterdir())):
+    for file in output_dir.iterdir():
         with open(file, "r") as file:
             content: str = file.read()
 
-        name: str = names[i]
-        username: str = usernames[i]
-        password: str = passwords[i]
+        write_status: bool = False
 
-        if name not in content and username not in content \
-            and password not in content:
-            raise AssertionError(
-                f"Failed to write text with data: {content}, got {name} | {username} | {password}"
-            )
+        # checking the contents of the output dir.
+        for i, name in enumerate(names):
+            username: str = usernames[i]
+            password: str = passwords[i]
+
+            if username in content and password in content \
+                and name in content:
+                write_status = True
+        
+        if not write_status:
+            raise AssertionError(f"Failed to write to file for {file.name}: {content}")
 
 def test_fail_write_csv_no_names(tmp_path: Path):
     writer: AzureWriter = AzureWriter()
