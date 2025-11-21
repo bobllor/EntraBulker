@@ -142,7 +142,7 @@ class API:
         writer.set_passwords([utils.generate_password(20) for _ in range(len(names))])
 
         curr_date: str = utils.get_date()
-        csv_name: str = f"{curr_date}-az-bulk.csv"
+        csv_name: str = f"{curr_date}-az-bulk-{utils.get_id()}.csv"
 
         if upload_id != self._auto_azure_state["upload_id"]:
             self._auto_azure_state["upload_id"] = upload_id

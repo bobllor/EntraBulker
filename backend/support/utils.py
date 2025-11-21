@@ -1,7 +1,7 @@
 from core.names import NameFormatter, NoSpace, Period
 from typing import Literal, Any, Callable
 from support.types import Response
-import string, re
+import string, re, uuid
 
 def format_name(name: str, *, keep_full: bool = False) -> str:
     '''Formats and validates a name, by default the First and Last name only.
@@ -336,3 +336,12 @@ def format_value(value: Any) -> Any:
         value = value[0:200] + "..."
 
     return value
+
+def get_id(divisor: int = 4) -> str:
+    '''Generates a random uuid4.'''
+    uid: str = uuid.uuid4().hex
+
+    if divisor == 0:
+        return uid
+
+    return uid[:int(len(uid) / divisor)]

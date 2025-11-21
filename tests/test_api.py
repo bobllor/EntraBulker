@@ -191,9 +191,28 @@ def test_generate_csv_invalid_text(api: API, df: pd.DataFrame):
     api.update_setting("enabled", True, "template")
 
     res: Response = api.generate_azure_csv(df) 
-    print(res)
 
     assert res["status"] == "error"
+
+def test_generate_csv_multiple(tmp_path: Path, api: API, df: pd.DataFrame):
+    parser: Parser = Parser(df)
+    parser.apply(col_name=DEFAULT_HEADER_MAP["name"], func=utils.format_name)
+
+    dataframes: list[pd.DataFrame] = [parser.get_df(), parser.get_df(), parser.get_df()]
+    ids: list[str] = [str(i) for i in range(len(dataframes))]
+
+    for i, dataframe in enumerate(dataframes):
+        res: Response = api.generate_azure_csv(dataframe, ids[i])
+
+        if res["status"] != "success":
+            raise AssertionError(f"Failed to generate CSV file: {res}")
+
+    file_count: int = 0 
+    for file in tmp_path.iterdir():
+        if "csv" in file.suffix:
+            file_count += 1
+    
+    assert file_count == len(dataframes)
 
 def test_generate_csv_formatter(tmp_path: Path, api: API, df: pd.DataFrame):
     # case / style / type

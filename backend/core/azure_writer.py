@@ -187,9 +187,7 @@ class AzureWriter:
         for i, name in enumerate(names): 
             username: str = usernames[i]
             password: str = passwords[i]
-            uid: str = uuid.uuid4().hex
-
-            uid = uid[:int(len(uid)/4)]
+            uid: str = utils.get_id()
 
             file_name: str = f"{name}-{uid}.txt"
 
