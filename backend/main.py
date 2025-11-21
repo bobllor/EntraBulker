@@ -14,8 +14,8 @@ OPCO_PATH: str = f"config/{OPCO_FILE}"
 if __name__ == '__main__':
     logger: Log = Log()
 
-    excel_reader: Reader = Reader(EXCEL_PATH, defaults=DEFAULT_HEADER_MAP, logger=logger)
-    settings_reader: Reader = Reader(SETTINGS_PATH, defaults=DEFAULT_SETTINGS_MAP, logger=logger)
+    excel_reader: Reader = Reader(EXCEL_PATH, defaults=DEFAULT_HEADER_MAP, update_only=True, logger=logger)
+    settings_reader: Reader = Reader(SETTINGS_PATH, defaults=DEFAULT_SETTINGS_MAP, update_only=True, logger=logger)
     opco_reader: Reader = Reader(OPCO_PATH, defaults=DEFAULT_OPCO_MAP, logger=logger)
 
     api: API = API(

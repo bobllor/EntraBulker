@@ -29,9 +29,6 @@ class Parser:
         '''
         res: dict[str, str] = self._check_df_columns(default_headers)
 
-        if res.get('status', 'error') == 'error':
-            return res
-
         return res
     
     def fillna(self, column: str, value: Any) -> None:

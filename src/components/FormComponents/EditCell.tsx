@@ -2,6 +2,7 @@ import { JSX, useEffect, useRef } from "react";
 import { ManualData } from "./manualUtils/types";
 import toast from "react-hot-toast";
 import { toaster } from "../../toastUtils";
+import { FaTimes, FaCheck } from "react-icons/fa";
 
 /** Component of ManualTable that reveals an edit box for a selected cell. */
 export default function EditCell({id, stringVal, setEditCell, manData}: EditCellProps): JSX.Element{
@@ -17,7 +18,7 @@ export default function EditCell({id, stringVal, setEditCell, manData}: EditCell
     return (
         <>
             <div
-            className="absolute h-12 z-3 top-[50%] bg-white border-1 p-3 flex justify-center items-center gap-5">
+            className="absolute h-12 z-4 bg-white border-1 p-3 flex justify-center items-center gap-5">
                 <input className="border-1 py-1 px-2 rounded-xl w-35 outline-0"
                 spellCheck={false}
                 ref={inputRef}
@@ -60,7 +61,7 @@ export default function EditCell({id, stringVal, setEditCell, manData}: EditCell
                                         const columnVal: string = id.replace(objID, '');
                                         
                                         for(const key of Object.keys(obj)){
-                                            if(obj[key] == columnVal){
+                                            if(obj[key as keyof ManualData] == columnVal){
                                                 return {
                                                     ...obj,
                                                     [key]: inputVal
@@ -83,11 +84,11 @@ export default function EditCell({id, stringVal, setEditCell, manData}: EditCell
                 <div
                 className="flex gap-5">
                     <span>
-                        C
+                        <FaCheck color="green" />
                     </span>
                     <span
                     onClick={() => setEditCell('')}>
-                        X
+                        <FaTimes color="red" />
                     </span>
                 </div>
             </div>

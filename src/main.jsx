@@ -5,15 +5,18 @@ import { BrowserRouter } from 'react-router'
 import { ModalProvider } from './context/ModalContext.tsx'
 import './styles.css'
 import App from './App.jsx'
+import { SettingsProvider } from './context/SettingsContext.tsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <ModalProvider>
-        <FileProvider>
-          <App />
-        </FileProvider>
-      </ModalProvider>
+      <SettingsProvider>
+        <ModalProvider>
+          <FileProvider>
+            <App />
+          </FileProvider>
+        </ModalProvider>
+      </SettingsProvider>
     </BrowserRouter>
   </StrictMode>,
 )

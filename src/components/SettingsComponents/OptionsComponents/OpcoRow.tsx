@@ -1,15 +1,15 @@
 import React, { JSX, useRef } from "react";
 import { OpcoMap } from "../types";
-import Trash from "../../../svgs/Trash";
 import { useResetOpcoValues } from "../hooks";
 import { toastError } from "../../../toastUtils";
 import { checkRes } from "../../../utils";
 import "../../../pywebview";
+import { FaTrash } from "react-icons/fa";
 
 const DEFAULT_KEY: string = "default";
 
 export default function OpcoRow(
-    {opco, baseOpco, isEditable, setOpcoOptions, defaultResetProp, setUpdateBaseRef, partialResetProp}: OpcoRowProps): JSX.Element{
+    {opco, baseOpco, isEditable, setOpcoOptions, defaultResetProp, partialResetProp}: OpcoRowProps): JSX.Element{
     // the key for default should not be editable.
     // this is only applicable to the key, as the default key cannot be edited but the value can.
     let inputEditable: boolean = isEditable && opco.opcoKey != DEFAULT_KEY ? false : true;
@@ -26,29 +26,41 @@ export default function OpcoRow(
         setOpcoOptions: setOpcoOptions,
     });
 
+    const keyIsLong: boolean = opco.opcoKey.length >= 16;
+    const valueIsLong: boolean = opco.value.length >= 16;
+
     return (
         <>
             <tr
+            className={`border-b-1 border-black hover:bg-blue-300/40 ${isEditable ? "text-black" : "text-gray-500"}`}
             ref={rowRef}>
                 <td>
                     <input 
+                    className={`text-ellipsis ${opco.opcoKey == DEFAULT_KEY && isEditable ? "cursor-not-allowed" : ""}
+                    outline-none`}
                     type="text"
                     name="key"
                     readOnly={inputEditable}
-                    title={opco.opcoKey == DEFAULT_KEY && isEditable ? `Key ${opco.opcoKey} cannot be edited` : ""}
+                    title={
+                        opco.opcoKey == DEFAULT_KEY && isEditable ? `Key ${opco.opcoKey} cannot be edited` 
+                        : keyIsLong && !isEditable ? opco.opcoKey : ""
+                    }
                     onChange={e => handleOpcoChange(e, opco, setOpcoOptions, "key")}
                     defaultValue={opco.opcoKey}/>
                 </td>
                 <td>
-                    <input 
+                    <input
+                    className={`text-ellipsis outline-none`}
                     type="text"
                     name="value"
                     readOnly={isEditable ? false : true}
+                    title={valueIsLong && !isEditable ? opco.value : ""}
                     onChange={e => handleOpcoChange(e, opco, setOpcoOptions, "value")}
                     defaultValue={opco.value}/>
                 </td>
                 <td 
-                className={`${isEditable && "hover:bg-gray-500"} flex justify-center items-center rounded-xl mr-1`}
+                className={`${isEditable && "hover:bg-gray-500"} mr-1 border-black
+                h-[inherit] border-1`}
                 onClick={() => { 
                     if(opco.opcoKey == DEFAULT_KEY){
                         toastError("Cannot delete default key");
@@ -63,7 +75,9 @@ export default function OpcoRow(
                         });
                     }
                 }}>
-                    <Trash stroke={isEditable ? "black" : "gray"}/>
+                    <div className="flex justify-center items-center">
+                        <FaTrash color={!isEditable ? "gray" : "black"}/>
+                    </div>
                 </td>
             </tr>
         </>
@@ -122,6 +136,5 @@ type OpcoRowProps = {
     defaultResetProp: {resetDefault: boolean, setResetDefault: React.Dispatch<React.SetStateAction<boolean>>},
     partialResetProp: {status: boolean, setStatus: React.Dispatch<React.SetStateAction<boolean>>},
     setOpcoOptions: React.Dispatch<React.SetStateAction<Array<OpcoMap>>>,
-    setUpdateBaseRef: React.Dispatch<React.SetStateAction<boolean>>,
     isEditable: boolean,
 }

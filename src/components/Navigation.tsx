@@ -3,10 +3,11 @@ import { NavigateFunction } from "react-router";
 import { useNavigate } from "react-router";
 import { useModalContext } from "../context/ModalContext";
 import { FormStateProps } from "./FormComponents/manualUtils/types";
+import { FaHammer, FaHome } from "react-icons/fa";
 
-const buttons: Array<{label: string, url: string}> = [
-    {label: 'Home', url: '/'},
-    {label: 'Custom', url: '/custom'}
+const buttons: Array<MainNavigationProps> = [
+    {label: 'Home', url: '/', icon: <FaHome size={20}/>},
+    {label: 'Custom', url: '/custom', icon: <FaHammer size={20} />}
 ]
 
 export default function Navigation({formState}: {formState: FormStateProps}
@@ -38,11 +39,24 @@ export default function Navigation({formState}: {formState: FormStateProps}
             {buttons.map((obj, i) => (
               <div key={i}
               onClick={() => clickWrapper(obj.url)}
-              className={`py-1 px-2 w-20 flex justify-center items-center rounded-xl bg-gray-300
-              hover:bg-gray-500/60`}>
-                {obj.label}
+              className={`p-2 w-25 flex justify-between items-center rounded-xl bg-gray-300
+              hover:bg-gray-500/60 gap-1 text-center`}>
+                {obj.icon && 
+                  <span>
+                    {obj.icon}
+                  </span>
+                }
+                <div className="flex justify-start items-center w-full">
+                  {obj.label}
+                </div>
               </div>
             ))}
         </>
     )
+}
+
+type MainNavigationProps = {
+  label: string,
+  url: string,
+  icon?: JSX.Element,
 }

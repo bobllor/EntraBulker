@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, Literal
 
 class GenerateCSVProps(TypedDict):
     fileName: str
@@ -17,9 +17,6 @@ class AzureHeaders(TypedDict):
     first_name: str
     last_name: str
 
-class SettingsMap(TypedDict):
-    output_dir: str
-
 class HeaderMap(TypedDict):
     opco: str
     name: str
@@ -27,7 +24,26 @@ class HeaderMap(TypedDict):
 class OpcoMap(TypedDict):
     default: str
 
+# for subsititions, the text must contain enclosed brackets [] around
+# the following three keys (CASE-SENSITIVE): NAME, PASSWORD, USERNAME
 class TemplateMap(TypedDict):
-    text_template: str
-    key_words: str
+    enabled: bool
+    text: str
     words_to_replace: str
+
+class Formatting(TypedDict):
+    format_type: Literal["period", "no space"]
+    format_case: Literal["title", "upper", "lower"]
+    format_style: Literal["first last", "f last", "first l"]
+
+# NOTE: this will need to be updated in types.ts as well.
+class APISettings(TypedDict):
+    output_dir: str
+    flatten_csv: bool
+    template: TemplateMap
+    format: Formatting
+
+# NOTE: can contain other keys if used.
+class Response(TypedDict):
+    status: Literal["success", "error"]
+    message: str

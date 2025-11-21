@@ -17,11 +17,14 @@ export default function Button({opts, selectedSetting, setSelectedSetting}: Butt
     return (
         <div className={`w-full h-8 rounded-xl 
         ${opts.label == selectedSetting ? "bg-gray-300" : "hover:bg-gray-300"} 
-        flex items-center p-3`}
+        flex items-center p-3 gap-2`}
         onClick={handleClick}>
-            <span className="flex items-center text-xl">
+            <div className="flex items-center">
+                {opts.icon != null && opts.icon}
+            </div>
+            <div className="flex items-center">
                 {opts.label}
-            </span>
+            </div>
         </div>
     )
 }

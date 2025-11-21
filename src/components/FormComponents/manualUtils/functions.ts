@@ -3,6 +3,7 @@ import { InputDataProps } from "./types";
 import { ManualData } from "./types";
 import { formInputs } from "./vars";
 import { toaster } from "../../../toastUtils";
+import "../../../pywebview";
 
 export async function addEntry(
     divRef: React.RefObject<HTMLDivElement|null>,

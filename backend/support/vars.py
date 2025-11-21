@@ -1,5 +1,5 @@
 from pathlib import Path
-from .types import HeaderMap, OpcoMap, TemplateMap, SettingsMap, AzureHeaders
+from .types import HeaderMap, OpcoMap, TemplateMap, APISettings, AzureHeaders
 from typing import Literal
 
 # NOTE: these are default mappings used to initialize the data.
@@ -28,13 +28,18 @@ DEFAULT_HEADER_MAP: HeaderMap = {
 DEFAULT_OPCO_MAP: OpcoMap = {
     'default': 'placeholder.com',
 }
-DEFAULT_SETTINGS_MAP: SettingsMap = {
-    'output_dir': str(Path().home()),
-}
 
-# data for the email template, part of MAPPING table.
-DEFAULT_TEMPLATE_MAP: TemplateMap = {
-    'text_template': '',
-    'key_words': '',
-    'words_to_replace': ''
+DEFAULT_SETTINGS_MAP: APISettings = {
+    "output_dir": str(Path().home()),
+    "flatten_csv": False,
+    "template": {
+        "enabled": False,
+        "text": "",
+        "words_to_replace": "",
+    },
+    "format": {
+        "format_case": "title",
+        "format_style": "first last",
+        "format_type": "period",
+    },
 }

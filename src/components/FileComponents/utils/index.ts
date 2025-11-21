@@ -2,6 +2,8 @@ import React from 'react';
 import { toastError, toastSuccess } from '../../../toastUtils.ts';
 import '../../../pywebview.ts';
 import { UploadedFilesProps, FileStatus, GenerateCSVProps } from './types.ts';
+import { Response } from '../../../pywebviewTypes.ts';
+import { generateId } from "../../../utils.ts"; 
 
 //** Updates the uploaded files state with the event file from the input element. */
 export function onFileChange(
@@ -44,16 +46,21 @@ async function getBase64(file: File): Promise<string | ArrayBuffer | null>{
 export async function uploadFile(
     event: React.SyntheticEvent<HTMLFormElement>,
     fileArr: Array<UploadedFilesProps>,
-    setFileArr: React.Dispatch<React.SetStateAction<Array<UploadedFilesProps>>>): Promise<void>{
+    setFileArr: React.Dispatch<React.SetStateAction<Array<UploadedFilesProps>>>,
+    flattenCsv: boolean = false): Promise<boolean>{
     event.preventDefault();
+
+    // by default it will assume true, it is modified inside the csv generation call.
+    let boolOut: boolean = true;
 
     if(fileArr.length == 0){
         toastError("No files were submitted.");
-        return;
+        return true;
     }
 
-    const b64Arr: Array<GenerateCSVProps> = [];
+    const csvResponseArr: Array<GenerateCSVProps> = [];
 
+    // setting up the b64 strings to send to the backend.
     for(const file of fileArr){
         const fileExtension: string|undefined = file.file?.name.split('.').at(-1);
 
@@ -64,37 +71,47 @@ export async function uploadFile(
         
         const b64: string|ArrayBuffer|null = await getBase64(file.file);
 
-        b64Arr.push({fileName: file.name, b64: b64 as string, id: file.id})
+        csvResponseArr.push({fileName: file.name, b64: b64 as string, id: file.id})
     }
 
-    for(const b64_ele of b64Arr){
+    // used with flattenCsv flag, it will be regenerated if false.
+    let uploadId: string = generateId();
+    for(const csvObj of csvResponseArr){
         let status: FileStatus = "success";
         try{
-            const res: {
-                status: string, message: string
-            } = await window.pywebview.api.generate_azure_csv(b64_ele);
+            const res: Response = await window.pywebview.api.generate_azure_csv(csvObj, uploadId);
             
             if(res.status == 'success'){
                 toastSuccess(res.message);
             }else{
                 toastError(res.message);
                 status = "error";
+
+                boolOut = false;
             }
         }catch(error){
             if(error instanceof Error){
                 toastError(error.message);
                 status = "error";
+
+                boolOut = false;
             }
         }
 
         setFileArr(prev => prev.map(p => {
-            if(p.id == b64_ele.id){
+            if(p.id == csvObj.id){
                 return {...p, status: status};
             } 
             
             return p;
         }));
+
+        if(!flattenCsv){
+            uploadId = generateId();
+        }
     }
+
+    return boolOut;
 }
 
 export function onDragDrop(event: DragEvent, 

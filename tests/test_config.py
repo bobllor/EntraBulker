@@ -2,7 +2,7 @@ from pathlib import Path
 from backend.core.json_reader import Reader
 from typing import Any
 from tests.fixtures import reader
-from support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, DEFAULT_TEMPLATE_MAP, DEFAULT_SETTINGS_MAP
+from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, DEFAULT_SETTINGS_MAP
 
 # NOTE: DEFAULT_HEADER_MAP is the default map for reader.
 
@@ -78,3 +78,35 @@ def test_find_invalid_key(reader: Reader):
     val: Any = reader.get("whatever")
 
     assert val is None
+
+def test_update_search(reader: Reader):
+    key_to_edit: str = "padding"
+    value: str = "yes"
+
+    # target is nest5 padding, nest4 and nest6 have a padding key.
+    reader.insert("nest1", 
+        {"nest2": {key_to_edit: None, "nest3": {key_to_edit: None, "nest4": {key_to_edit: None}}}})
+
+    res: dict[str, Any] = reader.update_search(key_to_edit, value, main_key="nest4")
+
+    if res["status"] != "success":
+        raise AssertionError(f"Failed to update key: {res}")
+
+    nest2: dict[str, Any] = reader.get("nest2")
+    nest3: dict[str, Any] = reader.get("nest3")
+    nest4: dict[str, Any] = reader.get("nest4")
+
+    assert nest2[key_to_edit] is None and nest3[key_to_edit] is None \
+        and nest4[key_to_edit] == value
+
+def test_get_search(reader: Reader):
+    key_to_edit: str = "padding"
+    value: str = "a long value here"
+    parent_key: str = "nest4"
+
+    reader.insert("nest1", 
+        {"nest2": {key_to_edit: None, "nest3": {key_to_edit: None, parent_key: {key_to_edit: value}}}})
+
+    new_value: str = reader.get_search(key_to_edit, parent_key=parent_key)
+
+    assert value == new_value

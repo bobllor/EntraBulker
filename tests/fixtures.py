@@ -1,8 +1,8 @@
-from logger import Log
+from backend.logger import Log
 from pathlib import Path
-from core.json_reader import Reader
-from api.api import API
-from support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, DEFAULT_OPCO_MAP
+from backend.core.json_reader import Reader
+from backend.api.api import API
+from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, DEFAULT_OPCO_MAP
 import pandas as pd
 import pytest
 
@@ -21,7 +21,7 @@ def reader(tmp_path: Path):
 
     yield Reader(json_path, defaults=DEFAULT_HEADER_MAP, is_test=True)
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def api(tmp_path: Path):
     config_path: Path = tmp_path / "config"
 

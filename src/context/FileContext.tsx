@@ -10,7 +10,6 @@ const FileContext = createContext<FileData>({
 export const useFileContext = () => useContext(FileContext);
 
 export function FileProvider({ children }: {children: JSX.Element}): JSX.Element {
-    // will be an array, future proof if i decide to add multiple file support
     const [uploadedFiles, setUploadedFiles] = useState<Array<UploadedFilesProps>>([]);
 
     const data: FileData = {

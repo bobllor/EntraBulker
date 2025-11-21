@@ -8,6 +8,7 @@ class Reader:
     def __init__(self, path: Path | str, *, 
         defaults: dict[str, Any] = None, 
         logger: Log = None,
+        update_only: bool = False,
         is_test: bool = False):
         '''Used to support CRUD operations on JSON data for the program.
         
@@ -23,6 +24,9 @@ class Reader:
             logger: Log, default None
                 The logger, by default it is None- creating a new instance with no special features.
             
+            update_only: bool, default False
+                Disables insertion and deletion in the Reader. By default it is false.
+            
             is_test: bool, default False
                 Boolean to indicate if the Reader is a test instance or not.
         '''
@@ -32,11 +36,19 @@ class Reader:
         self._name: str = Path(self.path).name
 
         self.logger: Log = logger or Log()
+        self.update_only: bool = update_only
         self._is_test: bool = is_test
 
         self._mkfiles()
 
         self._content: dict[str, Any] = self.read()
+
+        # ensures all keys are lowercase.
+        lowered_content: dict[str, Any] = self._lower_keys()
+        if self._content != lowered_content:
+            self._content = lowered_content
+            self.write(self._content)
+
         self._defaults = defaults
         if defaults:
             self.validate_defaults(defaults)
@@ -64,6 +76,10 @@ class Reader:
 
         It returns a response in the form of a dictionary.
         '''
+        update_res: dict[str, Any] = self._update_only_check()
+        if update_res["status"] == "error":
+            return update_res
+
         if key in self._content:
             self.logger.warning(f"Insertion failed: key {key} already exists")
             return utils.generate_response(status="error", message="Failed to insert, key already exists")
@@ -77,6 +93,10 @@ class Reader:
     
     def insert_many(self, data: dict[str, Any]) -> dict[str, Any]:
         '''Inserts multiple key-value pairs into the structure.''' 
+        update_res: dict[str, Any] = self._update_only_check()
+        if update_res["status"] == "error":
+            return update_res
+
         success_ops: int = 0
         for key, value in data.items():
             if key in self._content:
@@ -104,6 +124,14 @@ class Reader:
         '''Updates a key with the value.
         
         A dictionary response is generated and returned, indicating the status and message.
+
+        Parameters
+        ----------
+            key: str
+                The key being updated.
+
+            value: Any
+                Any value the key is updated to.
         '''
         if key not in self._content:
             self.logger.error(f"Update failed: key {key} does not exist")
@@ -116,9 +144,67 @@ class Reader:
 
         return utils.generate_response(message=f"Successfully updated key {key}", status_code=200)
     
+    def update_search(self, key: str, value: Any, *, main_key: str = None, data: dict[str, Any] = None) -> dict[str, Any]:
+        '''Recursively updates a key with the value. This handles updating nested keys and 
+        keys of the same name that can be found in multiple parent keys, by targeting a specific parent.
+        
+        A dictionary response is generated and returned, indicating the status and message.
+
+        Parameters
+        ----------
+            key: str
+                The key being updated.
+
+            value: Any
+                Any value the key is updated to.
+
+            main_key: str, default None
+                The key that represents the nested key. This is expected to be a dictionary
+                within the dictionary. If given and not found, then the first `key` match
+                will be changed, if it exists.
+            
+            data: dict[str, Any], default None
+                The data being recusirvely searched. By default it is None, using the Reader
+                as the data being searched by default. 
+        '''
+        if data is None:
+            data = self._content
+        
+        res: dict[str, Any] = utils.generate_response(
+            status="error", 
+            message="Failed to update key, key does not exist",
+        )
+        for k in data.keys():
+            if main_key is not None:
+                if main_key in data:
+                    res = self.update_search(key, value, data=data[main_key])
+
+                    return res
+            else:
+                if key in data:
+                    data[key] = value
+
+                    debug_val: Any = utils.format_value(value)
+
+                    self.logger.info(f"Updated key {key} with value {debug_val}")
+
+                    return utils.generate_response(message="Successfully updated key")
+
+            if isinstance(data[k], dict):
+                res = self.update_search(key, value, data=data[k], main_key=main_key)
+
+                if res["status"] == "success":
+                    return res
+
+        return res
+    
     def insert_update_many(self, data: dict[str, Any]) -> dict[str, Any]:
         '''Inserts contents of a dictionary into the Reader. If the key aleady exists,
         then it will update the Reader instead.'''
+        update_res: dict[str, Any] = self._update_only_check()
+        if update_res["status"] == "error":
+            return update_res
+
         self.logger.debug(f"Given data: {data}")
 
         for key, val in data.items():
@@ -147,12 +233,16 @@ class Reader:
     
     def delete(self, key: str) -> dict[str, Any]:
         '''Deletes a key from the file.'''
+        update_res: dict[str, Any] = self._update_only_check()
+        if update_res["status"] == "error":
+            return update_res
+
         if key in self._defaults and not self._is_test:
             self.logger.warning(f"Default key {key} was attempted to be deleted")
-            return utils.generate_response(status="error", message="Failed to delete key", status_code=400)
+            return utils.generate_response(status="error", message="Failed to delete key")
         elif key not in self._content:
             self.logger.info(f"Key {key} does not exist in {self._content} for removal")
-            return utils.generate_response(status="error", message="Unable to find key", status_code=500)
+            return utils.generate_response(status="error", message="Unable to find key")
         
         del self._content[key]
         self.write(self._content)
@@ -188,6 +278,45 @@ class Reader:
                     return value
         
         return None
+    
+    def get_search(self, key: str, *, data: dict[str, Any] = None, parent_key: str = None) -> Any:
+        '''Gets the value stored at the key. This uses a parent key to target a specific section
+        in case that there are multiple nested keys of the same name.
+        
+        Parameters
+        ----------
+            key: str
+                The key that is being searched for.
+            
+            data: dict[str, Any], default None
+                The data dictionary. When calling the method, **do not pass data** into this
+                argument. The only acceptable data is the **`Reader` content**, which by default
+                is set to the content if it is `None`.
+            
+            parent_key: str, default None
+                The parent key to target. This is used to target a certain section within the Reader,
+                used for targeting a key that can possibly be found in other sections. By default it is None,
+                and will be treated as a normal get() if None.
+        '''
+        if data is None:
+            data = self._content
+            
+        value: Any = None
+        if parent_key is None:
+            value = self.get(key, data=data) 
+        else:
+            for d_key, d_val in data.items():
+                if isinstance(d_val, dict):
+                    # consume the parent key if the parent key is found
+                    if d_key == parent_key:
+                        parent_key = None
+
+                    value = self.get_search(key, data=d_val, parent_key=parent_key)
+
+                    if value is not None:
+                        return value
+
+        return value
 
     def _mkfiles(self):
         '''Creates the file, including all directories. If they exist, then this does nothing.'''
@@ -201,6 +330,33 @@ class Reader:
                 file.write("{}")
 
             self.logger.info(f"Created JSON file: {self.path}")
+        
+    def _lower_keys(self, new_content: dict[str, Any] = None, content: dict[str, Any] = None):
+        '''Recursively lowercases all the keys, if any are not lowercase. Used to normalize key usage.
+        
+        Parameters
+        ----------
+            new_content: dict[str, Any], default None
+                The new lowercased content. This is expected to be an empty dictionary, which
+                by default is None and handled in the method.
+
+            content: dict[str, Any], default None
+                The content read from the file. By default it is None, using the read file.
+        '''
+        if content is None:
+            content = self._content
+        if new_content is None:
+            new_content = {}
+
+        for key in content:
+            content_val: Any = content[key]
+
+            if isinstance(content_val, dict):
+                content_val = self._lower_keys(None, content=content_val)
+
+            new_content[key.lower()] = content_val
+        
+        return new_content
     
     def validate_defaults(self, data_to_check: dict[str, Any]):
         '''Validates a JSON file for any incorrect values or missing keys from
@@ -224,3 +380,14 @@ class Reader:
         
         if has_corrected:
             self.write(self._content)
+    
+    def _update_only_check(self) -> dict[str, Any]:
+        '''Checks if the Reader is update only before an insertion/deletion action.
+        
+        It returns a response of an error message if it fails.
+        '''
+        if self.update_only:
+            self.logger.info(f"Reader {self._name} attempted an insertion/deletion, it is not allowed")
+            return utils.generate_response("error", message=f"Cannot insert or delete Reader {self._name}")
+        
+        return utils.generate_response(message="Can be updated")

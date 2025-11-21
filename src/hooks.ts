@@ -9,7 +9,6 @@ import { NavigateFunction, useLocation, useNavigate } from "react-router";
  * 
  * @param element - Any HTMLElement, if it is null then this will return void.
  * @param setShowComponent - The set state function, it must be a boolean.
- * @returns void 
  */
 export function useDismissRoute(
     targetRef: React.RefObject<HTMLElement|null>,
@@ -26,7 +25,7 @@ export function useDismissRoute(
             setShowComponent(false);
         }
         const onClick = (e: MouseEvent) => {
-            if(e.target == element){
+            if(e.currentTarget == element){
                 dismiss();
             }
         }

@@ -1,8 +1,8 @@
 import { JSX, useEffect, useRef, useState } from "react";
-import Trash from "../../svgs/Trash";
 import { useFileContext } from "../../context/FileContext";
 import { UploadedFilesProps } from "./utils/types";
 import { deleteFileEntry } from "./utils";
+import { FaTrash } from "react-icons/fa";
 
 export default function FileEntry({file}: {file: UploadedFilesProps}): JSX.Element{
     const { setUploadedFiles } = useFileContext();
@@ -50,7 +50,7 @@ export default function FileEntry({file}: {file: UploadedFilesProps}): JSX.Eleme
                     <span 
                     onClick={() => deleteFileEntry(file.id, setUploadedFiles)}
                     className="hover:bg-gray-400 p-2 rounded-xl">   
-                        <Trash />
+                        <FaTrash />
                     </span>
                 </div>
             </div>

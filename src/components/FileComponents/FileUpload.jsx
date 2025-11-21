@@ -1,5 +1,5 @@
+import { FaRegFolder } from "react-icons/fa";
 import { useFileContext } from "../../context/FileContext"
-import AddFile from "../../svgs/AddFile";
 import { onFileChange } from "./utils";
 
 const defaultStyle = "py-5 px-10 rounded-xl bg-blue-500 text-white flex gap-1";
@@ -14,8 +14,8 @@ export default function FileUpload({ inputFileRef, hasUploadedFiles = false }){
             className={`${!hasUploadedFiles ? defaultStyle : filesUploadedStyle}
                 relative transition-all hover:bg-blue-400`}>
                 <div
-                className="flex justify-center items-center">
-                    <AddFile />
+                className="flex justify-center items-center gap-2">
+                    <FaRegFolder size={20} />
                     <input className="opacity-0 absolute w-full h-full"
                     accept=".xlsx"
                     id="file-dialog"

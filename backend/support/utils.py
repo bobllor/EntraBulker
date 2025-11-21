@@ -1,6 +1,7 @@
 from core.names import NameFormatter, NoSpace, Period
 from typing import Literal, Any, Callable
-import string, re
+from support.types import Response
+import string, re, uuid
 
 def format_name(name: str, *, keep_full: bool = False) -> str:
     '''Formats and validates a name, by default the First and Last name only.
@@ -36,9 +37,8 @@ def format_name(name: str, *, keep_full: bool = False) -> str:
         if is_valid and not has_bad_words and len(name) > 1:
             new_name.append(name.title())
 
-    # TODO: wtf... lets fix this later
-    if not new_name:
-        raise ValueError('An invalid name was entered.')
+    if len(new_name) < 1:
+        return "Invalid Name"
 
     f_name: str = new_name[0]
     if keep_full:
@@ -265,26 +265,27 @@ def generate_password(max_length: int = 20) -> str:
     
     return "".join(pw)
 
-def generate_text_template(*, 
+def generate_text(*, 
     text: str, 
     username: str = '', 
     password: str = '',
-    name: str = '') -> dict[str, str]:
-    '''Replaces strings in a text template for onboarding.
+    name: str = '') -> Response:
+    '''Replaces strings in a text template.
 
     There are key words that can be replaced: USERNAME, PASSWORD, and NAME.
-    In order to replace them, the exact variable ***must be enclosed by brackets***. \n
+
+    In order to replace them, the exact variable ***must be enclosed by brackets***.
+
     The key words are ***case sensitive***, the function expects all of it to be uppercase only.
 
     Example:
     ```python
     password, name = password1234, John Doe
     text = "Hello [NAME], your password is [PASSWORD] and your username is [USERNAME]."
-    # replacement code here...
     print(text) # "Hello John Doe, your password is password1234 and your username is [USERNAME]."
     ```
     
-    This will replace **all** occurrences of the brackets. \n
+    This will replace **all** occurrences of the brackets.
     If no values are passed in the variables, then no replacements will occur to that key word in the text.
 
     Parameters
@@ -303,11 +304,16 @@ def generate_text_template(*,
         name: str, default ''
             Name of the client.
     '''
-    max_chars: int = 500
+    text = text.strip()
+    max_chars: int = 1250
 
     # this is going to get checked on the front end but it won't hurt to have this just in case.
     if len(text) > max_chars:
-        return generate_response(status='error', message='Cannot have a text of over 500 characters.')
+        return generate_response(
+            status='error', 
+            message=f'Cannot have a text of over {max_chars} characters.',
+            content="",    
+        )
 
     key_words: list[str] = ['USERNAME', 'PASSWORD', 'NAME']
     data: list[str] = [username, password, name]
@@ -318,4 +324,24 @@ def generate_text_template(*,
     
     return generate_response(status='success', 
         message='Successfully generated the text in the output folder.',
-        values=[['text', text]])
+        content=text)
+
+def format_value(value: Any) -> Any:
+    '''Formats a value for logging purposes. 
+    
+    This is **not to be used** for final data, rather it is only 
+    used to format data for the log.
+    '''
+    if isinstance(value, str) and len(value) > 200:
+        value = value[0:200] + "..."
+
+    return value
+
+def get_id(divisor: int = 4) -> str:
+    '''Generates a random uuid4.'''
+    uid: str = uuid.uuid4().hex
+
+    if divisor == 0:
+        return uid
+
+    return uid[:int(len(uid) / divisor)]

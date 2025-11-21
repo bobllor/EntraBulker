@@ -5,12 +5,13 @@ import Custom from "./routes/Custom";
 import Home from "./routes/Home";
 import Settings from "./routes/Settings";
 import Modal from "./components/Modal";
-import CogWheelIcon from "./svgs/CogWheelIcon";
 import { useModalContext } from "./context/ModalContext";
 import { ToastContainer } from "react-toastify";
 import General from "./components/SettingsComponents/OptionsComponents/General";
 import HeadersMapping from "./components/SettingsComponents/OptionsComponents/HeadersMapping";
 import OpcoMapping from "./components/SettingsComponents/OptionsComponents/OpcoMapping";
+import TextForm from "./components/SettingsComponents/OptionsComponents/TextForm";
+import { FaCog } from "react-icons/fa";
 
 const fullPageStyle = 'h-screen w-screen flex flex-col justify-center items-center overflow-hidden relative p-3'
 
@@ -45,20 +46,21 @@ export default function App() {
               <Route index element={<General />} />
               <Route path="headers-mapping" element={<HeadersMapping />} />
               <Route path="opco-mapping" element={<OpcoMapping />} />
+              <Route path="template" element={<TextForm />} />
             </Route>
           </Routes>
         }
         <div
-        className={`absolute flex justify-center items-center rounded-2xl p-1 left-0 bottom-0 m-10 z-3 
+        className={`absolute flex justify-center items-center rounded-2xl p-1 left-10 bottom-5 m-10 z-3 
         hover:bg-gray-500 ${showSetting && "pointer-events-none"}`}>
           <button
           className="outline-none"
           tabIndex={-1}
           onClick={() => navigate("/settings", {replace: true, state: {previousLocation: location}})}>
-            <CogWheelIcon width="32px" height="32px" stroke="black" />
+            <FaCog size={32} strokeWidth={10} stroke="black" color="gray"/>
           </button>
         </div>
-        <div className="flex justify-center items-center gap-2">
+        <div className="absolute left-10 top-5 z-2 flex flex-col justify-center items-center gap-2">
           <Navigation formState={{state: formEdited, func: setFormEdited}}/>
         </div>
         <Routes location={location.state?.previousLocation || location}>

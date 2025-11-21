@@ -18,3 +18,20 @@ def get_bytesio(path: Path | str) -> BytesIO:
     csv_bytes: bytes = "".join(content).encode()
 
     return BytesIO(csv_bytes)
+
+def get_csv(path: Path, *, drop_first_row: bool = False) -> Path | None:
+    ext: str = ".csv"
+
+    for file in path.iterdir():
+        if file.suffix.lower() == ext:
+            if drop_first_row:
+                content: str = ""
+                with open(file, "r") as f:
+                    f.readline()
+                    content = f.read()
+                with open(file, "w") as f:
+                    f.write(content) 
+
+            return file
+    
+    return None

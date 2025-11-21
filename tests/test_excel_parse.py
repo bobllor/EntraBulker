@@ -1,12 +1,12 @@
 from pathlib import Path
 from typing import Any
-from support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, AZURE_HEADERS, AZURE_VERSION
-from core.azure_writer import AzureWriter, HeadersKey
-from core.parser import Parser
+from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, AZURE_HEADERS, AZURE_VERSION
+from backend.core.azure_writer import AzureWriter, HeadersKey
+from backend.core.parser import Parser
 from faker import Faker
 from io import BytesIO
 import pandas as pd
-import support.utils as utils
+import backend.support.utils as utils
 import tests.utils as ttils
 import numpy as np
 import random
@@ -131,7 +131,7 @@ def test_write_new_csv(tmp_path: Path):
     
     df: pd.DataFrame = pd.read_csv(csv_bytes)
 
-    for key in HeadersKey.__args__:
+    for key in writer.get_keys():
         df_data: list[Any] = df[key].to_list()
         base_data: list[str] = writer.get_data(key)
 
