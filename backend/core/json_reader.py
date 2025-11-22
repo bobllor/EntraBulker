@@ -2,7 +2,8 @@ from logger import Log
 from pathlib import Path
 from typing import Any, Literal
 from support import utils
-import json
+import json, os
+import tempfile as tf
 
 class Reader:
     def __init__(self, path: Path | str, *, 
@@ -68,8 +69,11 @@ class Reader:
     def write(self, data: dict[str, Any]) -> None:
         '''Writes data to the file.'''
         # only write, append does not work.
-        with open(self.path, "w") as file:
+        with tf.NamedTemporaryFile("w", delete=False) as file:
+            temp_file: str = file.name
+
             json.dump(data, file)
+            os.replace(temp_file, self.path)
     
     def insert(self, key: str, value: Any) -> dict[str, Any]:
         '''Inserts a single key-value pair into the structure.
@@ -326,8 +330,10 @@ class Reader:
         if not self._pathpath.exists():
             self._pathpath.touch()
             # need to initialize it with a empty data
-            with open(self.path, "w") as file:
+            with tf.NamedTemporaryFile("w", delete=False) as file:
                 file.write("{}")
+
+                os.replace(file.name, self.path)
 
             self.logger.info(f"Created JSON file: {self.path}")
         
