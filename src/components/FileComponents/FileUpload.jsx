@@ -17,7 +17,7 @@ export default function FileUpload({ inputFileRef, hasUploadedFiles = false }){
                 className="flex justify-center items-center gap-2">
                     <FaRegFolder size={20} />
                     <input className="opacity-0 absolute w-full h-full"
-                    accept=".xlsx"
+                    accept=".xlsx, .csv"
                     id="file-dialog"
                     ref={inputFileRef}
                     onChange={e => onFileChange(e, setUploadedFiles)}
