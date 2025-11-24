@@ -1,18 +1,48 @@
-import { JSX } from "react";
+import { JSX, useRef, useState } from "react";
 import { OptionProps, ReaderType } from "../types";
 import OptionBase from "./OptionBase";
-import { onSubmitText } from "../functions";
+import { updateExcelReader } from "../functions";
 import { useSettingsContext } from "../../../context/SettingsContext";
+import { ToolTip } from "../../ui/ToolTip";
 
-const TextComponent = ({name, readerType}: {name: string, readerType: ReaderType}) => (
-    <form
-    onSubmit={e => onSubmitText(e, readerType)}>
-        <input
-        name={name}
-        className="border-1 rounded-xl py-1 px-2 outline-none"
-        type="text" />
-    </form>
-)
+function TextComponent({name, readerType, toolTipText}: TextComponentProps): JSX.Element {
+    const [inputValue, setInputValue] = useState<string>("");
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const {setUpdateHeaders} = useSettingsContext();
+
+    return (
+        <>
+            <form
+            className="flex justify-center items-center"
+            onSubmit={e => {
+                e.preventDefault(); 
+                
+                updateExcelReader(name, inputValue, readerType).then((status) => {
+                    if(status){
+                        if(inputRef.current){
+                            inputRef.current.value = "";
+                            inputRef.current.focus();
+                        }
+
+                        setUpdateHeaders(true);
+                    };
+                })}}>
+                    {toolTipText != "" && 
+                        <div className="flex">
+                            <ToolTip text={toolTipText!} />
+                        </div>
+                    }
+                    <input
+                    name={name}
+                    ref={inputRef}
+                    onChange={e => setInputValue(e.currentTarget.value)}
+                    className="border-1 rounded-xl py-1 px-2 outline-none"
+                    type="text" />
+            </form>
+        </>
+    )
+}
 
 const CurrentValue = (currVal: string) => {
     const maxLength: number = 20;
@@ -29,7 +59,7 @@ const CurrentValue = (currVal: string) => {
 
 const title: string = "Headers";
 const readerType: ReaderType = "excel";
-const tooltipText: string = "Changes the column names of the Excel file for parsing.";
+const tooltipText: string = "Modify the required columns of the Excel file to a differnet value for parsing.";
 
 export default function HeadersMapping(): JSX.Element{ 
     const {headers} = useSettingsContext();
@@ -37,12 +67,14 @@ export default function HeadersMapping(): JSX.Element{
     const options: Array<OptionProps> = [
         {
             label: "Name", 
-            element: <TextComponent name={"name"} readerType={readerType} />, 
+            element: <TextComponent name={"name"} readerType={readerType}
+                toolTipText="The header for the name of the user."/>, 
             optElement: CurrentValue(headers.name),
         },
         {
-            label: "Operating Company", 
-            element: <TextComponent name={"opco"} readerType={readerType} />,
+            label: "Organization", 
+            element: <TextComponent name={"opco"} readerType={readerType}
+                toolTipText="The header of the organization for the user."/>,
             optElement: CurrentValue(headers.opco),
         },
     ]
@@ -52,4 +84,10 @@ export default function HeadersMapping(): JSX.Element{
             <OptionBase options={options} title={title} tooltipText={tooltipText} />
         </>
     )
+}
+
+type TextComponentProps = {
+    name: string, 
+    readerType: ReaderType, 
+    toolTipText?: string,        
 }
