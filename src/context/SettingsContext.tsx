@@ -1,7 +1,7 @@
 import React, { JSX } from "react";
 import { useContext, createContext, useState } from "react";
 import { APISettings } from "../pywebviewTypes";
-import { useInitSettings, useInitHeaders, useUpdateSettings } from "./hooks";
+import { useInitSettings, useInitHeaders, useUpdateSettings, useUpdateHeaders } from "./hooks";
 
 const SettingsContext = createContext<SettingsData>({
     apiSettings: {} as APISettings,
@@ -10,6 +10,8 @@ const SettingsContext = createContext<SettingsData>({
     setHeaders: () => {},
     updateSettings: false,
     setUpdateSettings: () => {},
+    updateHeaders: false,
+    setUpdateHeaders: () => {},
 });
 
 export const useSettingsContext = () => useContext(SettingsContext);
@@ -19,11 +21,13 @@ export function SettingsProvider({ children }: {children: JSX.Element}): JSX.Ele
     const [headers, setHeaders] = useState<HeaderData>({} as HeaderData);
 
     const [updateSettings, setUpdateSettings] = useState<boolean>(false);
+    const [updateHeaders, setUpdateHeaders] = useState<boolean>(false);
 
     useInitSettings(setApiSettings);
     useInitHeaders(setHeaders);
 
     useUpdateSettings(updateSettings, setUpdateSettings, setApiSettings);
+    useUpdateHeaders(updateHeaders, setUpdateHeaders, setHeaders);
 
     const data: SettingsData = {
         apiSettings,
@@ -32,6 +36,8 @@ export function SettingsProvider({ children }: {children: JSX.Element}): JSX.Ele
         setHeaders,
         updateSettings,
         setUpdateSettings,
+        updateHeaders,
+        setUpdateHeaders
     }
     
     return (
@@ -50,6 +56,8 @@ export type SettingsData = {
     setHeaders: React.Dispatch<React.SetStateAction<HeaderData>>,
     updateSettings: boolean,
     setUpdateSettings: React.Dispatch<React.SetStateAction<boolean>>,
+    updateHeaders: boolean,
+    setUpdateHeaders: React.Dispatch<React.SetStateAction<boolean>>,
 }
 
 export type HeaderData = {

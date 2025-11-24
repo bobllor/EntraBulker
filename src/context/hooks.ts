@@ -3,6 +3,7 @@ import "../pywebview";
 import { APISettings } from "../pywebviewTypes";
 import { HeaderData } from "./SettingsContext";
 import { getReaderContent } from "../pywebviewFunctions";
+import { ReaderType } from "../components/SettingsComponents/types";
 
 /**
  * Hook to initialize the settings context.
@@ -43,6 +44,22 @@ export function useUpdateSettings(
         }, [updateSettings])
 }
 
+export function useUpdateHeaders(updateHeaders: boolean, setUpdateHeaders: 
+    Headers["setUpdateHeaders"], 
+    setHeaders: Headers["setHeaders"]){
+        useEffect(() => {
+            if(updateHeaders){
+                const readerType: ReaderType = "excel";
+
+                getReaderContent(readerType).then((res) => {
+                    setHeaders(res as HeaderData);
+                })
+                
+                setUpdateHeaders(false);
+            }
+        }, [updateHeaders])
+}
+
 type SettingsProps = {
     setApiSettings: React.Dispatch<React.SetStateAction<APISettings>>,
     updateSettings: boolean,
@@ -50,5 +67,8 @@ type SettingsProps = {
 }
 
 type Headers = {
+    headers: HeaderData,
     setHeaders: React.Dispatch<React.SetStateAction<HeaderData>>,
+    updateHeaders: boolean,
+    setUpdateHeaders: React.Dispatch<React.SetStateAction<boolean>>,
 }
