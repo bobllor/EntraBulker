@@ -4,9 +4,11 @@ on:
   push:
     paths:
       - '**.py'
+      - '!tests/**'
   pull_request:
     paths:
-        - '**.py'
+      - '**.py'
+      - '!tests/**'
   workflow_dispatch:
 
 jobs:
