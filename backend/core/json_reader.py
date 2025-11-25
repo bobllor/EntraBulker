@@ -52,6 +52,7 @@ class Reader:
             self.write(self._content)
 
         self._defaults = defaults
+        self.logger.debug(f"Defaults for {self._name}: {self._defaults}")
         # used for validating unupdatable defaults
         self._update_reader_flag: bool = False
         if defaults:
@@ -76,8 +77,13 @@ class Reader:
     def read(self) -> dict[str, Any]:
         '''Returns the contents of the .json file in a dictionary format.'''
         content: dict[str, Any] = {}
-        with open(self.path, "r") as file:
-            content = json.load(file)
+        try:
+            with open(self.path, "r") as file:
+                content = json.load(file)
+        except json.decoder.JSONDecodeError:
+            self.logger.error(f"JSON file was empty, failed to read")
+
+            self.write(content)
         
         return content
 
@@ -89,7 +95,6 @@ class Reader:
 
             json.dump(data, file)
             os.replace(temp_file, self.path)
-
             self.logger.info(f"File {self._name} written")
     
     def insert(self, key: str, value: Any) -> dict[str, Any]:
