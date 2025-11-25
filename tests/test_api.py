@@ -12,7 +12,7 @@ import backend.support.utils as utils
 import tests.utils as ttils
 import random
 
-def test_generate_csv(tmp_path: Path, api: API, df: pd.DataFrame):
+def test_generate_csv_normal(tmp_path: Path, api: API, df: pd.DataFrame):
     # creating a baseline dataframe for comparison in the end
     parser: Parser = Parser(df)
 
@@ -267,7 +267,7 @@ def test_generate_csv_formatter(tmp_path: Path, api: API, df: pd.DataFrame):
     formatter: Formatting = api.get_reader_value("settings", "format")
 
     barser: Parser = Parser(df)
-    res: dict[str, Any] = barser.validate_headers(DEFAULT_HEADER_MAP)
+    res: dict[str, Any] = barser.validate(DEFAULT_HEADER_MAP)
 
     barser.apply(DEFAULT_HEADER_MAP["name"], func=utils.format_name)
 
@@ -311,7 +311,7 @@ def test_generate_csv_formatter(tmp_path: Path, api: API, df: pd.DataFrame):
 
 def test_generate_csv_flatten(tmp_path: Path, api: API, df: pd.DataFrame):
     parser: Parser = Parser(df)
-    parser.validate_headers(DEFAULT_HEADER_MAP)
+    parser.validate(DEFAULT_HEADER_MAP)
     
     parser.apply(DEFAULT_HEADER_MAP["name"], func=utils.format_name)
     

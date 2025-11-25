@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import Any
 from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, AZURE_HEADERS, AZURE_VERSION
+from backend.support.types import Response
 from backend.core.azure_writer import AzureWriter, HeadersKey
 from backend.core.parser import Parser
+from tests.fixtures import df
 from faker import Faker
 from io import BytesIO
 import pandas as pd
@@ -71,7 +73,7 @@ def test_validate_df():
     df: pd.DataFrame = pd.read_json(test_json)
     parser: Parser = Parser(df)
 
-    res: dict[str, Any] = parser.validate_headers(DEFAULT_HEADER_MAP)
+    res: dict[str, Any] = parser.validate(DEFAULT_HEADER_MAP)
 
     if res["status"] != "success":
         raise AssertionError(
@@ -79,11 +81,35 @@ def test_validate_df():
             expected values {[val for val in DEFAULT_HEADER_MAP.values()]}", 
         )
 
+def test_duplicate_columns_validate_df(df: pd.DataFrame):
+    df.insert(len(df.columns), DEFAULT_HEADER_MAP["name"], [f"Name {i}" for i in range(len(df))], allow_duplicates=True)
+    df.insert(len(df.columns), DEFAULT_HEADER_MAP["opco"], [f"{i}" for i in range(len(df))], allow_duplicates=True)
+    parser: Parser = Parser(df)
+
+    res: Response = parser.validate(DEFAULT_HEADER_MAP)
+
+    res_msg: str = res["message"]
+
+    assert res["status"] == "error" and DEFAULT_HEADER_MAP["name"].lower() in res_msg \
+        and DEFAULT_HEADER_MAP["opco"].lower() in res_msg
+
+def test_validate_fail_df(df: pd.DataFrame):
+    parser: Parser = Parser(df)
+    modified_defaults = DEFAULT_HEADER_MAP.copy()
+
+    modified_defaults["name"] = "name"
+    modified_defaults["opco"] = "organization"
+
+    res: Response = parser.validate(modified_defaults)
+
+    assert res["status"] == "error" and modified_defaults["name"] in res["message"] \
+        and modified_defaults["opco"] in res["message"]
+
 def test_write_new_csv(tmp_path: Path):
     df: pd.DataFrame = pd.read_json(test_json)
     parser: Parser = Parser(df)
 
-    res: dict[str, Any] = parser.validate_headers(DEFAULT_HEADER_MAP)
+    res: dict[str, Any] = parser.validate(DEFAULT_HEADER_MAP)
 
     if res["status"] != "success":
         raise AssertionError(

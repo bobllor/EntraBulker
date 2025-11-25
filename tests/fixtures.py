@@ -21,6 +21,13 @@ def reader(tmp_path: Path):
 
     yield Reader(json_path, defaults=DEFAULT_HEADER_MAP, is_test=True)
 
+@pytest.fixture
+def settings_reader(tmp_path: Path):
+    json_name: str = "settings_temp_config.json"
+    json_path: Path = tmp_path / "cfg" / json_name
+
+    yield Reader(json_path, defaults=DEFAULT_SETTINGS_MAP, update_only=True, is_test=True)
+
 @pytest.fixture(scope="function")
 def api(tmp_path: Path):
     config_path: Path = tmp_path / "config"

@@ -1,7 +1,7 @@
 from pathlib import Path
 from backend.core.json_reader import Reader
 from typing import Any
-from tests.fixtures import reader
+from tests.fixtures import reader, settings_reader
 from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, DEFAULT_SETTINGS_MAP
 
 # NOTE: DEFAULT_HEADER_MAP is the default map for reader.
@@ -59,9 +59,9 @@ def test_validate_config(reader: Reader):
     if key in reader.get_content():
         raise AssertionError(f"Failed to remove key {key} from the JSON")
     
-    reader.validate_defaults(DEFAULT_HEADER_MAP)
+    new_reader: Reader = Reader(reader.get_path(), defaults=DEFAULT_HEADER_MAP, update_only=True, is_test=True)
 
-    assert key in reader.get_content() and key in reader.read()
+    assert key in new_reader.get_content() and key in new_reader.read()
 
 def test_find_key(reader: Reader):
     key: str = "nest5"
@@ -110,3 +110,49 @@ def test_get_search(reader: Reader):
     new_value: str = reader.get_search(key_to_edit, parent_key=parent_key)
 
     assert value == new_value
+
+def test_validate_reader(settings_reader: Reader):
+    invalid_key: str = "invalid key"
+
+    settings_reader.insert(invalid_key, "")
+    settings_reader.update("template", True)
+    settings_reader.delete("format")
+    settings_reader.delete("output_dir")
+    
+    for i, val in enumerate(["key1", "key2", "key3", "key4"]):
+        settings_reader.insert(val, i)
+
+    base_content: dict[str, Any] = settings_reader.get_content()
+    pre_read: dict[str, Any] = settings_reader.read()
+
+    reader: Reader = Reader(settings_reader.get_path(), defaults=DEFAULT_SETTINGS_MAP, update_only=True, is_test=True)
+    
+    new_content: dict[str, Any] = reader.get_content()
+    post_read: dict[str, Any] = reader.read()
+
+    default = DEFAULT_SETTINGS_MAP
+
+    assert base_content != new_content and pre_read != post_read and invalid_key not in post_read \
+        and invalid_key not in new_content and new_content == default and post_read == default
+
+def test_delete_config(reader: Reader):
+    path: Path = reader.get_path()
+
+
+    parent_path: Path = path.parent
+    path.unlink(missing_ok=True)
+    og_file_exist: bool = path.exists()
+
+    res = reader.insert("test", True) 
+    base_data: dict[str, Any] = reader.read()
+
+    if res["status"] != "success":
+        raise AssertionError(f"Failed to insert key into Reader for file deletion test")
+
+    config_count: int = 0
+
+    for file in parent_path.iterdir():
+        if file.suffix == ".json":
+            config_count += 1
+
+    assert path.exists() and not og_file_exist and config_count == 1 and reader.read() == base_data
