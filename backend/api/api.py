@@ -83,18 +83,32 @@ class API:
             delimited: list[str] = content['b64'].split(',')
             file_name: str = content['fileName']
 
-            # could add csv support here, for now it will be excel.
-            # NOTE: this could be useless because my front end already has this check.
-            if 'spreadsheet' not in delimited[0].lower():
+            meta_info: str = delimited[0]
+
+            self.logger.info(f"Received file {file_name}: {meta_info}")
+            if all(file_type not in meta_info.lower() for file_type in ["spreadsheet", "csv"]):
                 return utils.generate_response(status="error", 
-                    message='Incorrect file entered, got file TYPE_HERE'
+                    message='Invalid file entered, only .csv and .xlsx are allowed'
                 )
+            
+            is_excel: bool = "spreadsheet" in meta_info
 
             b64_string: str = delimited[-1]
             decoded_data: bytes = b64decode(b64_string)
             in_mem_bytes: BytesIO = BytesIO(decoded_data)
 
-            df = pd.read_excel(in_mem_bytes)
+            try:
+                if is_excel:
+                    df = pd.read_excel(in_mem_bytes)
+                else:
+                    df = pd.read_csv(in_mem_bytes)
+            except Exception as e:
+                self.logger.critical(f"Failed to parse file: {file_name} | {meta_info}")
+                self.logger.critical(f"Exception: {e}")
+
+                return utils.generate_response("error", message=f"An unknown error occurred while parsing {file_name}")
+
+            self.logger.info(f"File column names: {df.columns.to_list()}")
         else:
             df = content
 
@@ -108,13 +122,13 @@ class API:
         # however there is only three required keys: name, opco, and country.
         default_excel_columns: dict[str, str] = self.excel.get_content()
 
-        validate_dict: dict[str, str] = parser.validate_headers(
-            default_headers=default_excel_columns
+        self.logger.info(f"Default headers: {self.get_reader_content('excel')}")
+        validate_dict: Response = parser.validate(
+            default_headers=self.get_reader_content("excel")
         )
 
-        if validate_dict.get('status', 'error') == 'error':
-            return utils.generate_response(status='error', message=f'Invalid file \
-                {file_name} uploaded.')
+        if validate_dict["status"] == "error":
+            return validate_dict
 
         # maybe read this back? for now i want to keep the full name.
         #parser.apply(default_excel_columns["name"], func=utils.format_name)
