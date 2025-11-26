@@ -81,7 +81,7 @@ def test_validate_df():
             expected values {[val for val in DEFAULT_HEADER_MAP.values()]}", 
         )
 
-def test_duplicate_columns_validate_df(df: pd.DataFrame):
+def test_validate_fail_df_duplicate_columns(df: pd.DataFrame):
     df.insert(len(df.columns), DEFAULT_HEADER_MAP["name"], [f"Name {i}" for i in range(len(df))], allow_duplicates=True)
     df.insert(len(df.columns), DEFAULT_HEADER_MAP["opco"], [f"{i}" for i in range(len(df))], allow_duplicates=True)
     parser: Parser = Parser(df)
@@ -93,7 +93,7 @@ def test_duplicate_columns_validate_df(df: pd.DataFrame):
     assert res["status"] == "error" and DEFAULT_HEADER_MAP["name"].lower() in res_msg \
         and DEFAULT_HEADER_MAP["opco"].lower() in res_msg
 
-def test_validate_fail_df(df: pd.DataFrame):
+def test_validate_fail_df_missing_headers(df: pd.DataFrame):
     parser: Parser = Parser(df)
     modified_defaults = DEFAULT_HEADER_MAP.copy()
 
@@ -104,6 +104,18 @@ def test_validate_fail_df(df: pd.DataFrame):
 
     assert res["status"] == "error" and modified_defaults["name"] in res["message"] \
         and modified_defaults["opco"] in res["message"]
+    
+def test_validate_fail_df_duplicate_headers(df: pd.DataFrame):    
+    parser: Parser = Parser(df)
+    modified_defaults = DEFAULT_HEADER_MAP.copy()
+
+    modified_defaults["name"] = "organization"
+    modified_defaults["opco"] = "organization"
+
+    res: Response = parser.validate(modified_defaults)
+
+    assert res["status"] == "error" and "duplicate values" in res["message"].lower() \
+        and modified_defaults["name"] in res["message"].lower()
 
 def test_write_new_csv(tmp_path: Path):
     df: pd.DataFrame = pd.read_json(test_json)
@@ -132,7 +144,6 @@ def test_write_new_csv(tmp_path: Path):
         "company two": "companytwo.com",
         "company three": "company.three.nhs.gov"
     }
-
 
     names: list[str] = parser.get_rows(DEFAULT_HEADER_MAP["name"])
     opcos: list[str] = parser.get_rows(DEFAULT_HEADER_MAP["opco"])
