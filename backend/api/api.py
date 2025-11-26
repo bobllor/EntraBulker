@@ -1,7 +1,7 @@
 from core.json_reader import Reader
 from core.parser import Parser
 from core.azure_writer import AzureWriter
-from support.types import GenerateCSVProps, ManualCSVProps, APISettings, Formatting, TemplateMap, Response
+from support.types import GenerateCSVProps, ManualCSVProps, APISettings, Formatting, TemplateMap, Response, HeaderMap
 from base64 import b64decode
 from io import BytesIO
 from logger import Log
@@ -119,25 +119,26 @@ class API:
         
         # the user defined headers (values).
         # the key is the internal name, the value is the user defined columns.
-        # however there is only three required keys: name, opco, and country.
-        default_excel_columns: dict[str, str] = self.excel.get_content()
+        # however there are only two required keys: name and opco.
+        excel_columns: HeaderMap = self.excel.get_content()
 
-        self.logger.info(f"Default headers: {self.get_reader_content('excel')}")
+        self.logger.debug(f"Headers: {self.get_reader_content('excel')}")
         validate_dict: Response = parser.validate(
             default_headers=self.get_reader_content("excel")
         )
 
         if validate_dict["status"] == "error":
+            self.logger.error(f"Error validating DataFrame, message: {validate_dict['message']}")
             return validate_dict
 
         # maybe read this back? for now i want to keep the full name.
         #parser.apply(default_excel_columns["name"], func=utils.format_name)
-        parser.apply(default_excel_columns["opco"], func=lambda x: x.lower())
-        excel_names: list[str] = parser.get_rows(default_excel_columns["name"])
+        parser.apply(excel_columns["opco"], func=lambda x: x.lower())
+        excel_names: list[str] = parser.get_rows(excel_columns["name"])
 
         names: list[str] = [utils.format_name(name) for name in excel_names]
         full_names: list[str] = [utils.format_name(name, keep_full=True) for name in excel_names]
-        opcos: list[str] = parser.get_rows(default_excel_columns["opco"])
+        opcos: list[str] = parser.get_rows(excel_columns["opco"])
 
         self.logger.debug(f"Opcos: {opcos}") 
         dupe_names: list[str] = utils.check_duplicate_names(names)
