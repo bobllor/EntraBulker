@@ -133,14 +133,29 @@ class API:
 
         # maybe read this back? for now i want to keep the full name.
         #parser.apply(default_excel_columns["name"], func=utils.format_name)
+
+        # converting all values to a string to ensure no errors occur.
         parser.apply(excel_columns["opco"], func=lambda x: x.lower())
+        
+        base_rows_length: int = parser.length
+        dropped_rows: int = parser.dropna()
+        if dropped_rows > 0:
+            rows_str: str = "rows" if dropped_rows > 1 else "row"
+            res["message"] += f", dropped {dropped_rows}/{base_rows_length} {rows_str} from file due to missing values"
+
+        # ensure only strings are being worked with here. 
+        parser.apply(excel_columns["name"], func=lambda x: str(x))
+        parser.apply(excel_columns["opco"], func=lambda x: str(x))
+
         excel_names: list[str] = parser.get_rows(excel_columns["name"])
+        opcos: list[str] = parser.get_rows(excel_columns["opco"])
+
+        self.logger.debug(f"Name DF columns: {excel_names}")
+        self.logger.debug(f"Opco DF columns: {opcos}")
 
         names: list[str] = [utils.format_name(name) for name in excel_names]
         full_names: list[str] = [utils.format_name(name, keep_full=True) for name in excel_names]
-        opcos: list[str] = parser.get_rows(excel_columns["opco"])
 
-        self.logger.debug(f"Opcos: {opcos}") 
         dupe_names: list[str] = utils.check_duplicate_names(names)
 
         # the mapping of the operating company to their domain name.
@@ -202,6 +217,8 @@ class API:
                 self.update_setting("text", templates["text"][:1250], "template")
 
         # NOTE: any failures will require an update to the context in the frontend. 
+        self.logger.debug(f"Azure CSV generated: {res}")
+
         return res
     
     def generate_manual_csv(self, content: list[ManualCSVProps]) -> dict[str, str]:

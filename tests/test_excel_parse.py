@@ -174,3 +174,21 @@ def test_write_new_csv(tmp_path: Path):
 
         if not df_data == base_data:
             raise AssertionError(f"Failed to match baseline: {base_data}, got: {df_data}")
+
+def test_drop_validate_data(df: pd.DataFrame):
+    parser: Parser = Parser(df)
+
+    number: int = 100
+
+    parser.apply(DEFAULT_HEADER_MAP["name"], func=lambda _: np.nan)
+    parser.apply(DEFAULT_HEADER_MAP["opco"], func=lambda _: number)
+
+    parser.apply(DEFAULT_HEADER_MAP["opco"], func=lambda x: str(x))
+
+    for opco in parser.get_rows(DEFAULT_HEADER_MAP["opco"]):
+        if not isinstance(opco, str) and opco != str(number):
+            raise AssertionError(f"Failed to convert column to string: {parser.get_rows(DEFAULT_HEADER_MAP['opco'])}")
+
+    new_len: int = parser.dropna()
+
+    assert new_len != 0

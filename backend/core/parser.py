@@ -69,6 +69,18 @@ class Parser:
         
         self.df.drop(index=bad_rows, axis=0, inplace=True)
     
+    def dropna(self) -> int:
+        '''Drops all NaN rows if any column has the value. This affects the entire DataFrame.
+        
+        It returns an int indicating how many rows were dropped, otherwise 0 if none.
+        '''
+        base_len: int = len(self.df)
+        self.df = self.df.dropna(axis=0, how="any")
+
+        new_len: int = len(self.df)
+
+        return base_len - new_len
+    
     def apply(self, col_name: str, *, func: Callable[[Any], Any], args: tuple = ()) -> None:
         '''Applies a function onto a column and replaces the column values in the DataFrame
         in place.
@@ -171,3 +183,8 @@ class Parser:
             return util.generate_response(status='error', message=f'File is missing {column_str}: {", ".join(missing_columns)}')
 
         return util.generate_response(status='success', message=f"Found columns {','.join(found)}")
+
+    @property
+    def length(self) -> int:
+        '''The rows of the DataFrame.'''
+        return len(self.df)
