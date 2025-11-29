@@ -76,7 +76,7 @@ class API:
                 The upload ID for each file. It is used to keep track of each file and write to the
                 correct file. This is only relevant if flatten CSV is enabled.
         '''
-        res: Response = utils.generate_response(message="Generated CSV")
+        res: Response = utils.generate_response(message="CSV generated")
         df: pd.DataFrame = None
 
         if isinstance(content, dict):
@@ -116,6 +116,13 @@ class API:
             upload_id = utils.get_id(divisor=2)
 
         parser: Parser = Parser(df)
+        base_len: int = parser.length
+
+        if base_len == 0:
+            res["status"] = "error"
+            res["message"] = "File is empty"
+            
+            return res
         
         # the user defined headers (values).
         # the key is the internal name, the value is the user defined columns.
@@ -137,11 +144,26 @@ class API:
         # converting all values to a string to ensure no errors occur.
         parser.apply(excel_columns["opco"], func=lambda x: x.lower())
         
-        base_rows_length: int = parser.length
-        dropped_rows: int = parser.dropna()
+        dropped_name_rows: int = parser.drop_empty_rows(excel_columns["name"])
+        dropped_opco_rows: int = parser.drop_empty_rows(excel_columns["opco"])
+
+        dropped_rows: int = dropped_name_rows + dropped_opco_rows
+
+        new_len: int = parser.length
+
+        self.logger.debug(f"Dropped names: {dropped_name_rows}/{base_len}")
+        self.logger.debug(f"Dropped opcos: {dropped_opco_rows}/{base_len}")
+        self.logger.debug(f"Total dropped rows: {dropped_rows}/{base_len}")
+
+        if new_len == 0:
+            res["status"] = "error"
+            res["message"] = f"File is empty after validation ({dropped_rows}/{base_len} dropped rows), please correct the data"
+
+            return res
+
         if dropped_rows > 0:
             rows_str: str = "rows" if dropped_rows > 1 else "row"
-            res["message"] += f", dropped {dropped_rows}/{base_rows_length} {rows_str} from file due to missing values"
+            res["message"] += f", dropped {dropped_rows}/{base_len} {rows_str} from file due to missing values"
 
         # ensure only strings are being worked with here. 
         parser.apply(excel_columns["name"], func=lambda x: str(x))
