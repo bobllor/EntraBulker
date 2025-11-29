@@ -12,6 +12,7 @@ export default function FileEntry({file}: {file: UploadedFilesProps}): JSX.Eleme
     return (
         <>
             <div className={`px-7 min-h-30 max-h-30 default-shadow rounded-xl w-[90%] flex flex-col items-center border-1 border-gray-300
+            transition-all
             ${file.status == "none" ? "" : file.status == "success" ? "bg-green-200/90" : "bg-red-200/90"}`}>
                 <div className="flex items-center justify-between w-full mt-5">
                     <div className="flex items-center gap-2 text-ellipsis" title={file.name}>
@@ -21,9 +22,17 @@ export default function FileEntry({file}: {file: UploadedFilesProps}): JSX.Eleme
                             : file.fileType == "csv" &&
                             <FaRegFileAlt color="#314f1b" size={iconSize} />
                         }
-                        <span className="font-medium">
+                        <div className="flex gap-2 font-medium">
                             {file.name}
-                        </span>
+                            <span className={`transition-all ${file.status == "none" ? "opacity-0 scale-0" : "opacity-100 scale-100"}`}>
+                                {
+                                file.status == "success" 
+                                ? <FaCheck color="green" size={iconSize} /> 
+                                : file.status == "error" &&
+                                <FaTimes color="red" size={iconSize} />
+                                }
+                            </span>
+                        </div>
                     </div>
                     <div className="flex justify-center items-center">
                         <span 
