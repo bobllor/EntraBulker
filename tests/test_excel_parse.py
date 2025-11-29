@@ -189,6 +189,9 @@ def test_drop_validate_data(df: pd.DataFrame):
         if not isinstance(opco, str) and opco != str(number):
             raise AssertionError(f"Failed to convert column to string: {parser.get_rows(DEFAULT_HEADER_MAP['opco'])}")
 
-    new_len: int = parser.dropna()
+    dropped_name_rows: int = parser.drop_empty_rows(DEFAULT_HEADER_MAP["name"])
+    dropped_opco_rows: int = parser.drop_empty_rows(DEFAULT_HEADER_MAP["opco"])
 
-    assert new_len != 0
+    dropped_rows: int = dropped_name_rows + dropped_opco_rows
+
+    assert dropped_rows != 0

@@ -57,10 +57,13 @@ class Parser:
         column = column.lower()
         self.df[column] = self.df[column].fillna(value)
     
-    def drop_empty_rows(self, col_name: str) -> None:
+    def drop_empty_rows(self, col_name: str) -> int:
         '''Drop rows if a row is empty or NaN based on rows from a given column name. 
         The DataFrame is modified in place.
+
+        It returns the amount of rows dropped, if any.
         '''
+        base_len: int = self.length
         bad_rows: list[int] = []
 
         for i, data in enumerate(self.get_rows(col_name)):
@@ -68,18 +71,10 @@ class Parser:
                 bad_rows.append(i)
         
         self.df.drop(index=bad_rows, axis=0, inplace=True)
-    
-    def dropna(self) -> int:
-        '''Drops all NaN rows if any column has the value. This affects the entire DataFrame.
-        
-        It returns an int indicating how many rows were dropped, otherwise 0 if none.
-        '''
-        base_len: int = len(self.df)
-        self.df = self.df.dropna(axis=0, how="any")
 
-        new_len: int = len(self.df)
+        new_length: int = self.length
 
-        return base_len - new_len
+        return base_len - new_length
     
     def apply(self, col_name: str, *, func: Callable[[Any], Any], args: tuple = ()) -> None:
         '''Applies a function onto a column and replaces the column values in the DataFrame

@@ -7,6 +7,7 @@ from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, AZURE
 from backend.support.types import ManualCSVProps, APISettings, Formatting, Response
 from io import BytesIO
 import string
+import numpy as np
 import pandas as pd
 import backend.support.utils as utils
 import tests.utils as ttils
@@ -87,6 +88,22 @@ def test_generate_csv_multiple_template(tmp_path: Path, api: API, df: pd.DataFra
     
     assert base_len == csv_count and base_len == template_folder_count and \
         template_count == base_row_len
+
+def test_generate_csv_empty_file(api: API, df: pd.DataFrame):
+    empty_df: pd.DataFrame = df.copy(deep=True).iloc[0:0]
+
+    res: Response = api.generate_azure_csv(empty_df)
+
+    assert res["status"] == "error" and "empty" in res["message"]
+
+def test_generate_csv_empty_validate_file(api: API, df: pd.DataFrame):
+    parser: Parser = Parser(df)
+
+    parser.apply(DEFAULT_HEADER_MAP["name"], func=lambda _: np.nan)
+
+    res: Response = api.generate_azure_csv(parser.get_df())
+
+    assert res["status"] == "error" and "is empty after validation" in res["message"]
 
 def test_generate_csv_dupe_names(tmp_path: Path, api: API, df: pd.DataFrame):
     dupe_name: str = "John Doe"
