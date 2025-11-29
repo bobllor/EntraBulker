@@ -63,11 +63,12 @@ export async function uploadFile(
 
     // helper function for handling errors on a file
     const handleFileError = (msg: string, fileId: string) => {
-        toastError(`Failed file ${"file"}`);
+        const file: UploadedFilesProps = fileArr.filter(files => files.id == fileId)[0];
+        toastError(`Failed file ${file.name}`);
 
         setFileArr(prev => prev.map(fileObj => {
             if(fileObj.id == fileId){
-                return {...fileObj, status: "error"};
+                return {...fileObj, status: "error", msg: msg};
             }
 
             return fileObj;
@@ -113,10 +114,7 @@ export async function uploadFile(
         try{
             const res: Response = await window.pywebview.api.generate_azure_csv(csvObj, uploadId);
             
-            if(res.status == 'success'){
-                toastSuccess(res.message);
-            }else{
-                toastError(res.message);
+            if(res["status"] == "error"){
                 status = "error";
 
                 uploadSuccess = false;
@@ -124,6 +122,7 @@ export async function uploadFile(
 
             resMessage = res.message;
         }catch(error){
+            // toast error here due to it being a critical error.
             if(error instanceof Error){
                 toastError(error.message);
                 status = "error";
