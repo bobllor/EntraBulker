@@ -170,9 +170,6 @@ class AzureWriter:
 
         self.logger.debug(f"Template output path: {path}")
 
-        if not path.exists():
-            path.mkdir(parents=True, exist_ok=True)
-
         names: list[str] = self._headers_data[AZURE_HEADERS["name"]]
         usernames: list[str] = self._headers_data[AZURE_HEADERS["username"]]
         passwords: list[str] = self._headers_data[AZURE_HEADERS["password"]]
@@ -187,6 +184,9 @@ class AzureWriter:
         
         text_count: int = 0
         failed_count: int = 0
+
+        if not path.exists():
+            path.mkdir(parents=True, exist_ok=True)
 
         for i, name in enumerate(names): 
             username: str = usernames[i]
