@@ -4,7 +4,6 @@ from logger import Log
 from support.types import Response
 from pathlib import Path
 import tempfile as tf
-import uuid
 import os
 import pandas as pd
 import support.utils as utils

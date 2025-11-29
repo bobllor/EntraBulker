@@ -1,5 +1,5 @@
 from typing import Any, Callable
-from support.types import Response
+from support.types import Response, HeaderMap
 import pandas as pd
 import support.utils as util
 
@@ -17,7 +17,7 @@ class Parser:
         # lower all column names.
         self.df.rename(mapper=lambda x: x.lower(), axis=1, inplace=True)
 
-    def validate(self, default_headers: dict[str, str]) -> Response:
+    def validate(self, default_headers: HeaderMap) -> Response:
         '''Validate the DataFrame and its headers. It will return a Response indicating an
         error/success and a message with the error if applicable.
         
@@ -28,11 +28,27 @@ class Parser:
                 are the internal names, the values are user-defined names. Used to validate
                 column headers.
         '''
-        res: Response = self._check_duplicate_columns()
-        if res["status"] == "error":
-            return res
+        func_dict: dict[int, dict[str, Any]] = {
+            0: {"func": self._check_duplicate_headers, "args": default_headers},
+            1: {"func": self._check_duplicate_columns, "args": None},
+            2: {"func": self._check_df_columns, "args": default_headers},
+        }
 
-        res = self._check_df_columns(default_headers)
+        res: Response = util.generate_response(message="")
+
+        for i in range(len(func_dict)):
+            func: Callable = func_dict[i]["func"]
+            args: HeaderMap | None = func_dict[i]["args"]
+
+            if args is not None:
+                res = func(args)
+            else:
+                res = func()
+
+            if res["status"] == "error":
+                return res
+
+        res["message"] = "Successful validation"
 
         return res
     
@@ -90,6 +106,26 @@ class Parser:
     def get_df(self) -> pd.DataFrame:
         return self.df
     
+    def _check_duplicate_headers(self, headers: HeaderMap) -> Response:
+        '''Checks the given HeaderMap for duplicate values. The HeaderMap will be reversed to
+        value-key in order to validate and get the correct data from the DataFrame.
+        
+        If duplicate values are found, then an error Response will be returned.
+        '''
+        res: Response = util.generate_response(message="Successful Headers validation")
+        seen: set[str] = set()
+
+        for val in headers.values():
+            seen.add(val)
+
+        if len(seen) != len(headers):
+            value_str: str = "value" if len(seen) == 1 else "values"
+            res["message"] = f'Duplicate {value_str} "{", ".join([val for val in seen])}" found' \
+                ', cannot have duplicate values: header values must be updated'
+            res["status"] = "error"
+        
+        return res
+    
     def _check_duplicate_columns(self) -> Response:
         '''Checks the DataFrame of the file for duplicate column names. This ensures that there will not be multiple
         same valued columns in a given file.
@@ -111,10 +147,10 @@ class Parser:
         
         return util.generate_response(message="No duplicates found in the excel")
 
-    def _check_df_columns(self, column_map: dict[str, str]) -> Response:
+    def _check_df_columns(self, headers: dict[str, str]) -> Response:
         '''Checks the DataFrame columns to the reversed column map.'''
         # reverse to check the user defined names
-        rev_column_map: dict = {v: k for k, v in column_map.items()}
+        rev_column_map: dict = {v: k for k, v in headers.items()}
 
         found: set[str]= set()
 
@@ -127,7 +163,7 @@ class Parser:
             if low_col in rev_column_map:
                 found.add(low_col)
 
-        if len(found) != len(column_map):
+        if len(found) != len(headers):
             missing_columns: list[str] = [key for key in rev_column_map if key not in found]
 
             column_str: str = "column header" if len(missing_columns) == 1 else "column headers"
