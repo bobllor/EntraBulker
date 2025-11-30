@@ -10,8 +10,12 @@
     box-shadow: 0 3px 8px 1px rgba(0,0,0,.15);
 }
 
+.blurs{
+    backdrop-filter: 3px;
+}
+
 .scroll-style::-webkit-scrollbar{
-    color: black;
-    width: 10px;
+    scrollbar-color: black;
+    width: 5px;
     border-radius: 5px;
 }
