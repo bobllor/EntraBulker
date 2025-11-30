@@ -148,7 +148,7 @@ export async function uploadFile(
     return uploadSuccess;
 }
 
-export function onDragDrop(event: DragEvent, 
+export function onDragDrop(event: React.DragEvent, 
     setUploadedFiles: React.Dispatch<React.SetStateAction<Array<UploadedFilesProps>>>
 ): void{
     event.preventDefault();
