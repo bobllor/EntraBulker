@@ -15,15 +15,17 @@ export default function FileEntry({file}: {file: UploadedFilesProps}): JSX.Eleme
             transition-all
             ${file.status == "none" ? "" : file.status == "success" ? "bg-green-200/90" : "bg-red-200/90"}`}>
                 <div className="flex items-center justify-between w-full mt-5">
-                    <div className="flex items-center gap-2 text-ellipsis" title={file.name}>
+                    <div className="flex items-center gap-2" title={file.name}>
                         {   
                             file.fileType == "xlsx" ? 
                             <FaRegFileExcel color="#519E3E" size={iconSize} />
                             : file.fileType == "csv" &&
                             <FaRegFileAlt color="#314f1b" size={iconSize} />
                         }
-                        <div className="flex gap-2 font-medium">
-                            {file.name}
+                        <div className="flex gap-2 font-medium w-full">
+                            <span className="text-ellipsis text-nowrap overflow-hidden max-w-90">
+                                {file.name}
+                            </span>
                             <span className={`transition-all ${file.status == "none" ? "opacity-0 scale-0" : "opacity-100 scale-100"}`}>
                                 {
                                 file.status == "success" 
