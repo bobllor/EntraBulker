@@ -1,4 +1,4 @@
-import { JSX, useState } from "react";
+import { JSX } from "react";
 import EditCell from "./EditCell";
 import { ManualData } from "./manualUtils/types";
 
