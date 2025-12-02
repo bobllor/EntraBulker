@@ -9,7 +9,6 @@ import { JSX } from "react";
  * @param paddingY Number representing the padding amount for the Y-axis
  * @param type The button type
  * @param func The function used when the button is clicked, by default it is `undefined`
- * @param triggerSettingsUpdate Used to trigger to update the settings for the program, by default it is `false`
  */
 export default function Button(
     {text, bg = "bg-blue-500", bgHover = "bg-blue-400", 
