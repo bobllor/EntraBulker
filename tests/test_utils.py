@@ -76,3 +76,14 @@ def test_invalid_name():
     name: str = utils.format_name(" ")
 
     assert name == "Invalid Name"
+
+def test_generate_password():
+    password: str = utils.generate_password()
+
+    assert isinstance(password, str)
+
+def test_generate_custom_password():
+    pass_length: int = 15
+    password: str = utils.generate_password(pass_length, use_punctuations=True, use_uppercase_letters=True)
+
+    assert isinstance(password, str) and len(password) == pass_length
