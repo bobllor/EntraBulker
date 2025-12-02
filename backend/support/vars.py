@@ -2,6 +2,9 @@ from pathlib import Path
 from .types import HeaderMap, OpcoMap, TemplateMap, APISettings, AzureHeaders
 from typing import Literal
 
+# used as the baseline root path
+PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
+
 # NOTE: these are default mappings used to initialize the data.
 # the data is based off of ServiceNow naming, but the values can be changed.
 
@@ -40,5 +43,10 @@ DEFAULT_SETTINGS_MAP: APISettings = {
         "format_case": "title",
         "format_style": "first last",
         "format_type": "period",
+    },
+    "password": {
+        "length": 16,
+        "use_uppercase": False,
+        "use_punctuations": False,
     },
 }

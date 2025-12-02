@@ -36,12 +36,18 @@ class Formatting(TypedDict):
     format_case: Literal["title", "upper", "lower"]
     format_style: Literal["first last", "f last", "first l"]
 
+class Password(TypedDict):
+    length: int
+    use_uppercase: bool
+    use_punctuations: bool
+
 # NOTE: this will need to be updated in types.ts as well.
 class APISettings(TypedDict):
     output_dir: str
     flatten_csv: bool
     template: TemplateMap
     format: Formatting
+    password: Password
 
 # NOTE: can contain other keys if used.
 class Response(TypedDict):

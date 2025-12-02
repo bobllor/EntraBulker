@@ -153,7 +153,7 @@ def test_write_new_csv(tmp_path: Path):
         names, opcos, opco_map
     )
 
-    writer: AzureWriter = AzureWriter()
+    writer: AzureWriter = AzureWriter(project_root=tmp_path)
 
     writer.set_full_names(names)
     writer.set_usernames(usernames)

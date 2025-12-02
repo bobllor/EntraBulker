@@ -11,7 +11,7 @@ passwords: list[str] = [utils.generate_password(20) for _ in range(len(names))]
 text: str = "Hello [USERNAME] I am [NAME] and your password is [PASSWORD]"
 
 def test_write_text(tmp_path: Path):
-    writer: AzureWriter = AzureWriter()
+    writer: AzureWriter = AzureWriter(project_root=tmp_path)
 
     writer.set_full_names(names)
     writer.set_usernames(usernames)
@@ -43,7 +43,7 @@ def test_write_text(tmp_path: Path):
             raise AssertionError(f"Failed to write to file for {file.name}: {content}")
 
 def test_fail_write_csv_no_names(tmp_path: Path):
-    writer: AzureWriter = AzureWriter()
+    writer: AzureWriter = AzureWriter(project_root=tmp_path)
 
     writer.set_full_names(names)
     writer.set_passwords(passwords)
@@ -53,7 +53,7 @@ def test_fail_write_csv_no_names(tmp_path: Path):
     assert res["status"] == "error"
 
 def test_fail_write_csv_no_usernames(tmp_path: Path):
-    writer: AzureWriter = AzureWriter()
+    writer: AzureWriter = AzureWriter(project_root=tmp_path)
 
     writer.set_usernames(usernames)
     writer.set_passwords(passwords)
@@ -63,7 +63,7 @@ def test_fail_write_csv_no_usernames(tmp_path: Path):
     assert res["status"] == "error"
 
 def test_fail_write_csv_no_passwords(tmp_path: Path):
-    writer: AzureWriter = AzureWriter()
+    writer: AzureWriter = AzureWriter(project_root=tmp_path)
 
     writer.set_full_names(names)
     writer.set_usernames(usernames)

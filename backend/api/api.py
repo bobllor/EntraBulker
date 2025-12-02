@@ -1,13 +1,14 @@
 from core.json_reader import Reader
 from core.parser import Parser
 from core.azure_writer import AzureWriter
-from support.types import GenerateCSVProps, ManualCSVProps, APISettings, Formatting, TemplateMap, Response, HeaderMap
+from support.types import GenerateCSVProps, ManualCSVProps, APISettings, Response, HeaderMap
+from support.types import Password, Formatting, TemplateMap
 from base64 import b64decode
 from io import BytesIO
 from logger import Log
 from pathlib import Path
 from typing import Any, Literal, TypedDict
-from support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, DEFAULT_SETTINGS_MAP
+from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT
 import support.utils as utils
 import pandas as pd
 
@@ -25,8 +26,11 @@ AzureFileState = TypedDict(
 
 class API:
     def __init__(self, *, 
-            excel_reader: Reader, settings_reader: Reader,
-            opco_reader: Reader, logger: Log = None
+            excel_reader: Reader, 
+            settings_reader: Reader,
+            opco_reader: Reader, 
+            logger: Log = None,
+            project_root: Path = PROJECT_ROOT,
         ):
         '''API class.
         
@@ -43,6 +47,10 @@ class API:
             
             logger: Log, default None
                 The logger, if None is given then it will be a default logger.
+            
+            project_root: Path, default `PROJECT_ROOT`
+                The project root folder. This is only used for writing to files,
+                it ensures that the files are working in the same file system. 
         '''
         self.excel: Reader = excel_reader
         self.settings: Reader = settings_reader
@@ -54,6 +62,8 @@ class API:
             "opco": self.opco,
             "excel": self.excel,
         }
+
+        self._project_root: Path = project_root
 
         # state tracking for generate_azure_csv
         self._auto_azure_state: AzureFileState = {
@@ -191,13 +201,20 @@ class API:
             format_style=formatters["format_style"],
         )
 
-        writer: AzureWriter = AzureWriter(logger=self.logger)
+        writer: AzureWriter = AzureWriter(logger=self.logger, project_root=self._project_root)
 
         writer.set_full_names(full_names)
         writer.set_names(names)
         writer.set_block_sign_in(len(names), []) 
         writer.set_usernames(usernames)
-        writer.set_passwords([utils.generate_password(20) for _ in range(len(names))])
+
+        passwords: list[str] = []
+        for _ in range(len(names)):
+            password_res: Response = self.generate_password()
+
+            passwords.append(password_res["content"])
+        
+        writer.set_passwords(passwords)
 
         curr_date: str = utils.get_date()
 
@@ -284,9 +301,13 @@ class API:
             format_case=formatters["format_case"],
             format_style=formatters["format_style"],
         )
-        passwords: list[str] = [utils.generate_password() for _ in range(len(names))]
+        passwords: list[str] = []
+        for _ in range(len(names)):
+            password_res: Response = self.generate_password()
 
-        writer: AzureWriter = AzureWriter(logger=self.logger)
+            passwords.append(password_res["content"])
+
+        writer: AzureWriter = AzureWriter(logger=self.logger, project_root=self._project_root)
 
         writer.set_full_names(full_names)
         writer.set_usernames(usernames)
@@ -441,5 +462,48 @@ class API:
 
         if res["status"] == "success":
             self.settings.write(self.settings.get_content())
+        
+        self.logger.debug(f"Update setting response: {res}")
+
+        return res
+    
+    def generate_password(self) -> Response:
+        '''Generates a random password based off of the settings and returns a response. A password
+        will always be returned regardless of an error or not.
+
+        The password is always guaranteed to have one lowercase letter, one uppercase letter,
+        and one special character.
+        
+        The password is part of the `content` key of the Response.
+        '''
+        res: Response = utils.generate_response(message="Generated password", content="")
+
+        # if all else fails then grab the default values.
+        password_settings: Password = self.settings.get("password")
+
+        if password_settings is None:
+            self.logger.warning(f"Failed to get Password settings from the Settings Reader, it has been reset to its default values")
+
+            password_settings = DEFAULT_SETTINGS_MAP["password"]
+            self.settings.update("password", password_settings)
+
+            res["message"] += ", an error occurred while generating the password and has been reset to its default values"
+
+            update_res: Response = self.update_setting("password", DEFAULT_SETTINGS_MAP["password"])
+
+            if update_res["status"] == "error":
+                self.logger.error(f"Failed to update settings: {update_res}")
+
+                # catastrophic fail, will default back to default settings but still generate a password.
+                return utils.generate_response("error", message="Unknown failure has occurred, the issue has been logged", 
+                    content=utils.generate_password(DEFAULT_SETTINGS_MAP["password"]["length"]))
+        
+        password: str = utils.generate_password(
+            password_settings["length"], 
+            use_punctuations=password_settings["use_punctuations"],
+            use_uppercase_letters=password_settings["use_uppercase"]
+        )
+
+        res["content"] = password
 
         return res

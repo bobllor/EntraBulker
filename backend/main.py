@@ -1,7 +1,7 @@
 from core.json_reader import Reader
 from api.api import API
 from logger import Log
-from support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, DEFAULT_SETTINGS_MAP
+from support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, DEFAULT_SETTINGS_MAP, PROJECT_ROOT
 import webview
 
 EXCEL_FILE: str = 'excel-mapping.json'
@@ -16,15 +16,16 @@ VERSION: str = "1.0.0"
 if __name__ == '__main__':
     logger: Log = Log()
 
-    excel_reader: Reader = Reader(EXCEL_PATH, defaults=DEFAULT_HEADER_MAP, update_only=True, logger=logger)
-    settings_reader: Reader = Reader(SETTINGS_PATH, defaults=DEFAULT_SETTINGS_MAP, update_only=True, logger=logger)
-    opco_reader: Reader = Reader(OPCO_PATH, defaults=DEFAULT_OPCO_MAP, logger=logger)
+    excel_reader: Reader = Reader(EXCEL_PATH, defaults=DEFAULT_HEADER_MAP, update_only=True, logger=logger, project_root=PROJECT_ROOT)
+    settings_reader: Reader = Reader(SETTINGS_PATH, defaults=DEFAULT_SETTINGS_MAP, update_only=True, logger=logger, project_root=PROJECT_ROOT)
+    opco_reader: Reader = Reader(OPCO_PATH, defaults=DEFAULT_OPCO_MAP, logger=logger, project_root=PROJECT_ROOT)
 
     api: API = API(
         settings_reader=settings_reader, 
         excel_reader=excel_reader,
         opco_reader=opco_reader,
-        logger=logger
+        logger=logger,
+        project_root=PROJECT_ROOT
     )
     size: tuple[int, int] = (1280, 720)
 
