@@ -1,15 +1,15 @@
 :root{
     --settings-b-radius: 4px;
-    --settings-b-width: 2px;
+    --settings-b-width: 1px;
 }
 
 .settings-modal-border{
-    border: var(--settings-b-width) solid black; 
+    border: var(--settings-b-width) solid rgba(0, 0, 0, 0.4); 
     border-radius: 6px;
 }
 
 .settings-left-panel{
-    border-right: var(--settings-b-width) solid black;
+    border-right: var(--settings-b-width) solid rgba(0, 0, 0, 0.4);
     border-radius: var(--settings-b-radius) 0  0 var(--settings-b-radius);
 }
 
