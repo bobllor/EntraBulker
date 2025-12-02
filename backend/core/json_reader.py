@@ -52,7 +52,6 @@ class Reader:
             self.write(self._content)
 
         self._defaults = defaults
-        self.logger.debug(f"Defaults for {self._name}: {self._defaults}")
         # used for validating unupdatable defaults
         self._update_reader_flag: bool = False
         if defaults:
