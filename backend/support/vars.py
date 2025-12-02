@@ -41,4 +41,9 @@ DEFAULT_SETTINGS_MAP: APISettings = {
         "format_style": "first last",
         "format_type": "period",
     },
+    "password": {
+        "length": 16,
+        "use_uppercase": False,
+        "use_punctuations": False,
+    },
 }
