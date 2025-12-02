@@ -13,7 +13,7 @@ import { ToolTip } from "../../ui/ToolTip";
 import Loading from "../../ui/Loading";
 
 const orgKeyName: string = "Organization";
-const tooltipText: string = "Mapping of an organization to a domain name.";
+const tooltipText: string = "Mapping of an organization to a domain name";
 const inputLabel: InputLabelProps = {keyOpco: orgKeyName, valueOpco: "Domain"};
 
 export default function OpcoMapping(): JSX.Element{
@@ -84,7 +84,7 @@ export default function OpcoMapping(): JSX.Element{
                                         {inputLabel[name as keyof InputLabelProps]}:
                                     </label>
                                     <input 
-                                    className="border-1 outline-0 rounded-xl py-1 px-2 w-[30%]"
+                                    className="input-style rounded-xl py-1 px-2 w-[30%]"
                                     type="text"
                                     onChange={e => {
                                         const input: HTMLInputElement = e.currentTarget;
@@ -146,7 +146,7 @@ export default function OpcoMapping(): JSX.Element{
                                 <th>Domain</th>
                                 <th className="w-10">
                                     <div className="flex justify-center items-center">
-                                        <ToolTip text="To modify rows, enter edit mode." />
+                                        <ToolTip text="To modify rows, enter edit mode" />
                                     </div>
                                 </th>
                             </tr>

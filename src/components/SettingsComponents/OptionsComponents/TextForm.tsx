@@ -57,8 +57,8 @@ function TextField(): JSX.Element{
                         setTextValue(value);
                     }}
                     value={textValue} 
-                    className="relative bg-white resize-none rounded-xl border-1 border-gray-400 p-2 w-[90%] h-60 outline-none
-                    default-shadow">
+                    className="relative bg-white resize-none rounded-xl p-2 w-[90%] h-60
+                    default-shadow input-style">
                     </textarea>
                     <span className={`${textValue.length >= maxTextLength && "text-red-500"}`}>
                         {textValue.length}/{maxTextLength}
@@ -72,7 +72,7 @@ function TextField(): JSX.Element{
 
 const listItems: Array<{text: string, toolTipText: string}> = [
     {text: "[NAME]", toolTipText: "The name of the user"}, 
-    {text: "[USERNAME]", toolTipText: "The username/domain account of the user, e.g. example@nhs.org"}, 
+    {text: "[USERNAME]", toolTipText: "The username/domain account of the user, e.g. example@company.domain.org"}, 
     {text: "[PASSWORD]", toolTipText: "The password of the user"}, 
 ];
 
