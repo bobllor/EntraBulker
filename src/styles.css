@@ -6,8 +6,19 @@
     font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
 
+:root {
+    --default-shadow: 0 3px 8px 1px rgba(0,0,0,.15);
+}
+
 .default-shadow{
-    box-shadow: 0 3px 8px 1px rgba(0,0,0,.15);
+    box-shadow: var(--default-shadow);
+}
+
+.input-style{
+    box-shadow: var(--default-shadow);
+    border-color: rgba(0,0,0,.20);
+    border-width: 1px;
+    background-color: white;
 }
 
 .list-point::before{
