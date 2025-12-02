@@ -3,7 +3,7 @@ import OptionBase from "./OptionBase";
 import Button from "../../ui/Button";
 import { SettingsData, useSettingsContext } from "../../../context/SettingsContext";
 import { updateSetting } from "../../../pywebviewFunctions";
-import { toastError } from "../../../toastUtils";
+import { toastError, toastSuccess } from "../../../toastUtils";
 import { ToolTip } from "../../ui/ToolTip";
 import { FaAngleDown, FaAngleRight } from "react-icons/fa";
 
@@ -106,6 +106,7 @@ async function textSubmission(text: string, setApiSettings: SettingsData["setApi
 
     if(res.status == "success"){
         setApiSettings(prev => ({...prev, template: {...prev.template, text: text}}));
+        toastSuccess("Updated text template");
     }else{
         toastError(res.message);
     }
