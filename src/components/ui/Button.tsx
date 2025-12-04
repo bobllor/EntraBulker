@@ -1,25 +1,28 @@
-import { JSX } from "react";
+import { JSX, useRef } from "react";
+import { debouncer, throttler } from "../../utils";
 
 /**
  * A button component. 
- * @param text The text of the button 
- * @param bg Tailwind class string for the background of the button, by default it is bg-blue-500
- * @param bgHover Tailwind class string for the hover background of the button, by default it is bg-blue-400 
- * @param paddingX Number representing the padding amount for the X-axis
- * @param paddingY Number representing the padding amount for the Y-axis
- * @param type The button type
- * @param func The function used when the button is clicked, by default it is `undefined`
+ * 
+ * If closures are needed, then a function must be used. 
  */
 export default function Button(
     {text, bg = "bg-blue-500", bgHover = "bg-blue-400", 
-    paddingX = 2, paddingY = 2, type = "submit", func = undefined}: ButtonProps): JSX.Element{
+    paddingX = 2, paddingY = 2, type = "submit", func = undefined,
+    closureOpt = undefined}: ButtonProps): JSX.Element{
+
+    const closureRef = useRef(getClosure(closureOpt));
 
     return (
         <>
             <button
             onClick={() => {
                 if(func){
-                    func();
+                    if(closureRef.current != undefined){
+                        closureRef.current(func); 
+                    }else{
+                        func();
+                    }
                 }
             }}
             tabIndex={-1}
@@ -40,4 +43,29 @@ type ButtonProps = {
     paddingY?: number,
     func?: () => any | undefined,
     type?: "submit" | "reset" | "button" | undefined,
+    closureOpt?: ClosureProps,
+}
+
+type ClosureProps = {
+    type: "debounce" | "throttle",
+    timeout: number,
+}
+
+/**
+ * Gets the throttler or debouncer closure function.
+ * @param closureOpt The ClosureProp object.
+ * @returns The throttler or debouncer closure function, or if closureOpt is undefined then undefined.
+ */
+function getClosure(
+    closureOpt?: ClosureProps): ((func: () => any) => any) | undefined{
+    if(closureOpt == undefined){
+        return undefined;
+    }
+    let closureFunc = throttler((func: () => any) => func(), closureOpt.timeout)
+
+    if(closureOpt.type == "debounce"){
+        closureFunc = debouncer((func: () => any) => func(), closureOpt.timeout)
+    }
+
+    return closureFunc
 }
