@@ -6,6 +6,7 @@ import { updateSetting } from "../../../pywebviewFunctions";
 import { toastError, toastSuccess } from "../../../toastUtils";
 import { ToolTip } from "../../ui/ToolTip";
 import { FaAngleDown, FaAngleRight } from "react-icons/fa";
+import { throttler } from "../../../utils";
 
 const title: string = "Text Template";
 const tooltipText: string = "Generating the text template containing the login for the user";
@@ -19,6 +20,10 @@ export default function TextForm(): JSX.Element{
         </>
     )
 }
+
+const throttle = throttler(
+    (textValue: string, updaterFunc: (...args:any) => any) => textSubmission(textValue, updaterFunc)
+);
 
 function TextField(): JSX.Element{
     const {apiSettings, setApiSettings} = useSettingsContext();
@@ -46,7 +51,7 @@ function TextField(): JSX.Element{
             onSubmit={e => {
                     e.preventDefault();
 
-                    textSubmission(textValue, setApiSettings);
+                    throttle(textValue, setApiSettings);
                 }}>
                 <div className="flex flex-col items-center justify-center gap-2">
                     <textarea
@@ -63,7 +68,7 @@ function TextField(): JSX.Element{
                     <span className={`${textValue.length >= maxTextLength && "text-red-500"}`}>
                         {textValue.length}/{maxTextLength}
                     </span>
-                    <Button text="Submit" type="submit"/>
+                    <Button text="Submit" type="submit" />
                 </div>
             </form>
         </>
