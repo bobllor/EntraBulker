@@ -1,5 +1,6 @@
 import { JSX, useState } from "react";
 import { updateSetting } from "../../pywebviewFunctions";
+import { debouncer } from "../../utils";
 
 const sliderDebouncer = debouncer(
     (key: string, value: any, updaterFunc: (number: number) => any, parent?: string) => {
@@ -41,25 +42,4 @@ export type SliderProps = {
     baseValue: number,
     updaterFunc: (number: number) => any,
     parent?: string,
-}
-
-/**
- * 
- * @param func The function returned by the closure, this requires a `targetKey`, the `value` replacing the targetKey's value,
- * an `updaterFunc` which is expected to be a setter function from useState, and optionally a `parent`, which by default is
- * undefined, used for targeting nested keys.
- * @param timeout A timeout number, by default it is `700` ms.
- */
-function debouncer(
-    func: (targetKey: string, value: any, updaterFunc: (number: number) => any, parent?: string) => void | Promise<any>,
-    timeout: number = 700){
-    let timer: number | undefined;
-
-    return (targetKey: string, value: any, updaterFunc: (number: number) => any, parent?: string) => {
-        clearTimeout(timer);
-
-        timer = setTimeout(() => {
-            func(targetKey, value, updaterFunc, parent);
-        }, timeout);
-    }
 }
