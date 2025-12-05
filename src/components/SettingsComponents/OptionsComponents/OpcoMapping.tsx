@@ -2,7 +2,7 @@ import React, { JSX, useState, useRef } from "react";
 import { OpcoMap, ReaderType } from "../types";
 import { useOpcoInit, useUpdateBaseSetOpco } from "../hooks";
 import { addOpcoEntry } from "../functions";
-import { compareObjects } from "../../../utils";
+import { compareObjects, throttler } from "../../../utils";
 import OptionBase from "./OptionBase";
 import OpcoRow from "./OpcoRow";
 import { toastError } from "../../../toastUtils";
@@ -13,8 +13,12 @@ import { ToolTip } from "../../ui/ToolTip";
 import Loading from "../../ui/Loading";
 
 const orgKeyName: string = "Organization";
-const tooltipText: string = "Mapping of an organization to a domain name.";
+const tooltipText: string = "Mapping of an organization to a domain name";
 const inputLabel: InputLabelProps = {keyOpco: orgKeyName, valueOpco: "Domain"};
+
+const throttleOpcoEntry = throttler(
+    (event: React.FormEvent<HTMLFormElement>, optionUpdater: (...any: any) => any) => 
+        addOpcoEntry(event, optionUpdater));
 
 export default function OpcoMapping(): JSX.Element{
     const [opcoOptions, setOpcoOptions] = useState<Array<OpcoMap>>([]);
@@ -64,12 +68,12 @@ export default function OpcoMapping(): JSX.Element{
                                     return;
                                 }
 
-                                addOpcoEntry(e, setOpcoOptions).then((status) => {
+                                throttleOpcoEntry(addOpcoEntry(e, setOpcoOptions).then((status) => {
                                     if(status){
                                         setUpdateBaseRef(true);
                                         setInputData(prev => ({...prev, keyOpco: "", valueOpco: ""}));
                                     }
-                                });
+                                }));
                             }
                         }>
                         {/* The opco submission entry */}
@@ -84,7 +88,7 @@ export default function OpcoMapping(): JSX.Element{
                                         {inputLabel[name as keyof InputLabelProps]}:
                                     </label>
                                     <input 
-                                    className="border-1 outline-0 rounded-xl py-1 px-2 w-[30%]"
+                                    className="input-style rounded-xl py-1 px-2 w-[30%]"
                                     type="text"
                                     onChange={e => {
                                         const input: HTMLInputElement = e.currentTarget;
@@ -146,7 +150,7 @@ export default function OpcoMapping(): JSX.Element{
                                 <th>Domain</th>
                                 <th className="w-10">
                                     <div className="flex justify-center items-center">
-                                        <ToolTip text="To modify rows, enter edit mode." />
+                                        <ToolTip text="To modify rows, enter edit mode" />
                                     </div>
                                 </th>
                             </tr>

@@ -33,6 +33,7 @@ export function onFileChange(
                 file: file, 
                 status: "none", 
                 fileType: res.fileType as FileType,
+                errMsg: undefined, // this gets updated once the backend call completes
             }
         ]);
 }
@@ -62,11 +63,12 @@ export async function uploadFile(
 
     // helper function for handling errors on a file
     const handleFileError = (msg: string, fileId: string) => {
-        toastError(msg);
+        const file: UploadedFilesProps = fileArr.filter(files => files.id == fileId)[0];
+        toastError(`Failed file ${file.name}`);
 
         setFileArr(prev => prev.map(fileObj => {
             if(fileObj.id == fileId){
-                return {...fileObj, status: "error"};
+                return {...fileObj, status: "error", msg: msg};
             }
 
             return fileObj;
@@ -74,7 +76,7 @@ export async function uploadFile(
     }
 
     // by default it will assume true, it is modified inside the csv generation call.
-    let boolOut: boolean = true;
+    let uploadSuccess: boolean = true;
     if(fileArr.length == 0){
         toastError("No files were submitted.");
         return true;
@@ -107,29 +109,32 @@ export async function uploadFile(
     let uploadId: string = generateId();
     for(const csvObj of csvResponseArr){
         let status: FileStatus = "success";
+        let resMessage: string = "";
+
         try{
             const res: Response = await window.pywebview.api.generate_azure_csv(csvObj, uploadId);
             
-            if(res.status == 'success'){
-                toastSuccess(res.message);
-            }else{
-                toastError(res.message);
+            if(res["status"] == "error"){
                 status = "error";
 
-                boolOut = false;
+                uploadSuccess = false;
             }
+
+            resMessage = res.message;
         }catch(error){
+            // toast error here due to it being a critical error.
             if(error instanceof Error){
                 toastError(error.message);
                 status = "error";
 
-                boolOut = false;
+                resMessage = error.message;
+                uploadSuccess = false;
             }
         }
 
         setFileArr(prev => prev.map(p => {
             if(p.id == csvObj.id){
-                return {...p, status: status};
+                return {...p, status: status, msg: resMessage};
             } 
             
             return p;
@@ -140,10 +145,10 @@ export async function uploadFile(
         }
     }
 
-    return boolOut;
+    return uploadSuccess;
 }
 
-export function onDragDrop(event: DragEvent, 
+export function onDragDrop(event: React.DragEvent, 
     setUploadedFiles: React.Dispatch<React.SetStateAction<Array<UploadedFilesProps>>>
 ): void{
     event.preventDefault();

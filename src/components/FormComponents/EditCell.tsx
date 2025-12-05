@@ -20,8 +20,8 @@ export default function EditCell({id, stringVal, setEditCell, manData}: EditCell
     return (
         <>
             <div
-            className="absolute h-12 z-4 bg-white border-1 p-3 flex justify-center items-center gap-5">
-                <input className="border-1 py-1 px-2 rounded-xl w-35 outline-0"
+            className="absolute h-12 z-4 bg-white border-1 border-black/40 rounded-2xl p-4 flex justify-center items-center gap-5">
+                <input className="py-1 px-2 rounded-xl w-35 input-style"
                 spellCheck={false}
                 ref={inputRef}
                 type="text" defaultValue={stringVal} 

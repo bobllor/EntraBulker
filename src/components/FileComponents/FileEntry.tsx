@@ -1,66 +1,53 @@
-import { JSX, useEffect, useRef, useState } from "react";
+import { JSX } from "react";
 import { useFileContext } from "../../context/FileContext";
 import { UploadedFilesProps } from "./utils/types";
 import { deleteFileEntry } from "./utils";
-import { FaTrash, FaFileExcel, FaTimes, FaCheck } from "react-icons/fa";
+import { FaTrash, FaTimes, FaCheck, FaRegFileExcel, FaRegFileAlt } from "react-icons/fa";
+
+const iconSize: number = 25;
 
 export default function FileEntry({file}: {file: UploadedFilesProps}): JSX.Element{
     const { setUploadedFiles } = useFileContext();
 
-    const divRef = useRef<HTMLDivElement|null>(null);
-    const spanRef = useRef<HTMLSpanElement|null>(null);
-
-    useEffect(() => {
-        if(!divRef.current || !spanRef.current) return;
-
-        const div: HTMLDivElement = divRef.current!;
-        const divSize: number = div.offsetWidth;
-
-        const span: HTMLSpanElement = spanRef.current!;
-        const spanSize: number = span.scrollWidth;
-        
-        if(spanSize > divSize){
-            div.addEventListener("mouseenter", () => scrollHover(spanSize, div));
-            div.addEventListener("mouseleave", () => scrollHover(-spanSize, div));
-        }
-
-        return () => {
-            div.removeEventListener("mouseenter", () => scrollHover(spanSize, div));
-            div.removeEventListener("mouseleave", () => scrollHover(-spanSize, div));
-        }
-    }, [])
-
     return (
         <>
-            <div className={`px-5 py-2 default-shadow rounded-xl w-[90%] flex justify-between
-                ${file.status == "none" ? "" : file.status == "success" ? "bg-green-300" : "bg-red-300"}`}>
-                <div
-                title={file.name}
-                ref={divRef}
-                className="flex p-2 w-[60%] bg-gray-400/20 text-nowrap default-shadow rounded-xl overflow-x-hidden">
-                    {   
-                        file.fileType == "xlsx" && <FaFileExcel color="#00FF7F" stroke="black" strokeWidth={20} size={25} />
-                    }
-                    <span
-                    className="text-center w-full"
-                    ref={spanRef}
-                    >{file.name}</span>
+            <div className={`px-7 min-h-30 max-h-30 default-shadow rounded-xl w-[90%] flex flex-col items-center border-1 border-gray-300
+            transition-all
+            ${file.status == "none" ? "" : file.status == "success" ? "bg-green-200/90" : "bg-red-200/90"}`}>
+                <div className="flex items-center justify-between w-full mt-5">
+                    <div className="flex items-center gap-2" title={file.name}>
+                        {   
+                            file.fileType == "xlsx" ? 
+                            <FaRegFileExcel color="#519E3E" size={iconSize} />
+                            : file.fileType == "csv" &&
+                            <FaRegFileAlt color="#314f1b" size={iconSize} />
+                        }
+                        <div className="flex gap-2 font-medium w-full">
+                            <span className="text-ellipsis text-nowrap overflow-hidden max-w-90">
+                                {file.name}
+                            </span>
+                            <span className={`transition-all ${file.status == "none" ? "opacity-0 scale-0" : "opacity-100 scale-100"}`}>
+                                {
+                                file.status == "success" 
+                                ? <FaCheck color="green" size={iconSize} /> 
+                                : file.status == "error" &&
+                                <FaTimes color="red" size={iconSize} />
+                                }
+                            </span>
+                        </div>
+                    </div>
+                    <div className="flex justify-center items-center">
+                        <span 
+                        onClick={() => deleteFileEntry(file.id, setUploadedFiles)}
+                        className="hover:bg-gray-400 p-2 rounded-xl">   
+                            <FaTrash />
+                        </span>
+                    </div>
                 </div>
-                <div className="flex justify-center items-center">
-                    <span 
-                    onClick={() => deleteFileEntry(file.id, setUploadedFiles)}
-                    className="hover:bg-gray-400 p-2 rounded-xl">   
-                        <FaTrash />
-                    </span>
+                <div className="text-gray-600 w-full text-sm">
+                    {file.msg != undefined && file.msg}
                 </div>
             </div>
         </>
     )
-}
-
-function scrollHover(scrollAmount: number, element: HTMLElement): void{
-    element.scroll({
-        left: scrollAmount,
-        behavior: "smooth",
-    })
 }

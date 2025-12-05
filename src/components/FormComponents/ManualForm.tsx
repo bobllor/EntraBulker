@@ -2,8 +2,11 @@ import { useState, useRef, JSX } from "react";
 import { addEntry, submitManualEntry, validateInput } from "./manualUtils/functions";
 import { formInputs } from "./manualUtils/vars";
 import { useManualData } from "./manualUtils/hooks";
-import { FormStateProps, InputDataProps, SelectStateProps } from "./manualUtils/types";
+import { FormStateProps, InputDataProps, ManualData, SelectStateProps } from "./manualUtils/types";
 import ManualTable from "./ManualTable";
+import { throttler } from "../../utils";
+
+const submitFormThrottle = throttler((data: ManualData[], func: (...any: any) => any) => func(data));
 
 /** Form for manual entries instead of reading an Excel file. */
 export default function ManualForm({formState, select}:{
@@ -34,8 +37,8 @@ export default function ManualForm({formState, select}:{
                         <input name={Object.keys(inputData)[i]}
                         id={obj.name}
                         spellCheck={false}
-                        className={`outline-blue-300 border-1 px-3 py-1 rounded-xl 
-                            ${disableSubmit && 'border-red-300 outline-red-300'}`}
+                        className={`outline-blue-300 px-3 py-1 rounded-xl 
+                            ${disableSubmit && 'border-red-300 outline-red-300'} input-style`}
                         onChange={(e) => validateInput(e, setInputData, setDisableSubmit)}
                         onKeyDown={(e) => e.key == 'Enter' && addEntry(divRef, setManualData)}
                         type="text" />
@@ -59,7 +62,7 @@ export default function ManualForm({formState, select}:{
             <div>
                 <button
                 className={`px-10 py-3 rounded-xl bg-blue-500 text-white hover:bg-blue-400`}
-                onClick={() => submitManualEntry(manualData)}>Submit</button>
+                onClick={() => submitFormThrottle(manualData, submitManualEntry)}>Submit</button>
             </div>
         </>
     )

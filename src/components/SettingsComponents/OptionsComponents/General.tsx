@@ -9,7 +9,7 @@ import { setSetting, setOutputDir, setTextGenerationState, updateFormattingKey }
 import DropDown, { DropDownObject } from "../../ui/DropDown";
 
 const title: string = "General";
-const tooltipText: string = "General settings for the program.";
+const tooltipText: string = "General settings for the program";
 const formatTypeArray: Array<DropDownObject> = [
     {value: "period", text: "Period"},
     {value: "no space", text: "No Space"},

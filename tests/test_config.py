@@ -47,7 +47,7 @@ def test_insert_many_dupe(reader: Reader):
         len(reader.get_content()) == len(DEFAULT_HEADER_MAP) + len(new_data) - 1 \
         and "failed: 1" in res["message"]
 
-def test_validate_config(reader: Reader):
+def test_validate_config(tmp_path: Path, reader: Reader):
     res: dict[str, Any] = reader.insert("tester", "kharazad")
 
     if res["status"] != "success":
@@ -59,7 +59,10 @@ def test_validate_config(reader: Reader):
     if key in reader.get_content():
         raise AssertionError(f"Failed to remove key {key} from the JSON")
     
-    new_reader: Reader = Reader(reader.get_path(), defaults=DEFAULT_HEADER_MAP, update_only=True, is_test=True)
+    new_reader: Reader = Reader(
+        reader.get_path(), defaults=DEFAULT_HEADER_MAP, update_only=True, is_test=True,
+        project_root=tmp_path
+    )
 
     assert key in new_reader.get_content() and key in new_reader.read()
 
@@ -111,7 +114,7 @@ def test_get_search(reader: Reader):
 
     assert value == new_value
 
-def test_validate_reader(settings_reader: Reader):
+def test_validate_reader(tmp_path: Path, settings_reader: Reader):
     invalid_key: str = "invalid key"
 
     settings_reader.insert(invalid_key, "")
@@ -125,7 +128,10 @@ def test_validate_reader(settings_reader: Reader):
     base_content: dict[str, Any] = settings_reader.get_content()
     pre_read: dict[str, Any] = settings_reader.read()
 
-    reader: Reader = Reader(settings_reader.get_path(), defaults=DEFAULT_SETTINGS_MAP, update_only=True, is_test=True)
+    reader: Reader = Reader(
+        settings_reader.get_path(), defaults=DEFAULT_SETTINGS_MAP, update_only=True, is_test=True,
+        project_root=tmp_path
+    )
     
     new_content: dict[str, Any] = reader.get_content()
     post_read: dict[str, Any] = reader.read()

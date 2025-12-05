@@ -112,8 +112,9 @@ export async function setTextGenerationState(state: boolean, setApiSettings: Set
     })
 }
 
-export async function setSetting(key: string, state: any, func: (...any: any[]) => void): Promise<void>{
-    updateSetting(key, state).then((res) => {
+export async function setSetting(key: string, state: any, func: (...any: any[]) => void, 
+    parent: string | undefined = undefined): Promise<void>{
+    updateSetting(key, state, parent).then((res) => {
         if(res.status == "error"){
             toastError(res.message);
             return;

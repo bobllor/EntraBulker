@@ -14,6 +14,17 @@ export async function getReaderContent(reader: ReaderType): Promise<Record<strin
 }
 
 /**
+ * Generates a password. The password can be found in the `content` key of the Response.
+ */
+export async function generatePassword(): Promise<string>{
+    const res: Response = await window.pywebview.api.generate_password();
+
+    const password: string = res["content"] as string;
+
+    return password;
+}
+
+/**
  * Recursively updates a key with a value in a Reader
  * @param reader The Reader type to target
  * @param key The key which value is being updated

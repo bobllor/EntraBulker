@@ -2,6 +2,9 @@ from pathlib import Path
 from .types import HeaderMap, OpcoMap, TemplateMap, APISettings, AzureHeaders
 from typing import Literal
 
+# used as the baseline root path
+PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
+
 # NOTE: these are default mappings used to initialize the data.
 # the data is based off of ServiceNow naming, but the values can be changed.
 

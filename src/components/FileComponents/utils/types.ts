@@ -4,6 +4,7 @@ export type UploadedFilesProps = {
     file: File,
     status: FileStatus,
     fileType: FileType,
+    msg?: string,
 }
 
 export type FileStatus = "error" | "success" | "none"

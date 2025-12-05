@@ -12,6 +12,7 @@ import HeadersMapping from "./components/SettingsComponents/OptionsComponents/He
 import OpcoMapping from "./components/SettingsComponents/OptionsComponents/OpcoMapping";
 import TextForm from "./components/SettingsComponents/OptionsComponents/TextForm";
 import { FaCog } from "react-icons/fa";
+import Password from "./components/SettingsComponents/OptionsComponents/Password";
 
 const fullPageStyle = 'h-screen w-screen flex flex-col justify-center items-center overflow-hidden relative p-3'
 
@@ -47,6 +48,7 @@ export default function App() {
               <Route path="headers-mapping" element={<HeadersMapping />} />
               <Route path="opco-mapping" element={<OpcoMapping />} />
               <Route path="template" element={<TextForm />} />
+              <Route path="password" element={<Password />} />
             </Route>
           </Routes>
         }

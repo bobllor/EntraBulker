@@ -1,14 +1,14 @@
 from core.json_reader import Reader
 from core.parser import Parser
 from core.azure_writer import AzureWriter
-from support.types import GenerateCSVProps, ManualCSVProps, APISettings, Formatting, TemplateMap, Response, HeaderMap
-from support.types import Password
+from support.types import GenerateCSVProps, ManualCSVProps, APISettings, Response, HeaderMap
+from support.types import Password, Formatting, TemplateMap
 from base64 import b64decode
 from io import BytesIO
 from logger import Log
 from pathlib import Path
 from typing import Any, Literal, TypedDict
-from support.vars import DEFAULT_SETTINGS_MAP
+from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT
 import support.utils as utils
 import pandas as pd
 
@@ -26,8 +26,11 @@ AzureFileState = TypedDict(
 
 class API:
     def __init__(self, *, 
-            excel_reader: Reader, settings_reader: Reader,
-            opco_reader: Reader, logger: Log = None
+            excel_reader: Reader, 
+            settings_reader: Reader,
+            opco_reader: Reader, 
+            logger: Log = None,
+            project_root: Path = PROJECT_ROOT,
         ):
         '''API class.
         
@@ -44,6 +47,10 @@ class API:
             
             logger: Log, default None
                 The logger, if None is given then it will be a default logger.
+            
+            project_root: Path, default `PROJECT_ROOT`
+                The project root folder. This is only used for writing to files,
+                it ensures that the files are working in the same file system. 
         '''
         self.excel: Reader = excel_reader
         self.settings: Reader = settings_reader
@@ -55,6 +62,8 @@ class API:
             "opco": self.opco,
             "excel": self.excel,
         }
+
+        self._project_root: Path = project_root
 
         # state tracking for generate_azure_csv
         self._auto_azure_state: AzureFileState = {
@@ -192,7 +201,7 @@ class API:
             format_style=formatters["format_style"],
         )
 
-        writer: AzureWriter = AzureWriter(logger=self.logger)
+        writer: AzureWriter = AzureWriter(logger=self.logger, project_root=self._project_root)
 
         writer.set_full_names(full_names)
         writer.set_names(names)
@@ -298,7 +307,7 @@ class API:
 
             passwords.append(password_res["content"])
 
-        writer: AzureWriter = AzureWriter(logger=self.logger)
+        writer: AzureWriter = AzureWriter(logger=self.logger, project_root=self._project_root)
 
         writer.set_full_names(full_names)
         writer.set_usernames(usernames)

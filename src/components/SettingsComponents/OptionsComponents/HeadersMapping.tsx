@@ -37,7 +37,7 @@ function TextComponent({name, readerType, toolTipText}: TextComponentProps): JSX
                     name={name}
                     ref={inputRef}
                     onChange={e => setInputValue(e.currentTarget.value)}
-                    className="border-1 rounded-xl py-1 px-2 outline-none"
+                    className="input-style rounded-xl py-1 px-2"
                     type="text" />
             </form>
         </>
@@ -59,7 +59,7 @@ const CurrentValue = (currVal: string) => {
 
 const title: string = "Headers";
 const readerType: ReaderType = "excel";
-const tooltipText: string = "Modify the required columns of the Excel file to a differnet value for parsing.";
+const tooltipText: string = "Modify the column names of the Excel file for parsing";
 
 export default function HeadersMapping(): JSX.Element{ 
     const {headers} = useSettingsContext();
@@ -68,13 +68,13 @@ export default function HeadersMapping(): JSX.Element{
         {
             label: "Name", 
             element: <TextComponent name={"name"} readerType={readerType}
-                toolTipText="The header for the name of the user."/>, 
+                toolTipText="The header for the name of the user"/>, 
             optElement: CurrentValue(headers.name),
         },
         {
             label: "Organization", 
             element: <TextComponent name={"opco"} readerType={readerType}
-                toolTipText="The header of the organization for the user."/>,
+                toolTipText="The header of the organization for the user"/>,
             optElement: CurrentValue(headers.opco),
         },
     ]

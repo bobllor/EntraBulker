@@ -11,14 +11,26 @@ import support.utils as utils
 HeadersKey = Literal["name", "username", "password", "first_name", "last_name", "block_sign_in"]
 
 class AzureWriter:
-    def __init__(self, *, logger: Log = None): 
+    def __init__(self, *, logger: Log = None, project_root: Path = None): 
         '''Azure CSV writing class, an empty AzureHeaders is initialized
-        and must be setup prior to running AzureWriter.write().'''
+        and must be setup prior to running AzureWriter.write().
+        
+        Parameters
+        ----------
+            logger: Log, default `None`
+                The Log instance. If none, then it will use a default stdout logger.
+
+            project_root: Path | str, default `None`
+                The path to the project root. This is where the temporary files are written to
+                before being moved into the given path. By default it is None, using the
+                temporary FS as the location.
+        '''
         self._headers_data: dict[HeadersKey, list[str]] = {
             val: [] for val in AZURE_HEADERS.values()
         }
         
         self.logger: Log = logger or Log()
+        self._project_root: Path = project_root
     
     def set_full_names(self, names: list[str]):
         '''Sets the full names for the data.'''
@@ -107,7 +119,7 @@ class AzureWriter:
 
         # azure version must be specified on the first row.
         try:
-            with tf.NamedTemporaryFile("a", delete=False) as file:
+            with tf.NamedTemporaryFile("a", delete=False, dir=self._project_root) as file:
                 self.logger.info(f"Creating temporary file {file.name}")
                 temp_path: Path = Path(file.name)
                 keep_headers: bool = True
@@ -209,7 +221,7 @@ class AzureWriter:
                 res["message"] = text_res["message"] + f" Fails count: {failed_count}"
                 continue
             
-            with tf.NamedTemporaryFile("w", delete=False) as file:
+            with tf.NamedTemporaryFile("w", delete=False, dir=self._project_root) as file:
                 temp_file: Path = Path(file.name)
                 file.write(text_res["content"])
 

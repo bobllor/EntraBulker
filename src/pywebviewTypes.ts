@@ -9,6 +9,7 @@ export type APISettings = {
     flatten_csv: boolean,
     template: TemplateMap,
     format: Formatting,
+    password: Password,
 }
 
 export type TemplateMap = {
@@ -26,6 +27,15 @@ export type Formatting = {
 export type Response = {
     status: "success" | "error",
     message: string,
+    [key: string]: any,
+}
+
+// by default lowercase and numbers are enabled, it will not be
+// available to get modified.
+export type Password = {
+    length: number,
+    use_uppercase: boolean,
+    use_punctuations: boolean,
 }
 
 export type FormatType = "period" | "no space";

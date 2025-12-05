@@ -1,10 +1,10 @@
-import { JSX } from "react";
+import React, { JSX } from "react";
 import { useContext, createContext, useState } from "react";
 import { UploadedFilesProps } from "../components/FileComponents/utils/types";
 
 const FileContext = createContext<FileData>({
     uploadedFiles: [],
-    setUploadedFiles: () => {}
+    setUploadedFiles: () => {},
 });
 
 export const useFileContext = () => useContext(FileContext);
@@ -14,7 +14,7 @@ export function FileProvider({ children }: {children: JSX.Element}): JSX.Element
 
     const data: FileData = {
         uploadedFiles,
-        setUploadedFiles
+        setUploadedFiles,
     }
 
     return (

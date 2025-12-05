@@ -19,22 +19,22 @@ def reader(tmp_path: Path):
     json_name: str = "temp_reader.json"
     json_path: Path = tmp_path / "cfg" / json_name
 
-    yield Reader(json_path, defaults=DEFAULT_HEADER_MAP, is_test=True)
+    yield Reader(json_path, defaults=DEFAULT_HEADER_MAP, is_test=True, project_root=tmp_path)
 
 @pytest.fixture
 def settings_reader(tmp_path: Path):
     json_name: str = "settings_temp_config.json"
     json_path: Path = tmp_path / "cfg" / json_name
 
-    yield Reader(json_path, defaults=DEFAULT_SETTINGS_MAP, update_only=True, is_test=True)
+    yield Reader(json_path, defaults=DEFAULT_SETTINGS_MAP, update_only=True, is_test=True, project_root=tmp_path)
 
 @pytest.fixture(scope="function")
 def api(tmp_path: Path):
     config_path: Path = tmp_path / "config"
 
-    excel: Reader = Reader(config_path / "excel.json", defaults=DEFAULT_HEADER_MAP, is_test=True)
-    settings: Reader = Reader(config_path / "settings.json", defaults=DEFAULT_SETTINGS_MAP, is_test=True)
-    opcos: Reader = Reader(config_path / "opcos.json", defaults=DEFAULT_OPCO_MAP, is_test=True)
+    excel: Reader = Reader(config_path / "excel.json", defaults=DEFAULT_HEADER_MAP, is_test=True, project_root=tmp_path)
+    settings: Reader = Reader(config_path / "settings.json", defaults=DEFAULT_SETTINGS_MAP, is_test=True, project_root=tmp_path)
+    opcos: Reader = Reader(config_path / "opcos.json", defaults=DEFAULT_OPCO_MAP, is_test=True, project_root=tmp_path)
 
     opco_map: dict[str, str] = {
         "default": DEFAULT_OPCO_MAP["default"],
@@ -45,7 +45,7 @@ def api(tmp_path: Path):
 
     opcos.insert_many(opco_map)
 
-    api: API = API(excel_reader=excel, settings_reader=settings, opco_reader=opcos)
+    api: API = API(excel_reader=excel, settings_reader=settings, opco_reader=opcos, project_root=tmp_path)
     api.set_output_dir(tmp_path)
 
     yield api

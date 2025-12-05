@@ -10,7 +10,8 @@ class Reader:
         defaults: dict[str, Any] = None, 
         logger: Log = None,
         update_only: bool = False,
-        is_test: bool = False):
+        is_test: bool = False,
+        project_root: Path = None):
         '''Used to support CRUD operations on JSON data for the program.
         
         Parameters
@@ -31,11 +32,18 @@ class Reader:
             is_test: bool, default False
                 Boolean to indicate if the Reader is a test instance or not. This enables deletion of default keys,
                 but otherwise functions normally.
+            
+            project_root: Path | str, default `None`
+                The path to the project root. This is where the temporary files are written to
+                before being moved into the given path. By default it is None, using the
+                temporary FS as the location.
         '''
         # NOTE: because i code on linux this has to be a string due to a PosixPath issue with pywebview
         self.path: str = str(path)
         self._pathpath: Path = Path(path) if isinstance(path, str) else path
         self._name: str = Path(self.path).name
+
+        self._project_root: Path = project_root
 
         self.logger: Log = logger or Log()
         self.update_only: bool = update_only
@@ -89,7 +97,7 @@ class Reader:
     def write(self, data: dict[str, Any]) -> None:
         '''Writes data to the file.'''
         # only write, append does not work.
-        with tf.NamedTemporaryFile("w", delete=False) as file:
+        with tf.NamedTemporaryFile("w", delete=False, dir=self._project_root) as file:
             temp_file: str = file.name
 
             json.dump(data, file)
@@ -351,7 +359,7 @@ class Reader:
         if not self._pathpath.exists():
             self._pathpath.touch()
             # need to initialize it with a empty data
-            with tf.NamedTemporaryFile("w", delete=False) as file:
+            with tf.NamedTemporaryFile("w", delete=False, dir=self._project_root) as file:
                 file.write("{}")
 
                 os.replace(file.name, self.path)

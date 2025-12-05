@@ -3,6 +3,7 @@ import { useFileContext } from "../../context/FileContext"
 import { onFileChange } from "./utils";
 
 const defaultStyle = "py-5 px-10 rounded-xl bg-blue-500 text-white flex gap-1";
+// used for the upload file at the top
 const filesUploadedStyle = "py-2 px-10 rounded-t-xl bg-blue-500 text-white flex gap-1";
 
 export default function FileUpload({ inputFileRef, hasUploadedFiles = false }){
