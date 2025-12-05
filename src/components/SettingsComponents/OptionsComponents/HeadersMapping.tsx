@@ -44,7 +44,7 @@ function TextComponent({name, readerType, toolTipText}: TextComponentProps): JSX
     )
 }
 
-const CurrentValue = (currVal: string) => {
+function CurrentValue({currVal}: {currVal: string}): JSX.Element{
     const maxLength: number = 20;
     const label: string = "Value: "
 
@@ -69,13 +69,25 @@ export default function HeadersMapping(): JSX.Element{
             label: "Name", 
             element: <TextComponent name={"name"} readerType={readerType}
                 toolTipText="The header for the name of the user"/>, 
-            optElement: CurrentValue(headers.name),
+            optElement: <CurrentValue currVal={headers.name} />,
         },
         {
             label: "Organization", 
             element: <TextComponent name={"opco"} readerType={readerType}
                 toolTipText="The header of the organization for the user"/>,
-            optElement: CurrentValue(headers.opco),
+            optElement: <CurrentValue currVal={headers.opco} />,
+        },
+        {
+            label: "First Name", 
+            element: <TextComponent name={"first_name"} readerType={readerType}
+                toolTipText="The header for the first name of the user"/>,
+            optElement: <CurrentValue currVal={headers.first_name} />,
+        },
+        {
+            label: "Last Name", 
+            element: <TextComponent name={"last_name"} readerType={readerType}
+                toolTipText="The header for the last name of the user"/>,
+            optElement: <CurrentValue currVal={headers.last_name} />,
         },
     ]
 
