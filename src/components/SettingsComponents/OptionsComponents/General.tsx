@@ -43,6 +43,18 @@ export default function General(): JSX.Element{
                 })} />,
         },
         {
+            label: "Generate Text", 
+            element: <SliderButton status={apiSettings.template.enabled}
+                func={(status: boolean) => setTextGenerationState(status, setApiSettings)}/>,
+        },
+        {
+            label: "First/Last Name Headers", 
+            element: <SliderButton status={apiSettings.two_name_column_support}
+                func={(status: boolean) => setSetting("two_name_column_support", !status, () => {
+                    setApiSettings(prev => ({...prev, two_name_column_support: !status}));
+                })}/>,
+        },
+        {
             label: "Format Type", 
             element: <DropDown obj={formatTypeArray} 
                 objId="format_type" defaultValue={apiSettings.format.format_type} 
@@ -58,11 +70,6 @@ export default function General(): JSX.Element{
             element: <DropDown obj={formatCaseArray} 
                 objId="format_case" defaultValue={apiSettings.format.format_case} 
                 func={(key: string, value: any) => {updateFormattingKey(key, value, setApiSettings)}} />
-        },
-        {
-            label: "Generate Text", 
-            element: <SliderButton status={apiSettings.template.enabled}
-                func={(status: boolean) => setTextGenerationState(status, setApiSettings)}/>,
         },
     ]
 
