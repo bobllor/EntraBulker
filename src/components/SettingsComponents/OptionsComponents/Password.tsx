@@ -30,7 +30,7 @@ export default function Password(): JSX.Element{
                     (prev => ({...prev, password: {...prev.password, length: number}}))} />,
         },
         {
-            label: "Include uppercase letters", 
+            label: "Use uppercase letters", 
             element: <SliderButton func={(status: boolean) => {
                 setSetting("use_uppercase", !status, 
                     () => {setApiSettings(prev => ({...prev, password: {...prev.password, use_uppercase: !status}}))},
@@ -40,7 +40,18 @@ export default function Password(): JSX.Element{
             status={apiSettings.password.use_uppercase}/>
         },
         {
-            label: "Include punctuations", 
+            label: "Use numbers",
+            element: <SliderButton func={(status: boolean) => {
+                setSetting("use_numbers", !status,
+                    () => {setApiSettings(prev => ({...prev, password: {...prev.password, use_numbers: !status}}))},
+                    PARENT_KEY
+                );
+            }} 
+            status={apiSettings.password.use_numbers}
+            />
+        },
+        {
+            label: "Use punctuations", 
             element: <SliderButton func={(status: boolean) => {
                 setSetting("use_punctuations", !status, 
                     () => {setApiSettings(prev => ({...prev, password: {...prev.password, use_punctuations: !status}}))},
