@@ -7,8 +7,9 @@ from base64 import b64decode
 from io import BytesIO
 from logger import Log
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, TypedDict, Callable
 from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT
+from copy import deepcopy
 import support.utils as utils
 import pandas as pd
 
@@ -141,14 +142,25 @@ class API:
         settings: APISettings = self.settings.get_content()
 
         self.logger.debug(f"Headers: {excel_columns}")
-        validate_dict: Response = parser.validate(
-            default_headers=self.get_reader_content("excel"),
+        validate_dict: Response = self._validate_df(
+            df,
+            excel_columns,
             two_name_column_support=settings["two_name_column_support"],
         )
 
         if validate_dict["status"] == "error":
             self.logger.error(f"Error validating DataFrame, message: {validate_dict['message']}")
             return validate_dict
+        
+        # creating the name series and adding it into the DataFrame for normalization
+        # only if using two name columns
+        if settings["two_name_column_support"]:
+            full_name_series: pd.Series = parser.create_series(
+                func=self._concat_full_name,
+                args=(parser.df[excel_columns["first_name"]], parser.df[excel_columns["last_name"]])
+            )
+
+            parser.add(excel_columns["name"], full_name_series)
 
         # maybe read this back? for now i want to keep the full name.
         #parser.apply(default_excel_columns["name"], func=utils.format_name)
@@ -203,20 +215,7 @@ class API:
             format_style=formatters["format_style"],
         )
 
-        writer: AzureWriter = AzureWriter(logger=self.logger, project_root=self._project_root)
-
-        writer.set_full_names(full_names)
-        writer.set_names(names)
-        writer.set_block_sign_in(len(names), []) 
-        writer.set_usernames(usernames)
-
-        passwords: list[str] = []
-        for _ in range(len(names)):
-            password_res: Response = self.generate_password()
-
-            passwords.append(password_res["content"])
-        
-        writer.set_passwords(passwords)
+        writer: AzureWriter = self._get_azure_writer(full_names=full_names, usernames=usernames, names=names)
 
         curr_date: str = utils.get_date()
 
@@ -261,6 +260,103 @@ class API:
         self.logger.debug(f"Azure CSV generated: {res}")
 
         return res
+    
+    def _validate_df(self, df: pd.DataFrame, headers: HeaderMap, *, two_name_column_support: bool = False):
+        '''Validate the DataFrame and its headers. It will return a Response indicating an
+        error/success and a message with the error if applicable.
+        
+        Parameters
+        ----------
+            df: DataFrame
+                The DataFrame.
+
+            headers: dict[str, str]
+                Dictionary that maps internal variable names to user-defined names. The keys
+                are the internal names, the values are user-defined names. Used to validate
+                column headers.
+            
+            two_name_column_support: bool, default `False`
+                A boolean used to handle the column for the client name being split
+                into *two columns* (`First name`/`Last name`) instead of a single `Full name` column.
+                By default it is `False`. If true, then it will create a new column `Full name` and remove
+                the two columns for normalization.
+        '''
+        headers_copy: HeaderMap = deepcopy(headers)
+
+        # must remove otherwise column check will fail
+        if not two_name_column_support:
+            del headers_copy["first_name"]
+            del headers_copy["last_name"]
+        else:
+            # this will be added back in the check_df_columns step
+            # after combining the first_name and last_name columns.
+            del headers_copy["name"]
+
+        # check_df_columns must be the last number in the dict
+        # any other functions can be in any order
+        func_dict: dict[int, dict[str, Any]] = {
+            0: {"func": self._check_duplicate_headers, "args": [headers_copy]},
+            1: {"func": self._check_duplicate_columns, "args": [df]},
+            2: {"func": self._check_df_columns, "args": [df, headers_copy]},
+        }
+
+        res: Response = utils.generate_response(message="")
+
+        for i in range(len(func_dict)):
+            func: Callable[[Any], Response] = func_dict[i]["func"]
+            args: tuple[Any] = func_dict[i]["args"]
+
+            if args is not None:
+                res = func(*args)
+            else:
+                res = func()
+
+            if res["status"] == "error":
+                return res
+
+        res["message"] = "Successful validation"
+
+        return res
+    
+    def _concat_full_name(self, first_series: pd.Series, last_series: pd.Series) -> pd.Series:
+        '''Concatenates two name Series into a full name Series. This is used for two column support.
+        
+        If there are empty values in either series or if a non-string is read, then the row will be empty. 
+        This is intended to be used to drop the row.
+
+        Parameters
+        ----------
+            first_series: pd.Series[str]
+                The Series representing the first name column.
+
+            last_series: pd.Series[str]
+                The Series representing the last name column.
+        '''
+        name_func = lambda x: "" if not isinstance(x, str) else x.strip()
+
+        first_series = first_series.fillna("").apply(name_func)
+        last_series = last_series.fillna("").apply(name_func)
+
+        first_list: list[str] = first_series.to_list()
+        last_list: list[str] = last_series.to_list()
+
+        self.logger.debug(f"Concatenating to full name, first name data: {first_list} | last name data: {last_list}")
+
+        full_names: list[str] = []
+
+        for i, f_name in enumerate(first_list):
+            l_name: str = last_list[i]
+
+            if f_name == "" or l_name == "":
+                full_names.append("")
+            else:
+                full_names.append(f_name + " " + l_name)
+        
+        full_series: pd.Series = pd.Series(full_names)
+
+        self.logger.debug(f"Concatenated names: {full_names}")
+
+        return full_series
     
     def generate_manual_csv(self, content: list[ManualCSVProps]) -> dict[str, str]:
         '''Generates the Azure CSV file for bulk accounts through the manual input.
@@ -345,6 +441,27 @@ class API:
         self.logger.debug(f"Response: {res}")
 
         return res
+    
+    def _get_azure_writer(self, *,
+        full_names: list[str],
+        usernames: list[str],
+        names: list[str]) -> AzureWriter:
+        '''Creates an AzureWriter with the data set for writing.'''
+        writer: AzureWriter = AzureWriter(logger=self.logger, project_root=self._project_root)
+
+        passwords: list[str] = []
+        for _ in range(len(names)):
+            password_res: Response = self.generate_password()
+
+            passwords.append(password_res["content"])
+
+        writer.set_full_names(full_names)
+        writer.set_names(names)
+        writer.set_usernames(usernames)
+        writer.set_block_sign_in(len(full_names), [])
+        writer.set_passwords(passwords)
+
+        return writer
 
     def _generate_template(self, text: str, writer: AzureWriter, file_name: str) -> Response:
         res: Response = utils.generate_response(message="")
@@ -509,3 +626,69 @@ class API:
         res["content"] = password
 
         return res
+
+    def _check_duplicate_headers(self, headers: HeaderMap) -> Response:
+        '''Checks the given HeaderMap for duplicate values. The HeaderMap will be reversed to
+        value-key in order to validate and get the correct data from the DataFrame.
+        
+        If duplicate values are found, then an error Response will be returned.
+        '''
+        res: Response = utils.generate_response(message="Successful Headers validation")
+        seen: set[str] = set()
+
+        for val in headers.values():
+            seen.add(val)
+
+        if len(seen) != len(headers):
+            value_str: str = "value" if len(seen) == 1 else "values"
+            res["message"] = f'Duplicate {value_str} "{", ".join([val for val in seen])}" found' \
+                ', cannot have duplicate values: header values must be updated'
+            res["status"] = "error"
+        
+        return res
+    
+    def _check_duplicate_columns(self, df: pd.DataFrame) -> Response:
+        '''Checks the DataFrame of the file for duplicate column names. This ensures that there will not be multiple
+        same valued columns in a given file.
+
+        It returns an Response with an error if found.
+        '''
+        seen_values: set[str] = set()
+        duplicates: list[str] = []
+
+        for val in df.columns:
+            if val in seen_values:
+                duplicates.append(val)
+
+            seen_values.add(val)
+        
+        if len(duplicates) != 0:
+            col_str: str = "columns found in the file" if len(duplicates) != 1 else "column found in the file"
+            return utils.generate_response("error", message=f"Duplicate {col_str}: {', '.join(duplicates)}")
+        
+        return utils.generate_response(message="No duplicates found in the excel")
+
+    def _check_df_columns(self, df: pd.DataFrame, headers: dict[str, str]) -> Response:
+        '''Checks the DataFrame columns to the reversed column map.'''
+        # reverse to check the user defined names
+        rev_column_map: dict = {v: k for k, v in headers.items()}
+
+        found: set[str]= set()
+
+        for col in df.columns:
+            low_col: str = col.lower()
+
+            if len(found) == len(rev_column_map):
+                break
+
+            if low_col in rev_column_map:
+                found.add(low_col)
+
+        if len(found) != len(headers):
+            missing_columns: list[str] = [key for key in rev_column_map if key not in found]
+
+            column_str: str = "column header" if len(missing_columns) == 1 else "column headers"
+
+            return utils.generate_response(status='error', message=f'File is missing {column_str}: {", ".join(missing_columns)}')
+
+        return utils.generate_response(status='success', message=f"Found columns {','.join(found)}")
