@@ -24,6 +24,8 @@ AZURE_HEADERS: AzureHeaders = {
 DEFAULT_HEADER_MAP: HeaderMap = {
     'opco': 'operating company',
     'name': 'full name',
+    'first_name': 'first name',
+    'last_name': 'last name',
 }
 
 # no @ is used here because it is added in to the username generator
@@ -34,6 +36,7 @@ DEFAULT_OPCO_MAP: OpcoMap = {
 DEFAULT_SETTINGS_MAP: APISettings = {
     "output_dir": str(Path().home()),
     "flatten_csv": False,
+    "two_name_column_support": False,
     "template": {
         "enabled": False,
         "text": "",

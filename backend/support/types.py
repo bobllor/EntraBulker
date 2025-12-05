@@ -20,6 +20,8 @@ class AzureHeaders(TypedDict):
 class HeaderMap(TypedDict):
     opco: str
     name: str
+    first_name: str
+    last_name: str
 
 class OpcoMap(TypedDict):
     default: str
@@ -45,6 +47,7 @@ class Password(TypedDict):
 class APISettings(TypedDict):
     output_dir: str
     flatten_csv: bool
+    two_name_column_support: bool
     template: TemplateMap
     format: Formatting
     password: Password
