@@ -13,6 +13,13 @@ export type APISettings = {
     password: Password,
 }
 
+export type HeaderMap = {
+    opco: string,
+    name: string,
+    first_name: string,
+    last_name: string,
+}
+
 export type TemplateMap = {
     enabled: boolean,
     text: string,
