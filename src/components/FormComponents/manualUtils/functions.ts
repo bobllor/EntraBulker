@@ -67,22 +67,11 @@ export async function addEntry(
  * @param setDisableSubmit The react dispatch to disable the submit button 
  */
 export function validateInput(event: React.ChangeEvent<HTMLInputElement>,
-    setInputData: React.Dispatch<React.SetStateAction<InputDataProps>>, 
-    setDisableSubmit: React.Dispatch<React.SetStateAction<boolean>>){
+    setInputData: React.Dispatch<React.SetStateAction<InputDataProps>>){
         const elementName: string = event.currentTarget.name;
         const currValue: string = event.currentTarget.value;
 
         setInputData(prev => {
-            // retrieves the opposite input key from the current one
-            const otherKey: string = Object.keys(prev).filter((key) => key != elementName)[0];
-            const otherVal: string = prev[otherKey as keyof InputDataProps];
-            
-            if(otherVal == currValue && otherVal != '' && currValue != ''){
-                setDisableSubmit(true);
-            }else{
-                setDisableSubmit(false);
-            }
-
             return {...prev, [elementName]: currValue}
         })
 }
