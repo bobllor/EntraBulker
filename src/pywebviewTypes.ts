@@ -7,6 +7,7 @@ The related types found in both files must be 1:1.
 export type APISettings = {
     output_dir: string,
     flatten_csv: boolean,
+    two_name_column_support: boolean,
     template: TemplateMap,
     format: Formatting,
     password: Password,
@@ -15,7 +16,6 @@ export type APISettings = {
 export type TemplateMap = {
     enabled: boolean,
     text: string,
-    words_to_replace: string,
 }
 
 export type Formatting = {
@@ -36,6 +36,7 @@ export type Password = {
     length: number,
     use_uppercase: boolean,
     use_punctuations: boolean,
+    use_numbers: boolean,
 }
 
 export type FormatType = "period" | "no space";
