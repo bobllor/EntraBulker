@@ -31,7 +31,6 @@ class OpcoMap(TypedDict):
 class TemplateMap(TypedDict):
     enabled: bool
     text: str
-    words_to_replace: str
 
 class Formatting(TypedDict):
     format_type: Literal["period", "no space"]
@@ -42,6 +41,7 @@ class Password(TypedDict):
     length: int
     use_uppercase: bool
     use_punctuations: bool
+    use_numbers: bool
 
 # NOTE: this will need to be updated in types.ts as well.
 class APISettings(TypedDict):

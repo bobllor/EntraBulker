@@ -231,7 +231,10 @@ def get_date(date_format: str = '%Y-%m-%dT%H%M%S') -> str:
 
     return date
 
-def generate_password(max_length: int = 16, *, use_punctuations: bool = False, use_uppercase_letters: bool = False) -> str:
+def generate_password(max_length: int = 16, *, 
+    use_punctuations: bool = False, 
+    use_uppercase_letters: bool = False,
+    use_numbers: bool = False) -> str:
     '''Random password generation. The password will always have a minimum of one upper, one lower, and one special character.
     
     Parameters
@@ -244,6 +247,9 @@ def generate_password(max_length: int = 16, *, use_punctuations: bool = False, u
 
         use_uppercase_letters: bool, default `False`
             If true, then uppercase letters are used in the password.
+        
+        use_numbers: bool, default `False`
+            If true, then numbers are used in the password.
     '''
     # FIXME: add a profanity checker?
     import random, string
@@ -259,12 +265,14 @@ def generate_password(max_length: int = 16, *, use_punctuations: bool = False, u
     # ' - % $ are not allowed
     punctuations: string = ''.join([c for c in string.punctuation if c not in '-%\''])
 
-    valid_chars: string = lower + numbers
+    valid_chars: string = lower
 
     if use_punctuations:
         valid_chars += punctuations
     if use_uppercase_letters:
         valid_chars += upper
+    if use_numbers:
+        valid_chars += numbers
 
     # need at least one upper, lower, and special
     for seq in [upper, lower, punctuations]:

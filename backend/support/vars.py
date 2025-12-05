@@ -40,7 +40,6 @@ DEFAULT_SETTINGS_MAP: APISettings = {
     "template": {
         "enabled": False,
         "text": "",
-        "words_to_replace": "",
     },
     "format": {
         "format_case": "title",
@@ -51,5 +50,6 @@ DEFAULT_SETTINGS_MAP: APISettings = {
         "length": 16,
         "use_uppercase": False,
         "use_punctuations": False,
+        "use_numbers": False,
     },
 }
