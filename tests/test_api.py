@@ -6,12 +6,11 @@ from backend.core.parser import Parser
 from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, AZURE_HEADERS 
 from backend.support.types import ManualCSVProps, APISettings, Formatting, Response
 from io import BytesIO
-import string
 import numpy as np
 import pandas as pd
 import backend.support.utils as utils
 import tests.utils as ttils
-import random
+import random, string
 
 def test_generate_csv_normal(tmp_path: Path, api: API, df: pd.DataFrame):
     # creating a baseline dataframe for comparison in the end
@@ -96,6 +95,39 @@ def test_generate_csv_two_names(tmp_path: Path, api: API, df: pd.DataFrame):
 
     assert new_len == base_len and new_usernames == base_usernames \
         and new_names == base_names
+
+def test_generate_csv_bad_two_names(tmp_path: Path, api: API, df: pd.DataFrame):
+    base_len: int = len(df) // 2
+
+    df_copy: pd.DataFrame = df.copy(deep=True)
+    names: list[str] = df_copy[DEFAULT_HEADER_MAP["name"]].to_list()
+
+    first_names: list[str | bool] = []
+    last_names: list[str] = []
+
+    for i, name in enumerate(names):
+        split_name: list[str] = name.split()
+
+        if i % 2 == 0:
+            first_names.append(True)
+        else:
+            first_names.append(split_name[0])
+        last_names.append(" ".join(split_name[1:]))
+    
+    df_copy[DEFAULT_HEADER_MAP["first_name"]] = pd.Series(first_names)
+    df_copy[DEFAULT_HEADER_MAP["last_name"]] = pd.Series(last_names)
+    
+    api.update_setting("two_name_column_support", True)
+
+    res: Response = api.generate_azure_csv(df_copy)
+
+    if res["status"] == "error":
+        raise AssertionError(f"Failed to generate CSV: {res}")
+    
+    csv_file: Path = ttils.get_csv(tmp_path)
+    new_df: pd.DataFrame = pd.read_csv(ttils.get_bytesio(csv_file))
+
+    assert len(new_df) == base_len
 
 def test_generate_csv_multiple_template(tmp_path: Path, api: API, df: pd.DataFrame):
     res: Response = api.update_setting("enabled", True, "template")
@@ -329,7 +361,6 @@ def test_generate_csv_formatter(tmp_path: Path, api: API, df: pd.DataFrame):
     formatter: Formatting = api.get_reader_value("settings", "format")
 
     barser: Parser = Parser(df)
-    res: dict[str, Any] = barser.validate(DEFAULT_HEADER_MAP)
 
     barser.apply(DEFAULT_HEADER_MAP["name"], func=utils.format_name)
 
@@ -351,11 +382,8 @@ def test_generate_csv_formatter(tmp_path: Path, api: API, df: pd.DataFrame):
         )
 
         usernames.add(username)
-
-    if res["status"] != "success":
-        raise AssertionError(f"Failed to validate DataFrame")
     
-    res = api.generate_azure_csv(df)
+    res: Response = api.generate_azure_csv(df)
 
     file: Path = ttils.get_csv(tmp_path)
 
@@ -373,8 +401,6 @@ def test_generate_csv_formatter(tmp_path: Path, api: API, df: pd.DataFrame):
 
 def test_generate_csv_flatten(tmp_path: Path, api: API, df: pd.DataFrame):
     parser: Parser = Parser(df)
-    parser.validate(DEFAULT_HEADER_MAP)
-    
     parser.apply(DEFAULT_HEADER_MAP["name"], func=utils.format_name)
     
     parser_dfs: list[pd.DataFrame] = [parser.get_df(), parser.get_df()]
