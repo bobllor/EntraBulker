@@ -33,14 +33,14 @@ export default function ManualTable({manualData, setManualData, select}:
                             id={obj.name! + obj.id}
                             data={obj.name!}
                             maxLength={16}
-                            edit={{editCell: editCell, setEditCell: setEditCell}} 
+                            edit={{editCell: editCell, setEditCell: setEditCell, checkEmpty: true}} 
                             manData={{manualData: manualData, setManualData: setManualData}}
                             select={{selectedCell: select.selectedCell, setSelectedCell: select.setSelectedCell}} />
                             <TableData 
                             id={obj.opco! + obj.id}
                             data={obj.opco!}
                             maxLength={20}
-                            edit={{editCell: editCell, setEditCell: setEditCell}} 
+                            edit={{editCell: editCell, setEditCell: setEditCell, checkEmpty: false}} 
                             manData={{manualData: manualData, setManualData: setManualData}}
                             select={{selectedCell: select.selectedCell, setSelectedCell: select.setSelectedCell}} />
                             <td

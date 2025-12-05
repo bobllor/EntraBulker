@@ -16,7 +16,9 @@ export default function TableData({id, data, edit, maxLength, manData, select}: 
             title={data.length > maxLength ? data : ""}>
                 {data}
                 {id + data == edit.editCell && 
-                <EditCell id={id} stringVal={data} setEditCell={edit.setEditCell} manData={manData}/>}
+                <EditCell id={id} stringVal={data} setEditCell={edit.setEditCell} manData={manData} 
+                    checkEmpty={edit.checkEmpty ? edit.checkEmpty : false}/>
+                }
             </td>
         </>
     )
@@ -28,7 +30,8 @@ type TableDataProps = {
     maxLength: number,
     edit: {
         editCell: string,
-        setEditCell: React.Dispatch<React.SetStateAction<string>>
+        setEditCell: React.Dispatch<React.SetStateAction<string>>,
+        checkEmpty?: boolean,
     },
     manData: {
         manualData: Array<ManualData>

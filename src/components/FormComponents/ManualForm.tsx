@@ -21,7 +21,6 @@ export default function ManualForm({formState, select}:{
     const [inputData, setInputData] = useState<InputDataProps>(
         {nameValue: '', opcoValue: ''}
     );
-    const [disableSubmit, setDisableSubmit] = useState<boolean>(false);
 
     return (
         <>
@@ -37,16 +36,14 @@ export default function ManualForm({formState, select}:{
                         <input name={Object.keys(inputData)[i]}
                         id={obj.name}
                         spellCheck={false}
-                        className={`outline-blue-300 px-3 py-1 rounded-xl 
-                            ${disableSubmit && 'border-red-300 outline-red-300'} input-style`}
-                        onChange={(e) => validateInput(e, setInputData, setDisableSubmit)}
+                        className={`outline-blue-300 px-3 py-1 rounded-xl input-style`}
+                        onChange={(e) => validateInput(e, setInputData)}
                         onKeyDown={(e) => e.key == 'Enter' && addEntry(divRef, setManualData)}
                         type="text" />
                     </div>
                 ))}
                 <button
                 className={`px-5 py-3 rounded-xl bg-blue-500 text-white hover:bg-blue-400`}
-                disabled={disableSubmit}
                 onClick={() => addEntry(divRef, setManualData)}>Add Entry</button>
             </div>
             <div
