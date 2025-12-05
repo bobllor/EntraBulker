@@ -12,7 +12,7 @@ export default function Navigation({
     useDismissRoute(closeRef, setShowSetting);
 
     return (
-        <div className={`h-full w-[33%] bg-gray-500/60 absolute 
+        <div className={`h-full w-[33%] bg-gray-200 absolute 
         settings-left-panel p-2`}>
             <div className="flex items-center justify-start px-1">
                 <div className="hover:bg-gray-500 rounded-xl p-1 mb-1"
