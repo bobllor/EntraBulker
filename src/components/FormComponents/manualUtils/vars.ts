@@ -5,5 +5,3 @@ export const formInputs: Array<{name: string, label: string}> = [
     {name: 'name-input', label: nameLabel},
     {name: 'opco-input', label: opcoLabel},
 ]
-
-export const tableHeaders: Array<string> = ['Name', 'Operating Company'];
