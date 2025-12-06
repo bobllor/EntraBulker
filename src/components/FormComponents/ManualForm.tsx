@@ -2,17 +2,14 @@ import { useState, useRef, JSX } from "react";
 import { addEntry, submitManualEntry, validateInput } from "./manualUtils/functions";
 import { formInputs } from "./manualUtils/vars";
 import { useManualData } from "./manualUtils/hooks";
-import { FormStateProps, InputDataProps, ManualData, SelectStateProps } from "./manualUtils/types";
+import { EditCellProps, FormStateProps, InputDataProps, ManualData, SelectStateProps } from "./manualUtils/types";
 import ManualTable from "./ManualTable";
 import { throttler } from "../../utils";
 
 const submitFormThrottle = throttler((data: ManualData[], func: (...any: any) => any) => func(data));
 
 /** Form for manual entries instead of reading an Excel file. */
-export default function ManualForm({formState, select}:{
-        formState: FormStateProps,
-        select: SelectStateProps}
-    ): JSX.Element{
+export default function ManualForm({formState, selectState, editCellState}: ManualFormProps): JSX.Element{
     const divRef: React.RefObject<HTMLDivElement|null> = useRef(null);
 
     const [manualData, setManualData] = useManualData(formState);
@@ -47,9 +44,10 @@ export default function ManualForm({formState, select}:{
                 onClick={() => addEntry(divRef, setManualData)}>Add Entry</button>
             </div>
             <div
-            className="relative overflow-y-scroll min-w-150 max-w-150 min-h-80 max-h-80">
+            className="relative overflow-y-scroll min-w-150 max-w-150 min-h-80 max-h-80 overflow-x-hidden">
                 {manualData.length > 0 ? 
-                <ManualTable manualData={manualData} setManualData={setManualData} select={select}/> :
+                <ManualTable manualData={manualData} setManualData={setManualData} select={selectState}
+                 edit={editCellState}/> :
                 <div
                 className="w-full flex justify-center items-center bg-gray-200 px-4 py-1 uppercase">
                     <p><strong>No entries entered</strong></p>
@@ -63,4 +61,10 @@ export default function ManualForm({formState, select}:{
             </div>
         </>
     )
+}
+
+type ManualFormProps = {
+    formState: FormStateProps,
+    selectState: SelectStateProps,
+    editCellState: EditCellProps,
 }
