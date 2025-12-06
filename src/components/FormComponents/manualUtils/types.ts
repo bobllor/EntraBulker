@@ -1,3 +1,5 @@
+import React from "react"
+
 export type ManualData = {
     id?: string,
     name?: string, 
@@ -17,4 +19,9 @@ export type InputDataProps = {
 export type SelectStateProps = {
     selectedCell: string,
     setSelectedCell: React.Dispatch<React.SetStateAction<string>>
+}
+
+export type EditCellProps = {
+    editCell: string,
+    setEditCell: React.Dispatch<React.SetStateAction<string>>,
 }
