@@ -4,6 +4,7 @@ import { ManualData } from "./types";
 import { formInputs } from "./vars";
 import { toastError } from "../../../toastUtils";
 import "../../../pywebview";
+import { generateId } from "../../../utils";
 
 export async function addEntry(
     divRef: React.RefObject<HTMLDivElement|null>,
@@ -53,7 +54,7 @@ export async function addEntry(
 
     nameInput?.focus();
     
-    const id: string = Date.now().toString();
+    const id: string = generateId();
     objTemp['id'] = id;
 
     setData(prev => [...prev, objTemp]);
