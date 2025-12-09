@@ -1,6 +1,12 @@
 from pathlib import Path
-from .types import HeaderMap, OpcoMap, TemplateMap, APISettings, AzureHeaders
+from .types import HeaderMap, OpcoMap, TemplateMap, APISettings, AzureHeaders, Metadata
 from typing import Literal
+
+VERSION: str = "v1.0.0"
+
+META: Metadata = {
+    "version": VERSION,
+}
 
 # used as the baseline root path
 PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
