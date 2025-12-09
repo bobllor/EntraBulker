@@ -5,6 +5,7 @@ import { useManualData } from "./manualUtils/hooks";
 import { EditCellProps, FormStateProps, InputDataProps, ManualData, SelectStateProps } from "./manualUtils/types";
 import ManualTable from "./ManualTable";
 import { throttler } from "../../utils";
+import Button from "../ui/Button";
 
 const submitFormThrottle = throttler((data: ManualData[], func: (...any: any) => any) => func(data));
 
@@ -44,7 +45,7 @@ export default function ManualForm({formState, selectState, editCellState}: Manu
                 onClick={() => addEntry(divRef, setManualData)}>Add Entry</button>
             </div>
             <div
-            className="relative overflow-y-scroll min-w-150 max-w-150 min-h-80 max-h-80 overflow-x-hidden">
+            className="relative overflow-y-scroll min-w-200 max-w-200 min-h-90 max-h-90 overflow-x-hidden">
                 {manualData.length > 0 ? 
                 <ManualTable manualData={manualData} setManualData={setManualData} select={selectState}
                  edit={editCellState}/> :
@@ -55,9 +56,8 @@ export default function ManualForm({formState, selectState, editCellState}: Manu
                 }
             </div>
             <div>
-                <button
-                className={`px-10 py-3 rounded-xl bg-blue-500 text-white hover:bg-blue-400`}
-                onClick={() => submitFormThrottle(manualData, submitManualEntry)}>Submit</button>
+                <Button type="submit" paddingX={10} paddingY={3} 
+                func={() => submitFormThrottle(manualData, submitManualEntry)} text="Submit"/>
             </div>
         </>
     )

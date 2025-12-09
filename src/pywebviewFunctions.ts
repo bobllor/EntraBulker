@@ -1,6 +1,6 @@
 import { ReaderType } from "./components/SettingsComponents/types";
 import "./pywebview";
-import { Response } from "./pywebviewTypes";
+import { Metadata, Response } from "./pywebviewTypes";
 
 /**
  * Retrieves the contents of the reader.
@@ -22,6 +22,16 @@ export async function generatePassword(): Promise<string>{
     const password: string = res["content"] as string;
 
     return password;
+}
+
+/**
+ * Retrieves the metadata of the program.
+ * @returns Metadata object
+ */
+export async function getMetadata(): Promise<Metadata>{
+    const meta: Metadata = await window.pywebview.api.get_metadata();
+
+    return meta;
 }
 
 /**

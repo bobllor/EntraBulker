@@ -46,6 +46,10 @@ export type Password = {
     use_numbers: boolean,
 }
 
+export type Metadata = {
+    version: string,
+}
+
 export type FormatType = "period" | "no space";
 export type FormatCase = "title" | "upper" | "lower";
 export type FormatStyle = "first last" | "f last" | "first l";

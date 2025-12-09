@@ -14,6 +14,7 @@ import TextForm from "./components/SettingsComponents/OptionsComponents/TextForm
 import { FaCog } from "react-icons/fa";
 import Password from "./components/SettingsComponents/OptionsComponents/Password";
 import { useDisableShortcuts } from "./hooks";
+import { useMetaContext } from "./context/MetaContext";
 
 const fullPageStyle = 'h-screen w-screen flex flex-col justify-center items-center overflow-hidden relative p-3'
 
@@ -27,6 +28,7 @@ export default function App() {
   const navigate = useNavigate();
 
   const { showModal } = useModalContext();
+  const { version } = useMetaContext();
 
   useEffect(() => {
     if(location.pathname.includes("settings")){
@@ -74,6 +76,9 @@ export default function App() {
               formState={{state: formEdited, func: setFormEdited}}/>} />
             <Route path="settings" element={<Settings setShowSetting={setShowSetting} />} />
         </Routes>
+        <div className="">
+          {version}
+        </div>
       </div>
     </>
   )

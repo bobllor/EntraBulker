@@ -1,8 +1,8 @@
 import React, { useEffect } from "react"
 import "../pywebview";
-import { APISettings } from "../pywebviewTypes";
+import { APISettings, Metadata } from "../pywebviewTypes";
 import { HeaderData } from "./SettingsContext";
-import { getReaderContent } from "../pywebviewFunctions";
+import { getMetadata, getReaderContent } from "../pywebviewFunctions";
 import { ReaderType } from "../components/SettingsComponents/types";
 
 /**
@@ -60,6 +60,14 @@ export function useUpdateHeaders(updateHeaders: boolean, setUpdateHeaders:
         }, [updateHeaders])
 }
 
+export function useInitMeta(setVersion: Meta["setVersion"]){
+    useEffect(() => {
+        getMetadata().then((meta) => {
+            setVersion(meta.version);
+        });
+    }, [])
+}
+
 type SettingsProps = {
     setApiSettings: React.Dispatch<React.SetStateAction<APISettings>>,
     updateSettings: boolean,
@@ -71,4 +79,8 @@ type Headers = {
     setHeaders: React.Dispatch<React.SetStateAction<HeaderData>>,
     updateHeaders: boolean,
     setUpdateHeaders: React.Dispatch<React.SetStateAction<boolean>>,
+}
+
+type Meta = {
+    setVersion: React.Dispatch<React.SetStateAction<string>>,
 }
