@@ -2,13 +2,13 @@ from core.json_reader import Reader
 from core.parser import Parser
 from core.azure_writer import AzureWriter
 from support.types import GenerateCSVProps, ManualCSVProps, APISettings, Response, HeaderMap
-from support.types import Password, Formatting, TemplateMap
+from support.types import Password, Formatting, TemplateMap, Metadata
 from base64 import b64decode
 from io import BytesIO
 from logger import Log
 from pathlib import Path
 from typing import Any, Literal, TypedDict, Callable
-from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT
+from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META
 from copy import deepcopy
 import support.utils as utils
 import pandas as pd
@@ -691,3 +691,7 @@ class API:
             return utils.generate_response(status='error', message=f'File is missing {column_str}: {", ".join(missing_columns)}')
 
         return utils.generate_response(status='success', message=f"Found columns {','.join(found)}")
+    
+    def get_metadata(self) -> Metadata:
+        '''Gets the metadata in a dictionary response.'''
+        return META
