@@ -430,7 +430,7 @@ class Reader:
 
         for key, val in reader_data.items():
             if key not in default_data:
-                self.logger.info(f"Found invalid key {key}")
+                self.logger.warning(f"Removing invalid key {key}")
 
                 self._update_reader_flag = True
                 continue
@@ -441,10 +441,19 @@ class Reader:
 
                 new_data[key] = default_data[key]
                 self.logger.info(f"Corrected key {key}")
+                self._update_reader_flag = True
             else:
                 new_data[key] = val
 
             if isinstance(val, dict):
+                # checking if values in default data exist in the reader_data
+                for d_key, d_val in default_data[key].items():
+                    if d_key not in val:
+                        self.logger.warning(f"Added missing key {d_key}")
+
+                        new_data[key][d_key] = d_val
+                        self._update_reader_flag = True
+
                 temp_data: dict[str, Any] = self._validate_unupdatable_defaults(val, default_data[key])
 
                 new_data[key] = temp_data
