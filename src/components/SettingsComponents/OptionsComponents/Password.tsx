@@ -27,7 +27,8 @@ export default function Password(): JSX.Element{
             element: <SliderRange targetKey="length" baseValue={apiSettings.password.length} 
                 parent="password" 
                 updaterFunc={(number: number) => setApiSettings
-                    (prev => ({...prev, password: {...prev.password, length: number}}))} />,
+                    (prev => ({...prev, password: {...prev.password, length: number}}))} 
+                timeout={250} />,
         },
         {
             label: "Use uppercase letters", 

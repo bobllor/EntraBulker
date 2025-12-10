@@ -1,11 +1,6 @@
-import { JSX, useState } from "react";
+import { JSX, useRef, useState } from "react";
 import { updateSetting } from "../../pywebviewFunctions";
 import { debouncer } from "../../utils";
-
-const sliderDebouncer = debouncer(
-    (key: string, value: any, updaterFunc: (number: number) => any, parent?: string) => {
-        updateSetting(key, value, parent).then(() => updaterFunc(value));
-    });
 
 const minLength: number = 7;
 const maxLength: number = 30;
@@ -15,9 +10,13 @@ const maxLength: number = 30;
  * 
  * The updaterFunc is required to update the state of the Settings. This is expected to take a number argument.
  */
-export default function SliderRange({targetKey, baseValue, parent = undefined, updaterFunc}: SliderProps): JSX.Element{
+export default function SliderRange({targetKey, baseValue, parent = undefined, updaterFunc, timeout = 500}: SliderProps): JSX.Element{
     const [sliderValue, setSliderValue] = useState<number>(baseValue);
 
+    const sliderDebouncer = useRef(debouncer(
+        (key: string, value: any, updaterFunc: (number: number) => any, parent?: string) => {
+            updateSetting(key, value, parent).then(() => updaterFunc(value));
+        }, timeout));
 
     return (
         <div className="flex items-center gap-2">
@@ -28,7 +27,7 @@ export default function SliderRange({targetKey, baseValue, parent = undefined, u
                 const value: number = Number(e.currentTarget.value);
                 setSliderValue(Number(e.currentTarget.value));
 
-                sliderDebouncer(targetKey, value, updaterFunc, parent);
+                sliderDebouncer.current(targetKey, value, updaterFunc, parent);
             }}
             min={minLength}
             max={maxLength}
@@ -42,4 +41,5 @@ export type SliderProps = {
     baseValue: number,
     updaterFunc: (number: number) => any,
     parent?: string,
+    timeout?: number,
 }
