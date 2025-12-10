@@ -2,7 +2,7 @@ import React, { Dispatch } from "react";
 import { InputDataProps } from "./types";
 import { ManualData } from "./types";
 import { formInputs } from "./vars";
-import { toastError } from "../../../toastUtils";
+import { toastError, toastSuccess } from "../../../toastUtils";
 import "../../../pywebview";
 import { generateId } from "../../../utils";
 
@@ -86,6 +86,8 @@ export async function submitManualEntry(manualData: Array<ManualData>): Promise<
     let res: {status: string, message: string} = await window.pywebview.api.generate_manual_csv(manualData);
 
     if(res.status == 'success'){
+        toastSuccess(res.message);
+    }else{
         toastError(res.message);
     }
 }
