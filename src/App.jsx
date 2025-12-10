@@ -76,7 +76,7 @@ export default function App() {
               formState={{state: formEdited, func: setFormEdited}}/>} />
             <Route path="settings" element={<Settings setShowSetting={setShowSetting} />} />
         </Routes>
-        <div className="">
+        <div className="w-full flex justify-end items-center px-5">
           {version}
         </div>
       </div>
