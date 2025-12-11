@@ -1,0 +1,44 @@
+@import "tailwindcss";
+@import "./styles/settings.css";
+@import "./styles/animations.css";
+
+*{
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+:root {
+    --default-shadow: 0 3px 8px 1px rgba(0,0,0,.15);
+}
+
+.default-shadow{
+    box-shadow: var(--default-shadow);
+}
+
+.input-style{
+    box-shadow: var(--default-shadow);
+    border-color: rgba(0,0,0,.20);
+    border-width: 1px;
+    background-color: white;
+}
+
+.list-point::before{
+    content: "";
+    position: absolute;
+    background-color: black;
+    width: 5px;
+    height: 5px;
+    border-radius: 10px;
+    top: 50%;
+    left: 0;
+    transform: translate(-50%, -50%);
+}
+
+.blurs{
+    backdrop-filter: 3px;
+}
+
+.scroll-style::-webkit-scrollbar{
+    scrollbar-color: black;
+    width: 5px;
+    border-radius: 5px;
+}
