@@ -8,7 +8,7 @@ from io import BytesIO
 from logger import Log
 from pathlib import Path
 from typing import Any, Literal, TypedDict, Callable
-from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER
+from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH
 from copy import deepcopy
 import support.utils as utils
 import pandas as pd
@@ -702,10 +702,11 @@ class API:
         WARNING: This will exit the current program with a code 3 and run the separate update installer.
         '''
         updater_cmd: list[str] = [
-            str(self._project_root / UPDATER)
+            str(UPDATER_PATH)
         ]
 
         self.logger.info("Updating application")
+        self.logger.debug(f"Updater path: {UPDATER_PATH}")
 
         utils.run_cmd(updater_cmd)
         exit(3)
