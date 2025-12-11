@@ -12,9 +12,6 @@ dist
 dist-ssr
 *.local
 
-# files
-*.xlsx
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -29,6 +26,7 @@ dist-ssr
 # files
 *.xlsx
 *.*[Cc|Ss|Vv]
+temp/
 config
 
 # python
