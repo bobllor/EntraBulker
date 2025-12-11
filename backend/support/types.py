@@ -20,16 +20,20 @@ class AzureHeaders(TypedDict):
 class HeaderMap(TypedDict):
     opco: str
     name: str
+    first_name: str
+    last_name: str
 
 class OpcoMap(TypedDict):
     default: str
+
+class Metadata(TypedDict):
+    version: str
 
 # for subsititions, the text must contain enclosed brackets [] around
 # the following three keys (CASE-SENSITIVE): NAME, PASSWORD, USERNAME
 class TemplateMap(TypedDict):
     enabled: bool
     text: str
-    words_to_replace: str
 
 class Formatting(TypedDict):
     format_type: Literal["period", "no space"]
@@ -40,11 +44,13 @@ class Password(TypedDict):
     length: int
     use_uppercase: bool
     use_punctuations: bool
+    use_numbers: bool
 
 # NOTE: this will need to be updated in types.ts as well.
 class APISettings(TypedDict):
     output_dir: str
     flatten_csv: bool
+    two_name_column_support: bool
     template: TemplateMap
     format: Formatting
     password: Password

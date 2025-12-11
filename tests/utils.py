@@ -9,7 +9,11 @@ def randomizer(_: str, *args) -> str:
     return args[random.randint(0, size - 1)]
 
 def get_bytesio(path: Path | str) -> BytesIO:
-    '''Reads from a file and return the bytes wrapped with BytesIO.'''
+    '''Reads from a CSV file and return the bytes wrapped with BytesIO.
+
+    The first row automatically is dropped, this assumes the CSV file is the 
+    Azure file.
+    '''
     with open(path, "r") as file:
         content: list[str] = file.readlines()
 
@@ -19,19 +23,14 @@ def get_bytesio(path: Path | str) -> BytesIO:
 
     return BytesIO(csv_bytes)
 
-def get_csv(path: Path, *, drop_first_row: bool = False) -> Path | None:
+def get_csv(path: Path, *, ignore_files: list[Path] = []) -> Path | None:
     ext: str = ".csv"
+
+    ignore: set[str] = {file.name.lower() for file in ignore_files}
 
     for file in path.iterdir():
         if file.suffix.lower() == ext:
-            if drop_first_row:
-                content: str = ""
-                with open(file, "r") as f:
-                    f.readline()
-                    content = f.read()
-                with open(file, "w") as f:
-                    f.write(content) 
-
-            return file
+            if file.name.lower() not in ignore:
+                return file
     
     return None

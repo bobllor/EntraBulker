@@ -1,7 +1,7 @@
 from core.json_reader import Reader
 from api.api import API
 from logger import Log
-from support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, DEFAULT_SETTINGS_MAP, PROJECT_ROOT
+from support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, DEFAULT_SETTINGS_MAP, PROJECT_ROOT, VERSION
 import webview
 
 EXCEL_FILE: str = 'excel-mapping.json'
@@ -10,8 +10,7 @@ OPCO_FILE: str = "opco-mapping.json"
 EXCEL_PATH: str = f'config/{EXCEL_FILE}'
 SETTINGS_PATH: str = f'config/{SETTINGS_FILE}'
 OPCO_PATH: str = f"config/{OPCO_FILE}"
-
-VERSION: str = "1.0.0"
+LOGS_PATH: str = f"logs"
 
 if __name__ == '__main__':
     logger: Log = Log()
@@ -27,9 +26,9 @@ if __name__ == '__main__':
         logger=logger,
         project_root=PROJECT_ROOT
     )
-    size: tuple[int, int] = (1280, 720)
+    size: tuple[int, int] = (1600, 900)
 
-    title: str = 'TEMPORARY'
+    title: str = f'EntraBulker {VERSION}'
     url: str = 'http://localhost:5173/'
 
     webview.create_window(title, url, js_api=api, min_size=size)
