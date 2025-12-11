@@ -1,5 +1,5 @@
 from logger import Log
-from updater import Updater
+from backend.core.updater import Updater
 from support.vars import PROJECT_ROOT
 from pathlib import Path
 
