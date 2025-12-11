@@ -16,7 +16,7 @@ export default function OptionBase({options = [], tooltipText, title, element}: 
                     <div 
                     key={i}
                     className={getClassName(opt.justify)}>
-                        <div className="flex flex-col">
+                        <div className={`flex ${opt.optElementDirection == "row" ? "flex-row items-center" : "flex-col"} justify-center`}>
                             {opt.label}
                             {opt.optElement && opt.optElement}
                         </div>

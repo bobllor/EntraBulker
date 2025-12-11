@@ -10,6 +10,7 @@ export type OptionProps = {
     label: string, // the option to be displayed
     element: JSX.Element, // the element to display after the label. this should be related to the backend call
     optElement?: JSX.Element, // an optional element that is displayed right next to the label.
+    optElementDirection?: "row" | "col",
     justify?: "center" | "between" | "start" | "end",
 }
 

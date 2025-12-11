@@ -7,6 +7,7 @@ import "../../../pywebview";
 import { useSettingsContext } from "../../../context/SettingsContext";
 import { setSetting, setOutputDir, setTextGenerationState, updateFormattingKey } from "../functions";
 import DropDown, { DropDownObject } from "../../ui/DropDown";
+import { ToolTip } from "../../ui/ToolTip";
 
 const title: string = "General";
 const tooltipText: string = "General settings for the program";
@@ -53,6 +54,8 @@ export default function General(): JSX.Element{
                 func={(status: boolean) => setSetting("two_name_column_support", !status, () => {
                     setApiSettings(prev => ({...prev, two_name_column_support: !status}));
                 })}/>,
+            optElement: <ToolTip text="Enable support for First and Last Name columns in the file"/>,
+            optElementDirection: "row",
         },
         {
             label: "Format Type", 
