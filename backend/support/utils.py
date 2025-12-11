@@ -1,7 +1,8 @@
 from core.names import NameFormatter, NoSpace, Period
 from typing import Literal, Any, Callable
 from support.types import Response
-import string, re, uuid
+from pathlib import Path
+import string, re, uuid, subprocess
 
 def format_name(name: str, *, keep_full: bool = False) -> str:
     '''Formats and validates a name, by default the First and Last name only.
@@ -367,3 +368,35 @@ def get_id(divisor: int = 4) -> str:
         return uid
 
     return uid[:int(len(uid) / divisor)]
+
+def unlink_path(path: Path) -> None:
+    '''Method to remove a given Path. If the path is a directory, then
+    recursively remove all of its contents and itself.'''
+    if path.is_dir():
+        for child in path.iterdir():
+            if not child.is_dir():
+                child.unlink()
+            else:
+                unlink_path(child)
+        
+        path.rmdir()
+    else:
+        path.unlink()
+
+def run_cmd(cmd: list[str]) -> None:
+    '''Executes a command through subprocess.'''
+    blacklisted_cmd: set[str] = {
+        "rm", "rmdir", "ri", "del",
+        "rd", "erase", "remove-item"
+    }
+
+    for string in cmd:
+        if string.lower() in blacklisted_cmd:
+            return "", f"Error: blacklisted command {string} used as argument"
+
+    process: subprocess.CompletedProcess[bytes] = subprocess.run(cmd, capture_output=True)
+
+    out: str = process.stdout.decode()
+    err: str = process.stderr.decode()
+
+    return out, err
