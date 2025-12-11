@@ -25,11 +25,12 @@ dist-ssr
 
 # files
 *.xlsx
-*.*[Cc|Ss|Vv]
-temp/
-config
+*.XLSX
+*.csv
+*.CSV
+temp
+/config/
 
 # python
 __pycache__/
-backend/assets/
 .venv
