@@ -4,7 +4,6 @@ from requests import Response
 from typing import Any, Iterable
 from support.types import Response as cResponse
 from logger import Log
-import tempfile as tf
 import support.utils as utils
 import requests, os, shutil
 
@@ -42,7 +41,7 @@ class Updater:
         '''Downloads the zip file from the specified url. It will download the file
         to the project root in a temporary folder. 
         
-        The ZIP file propertyis also set in the method.
+        The ZIP file property is also set in the method.
         
         Parameters
         ----------
@@ -78,20 +77,28 @@ class Updater:
         zip_url: str = content["assets"][0]["browser_download_url"]
         zip_name: str = zip_url.split("/")[-1]
 
-        temp_file: str = ""
-        with requests.get(zip_url, stream=True) as r:
-            # TODO: error handle here please!
-            with tf.NamedTemporaryFile("wb", delete=False, dir=self.project_root) as file:
-                temp_file = file.name
+        try:
+            with requests.get(zip_url) as r:
+                # TODO: error handle here please!
+                # NOTE: there was a massive headache when writing my test cases
+                # it turns out for some reason, NamedTemporaryFile does not write
+                # file bytes properly, it always attempts to decode with utf-8 causing errors.
+                # why does this occur? i have no fucking idea.
+                with open(self.temp_dir / zip_name, "wb") as file:
+                    for chunk in r.iter_content(8024):
+                        file.write(chunk)
+        except Exception as e:
+            self.logger.error(f"Exception occurred while downloading file: {e}")
 
-                for chunk in r.iter_content(chunk_size=8192):
-                    file.write(chunk) 
+            out_res["status"] = "error"
+            out_res["message"] = "An error occurred while downloading the files"
+
+            return out_res
         
         self.zip_path = self.temp_dir / zip_name
-        os.replace(temp_file, self.zip_path)
 
         out_res["message"] = f"Successfully downloaded {zip_name} to {self.temp_dir}"
-        self.logger.info(f"Downloaded {zip_name} to {self.project_root}")
+        self.logger.info(f"Downloaded {zip_name} to {self.temp_dir}")
 
         return out_res
     
@@ -188,7 +195,7 @@ class Updater:
                     folder_remove_count += 1
         
         if folder_remove_count > 0:
-            res["message"] = f"Removed {folder_remove_count} {"folders" if folder_remove_count > 1 else "folder"}"
+            res["message"] = f"Removed {folder_remove_count} {'folders' if folder_remove_count > 1 else 'folder'}"
 
         return res
     
@@ -196,6 +203,8 @@ class Updater:
         '''Removes the temporary folder holding the files for the Updater class.'''
         utils.unlink_path(self.temp_dir)
     
-    def get_zippath(self) -> Path:
-        '''Returns the path of the ZIP file output.'''
+    def get_zippath(self) -> Path | None:
+        '''Returns the path of the ZIP file output.
+        If `download_zip` was never invoked then this will return `None`.
+        '''
         return self.zip_path
