@@ -3,6 +3,8 @@ from pathlib import Path
 from backend.core.json_reader import Reader
 from backend.api.api import API
 from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, DEFAULT_OPCO_MAP
+from backend.core.updater import Updater
+from unittest.mock import patch
 import pandas as pd
 import pytest
 
@@ -51,9 +53,20 @@ def api(tmp_path: Path):
     yield api
 
 @pytest.fixture
+def get():
+    with patch('requests.get') as get:
+        yield get
+
+@pytest.fixture
 def df():
     df: pd.DataFrame = pd.read_json(JSON)
 
     df = df.rename(mapper=lambda x: x.lower(), axis=1)
 
     yield df
+
+@pytest.fixture
+def updater(tmp_path: Path):
+    upd: Updater = Updater(tmp_path)
+
+    yield upd
