@@ -1,5 +1,5 @@
 from pathlib import Path
-from .types import HeaderMap, OpcoMap, TemplateMap, APISettings, AzureHeaders, Metadata
+from .types import HeaderMap, OpcoMap, TemplateMap, APISettings, AzureHeaders, Metadata, FileNames
 from typing import Literal
 
 VERSION: str = "v1.0.0"
@@ -13,6 +13,14 @@ PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
 # name of the updater application for updating the application
 UPDATER_PATH: Path = PROJECT_ROOT / "updater"
 REPO_URL: str = "  https://api.github.com/repos/bobllor/entra-bulker/releases"
+
+FILE_NAMES: FileNames = {
+    "updater": "updater.exe",
+    "main_app": "entrabulker.exe",
+    "updater_dist": "udist",
+    "main_app_dist": "appdist",
+    "zip_folder": "entrabulker",
+}
 
 # NOTE: these are default mappings used to initialize the data.
 # the data is based off of ServiceNow naming, but the values can be changed.
