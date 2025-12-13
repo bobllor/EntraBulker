@@ -4,6 +4,7 @@ from requests import Response
 from typing import Any, Iterable
 from support.types import Response as cResponse
 from logger import Log
+from support.vars import FILE_NAMES
 import support.utils as utils
 import requests, os, shutil
 
@@ -17,8 +18,7 @@ class Updater:
         Parameters
         ----------
             project_root: Path
-                The project root. This is required to handle different file systems
-                during temporary file writing and moving.
+                The project root, the ZIP file is downloaded in the root's parent.
             
             logger: Log, default None
                 The Log class. By default it is None, printing to stdout.
@@ -27,15 +27,18 @@ class Updater:
         self.logger: Log = logger or Log()
         
         # all files will be worked on in here before being moved into the main directory
-        self.temp_dir: Path = self.project_root / "temp"
+        # this also makes it easier to clean up everything
+        self._temp_dir: Path = self.project_root / "temp"
+        # the single folder in the zip
+        self._zip_folder: Path = self._temp_dir / FILE_NAMES["zip_folder"]
 
-        if self.temp_dir.exists() and self.temp_dir.is_dir():
-            utils.unlink_path(self.temp_dir)
+        if self._temp_dir.exists() and self._temp_dir.is_dir():
+            utils.unlink_path(self._temp_dir)
 
-        if not self.temp_dir.exists():
-            self.temp_dir.mkdir(exist_ok=True, parents=True)
+        if not self._temp_dir.exists():
+            self._temp_dir.mkdir(exist_ok=True, parents=True)
 
-        self.zip_path: Path = None
+        self._zip_file_path: Path = None
     
     def download_zip(self, url: str) -> cResponse:
         '''Downloads the zip file from the specified url. It will download the file
@@ -84,7 +87,7 @@ class Updater:
                 # it turns out for some reason, NamedTemporaryFile does not write
                 # file bytes properly, it always attempts to decode with utf-8 causing errors.
                 # why does this occur? i have no fucking idea.
-                with open(self.temp_dir / zip_name, "wb") as file:
+                with open(self._temp_dir / zip_name, "wb") as file:
                     for chunk in r.iter_content(8024):
                         file.write(chunk)
         except Exception as e:
@@ -95,28 +98,28 @@ class Updater:
 
             return out_res
         
-        self.zip_path = self.temp_dir / zip_name
+        self._zip_file_path = self._temp_dir / zip_name
 
-        out_res["message"] = f"Successfully downloaded {zip_name} to {self.temp_dir}"
-        self.logger.info(f"Downloaded {zip_name} to {self.temp_dir}")
+        out_res["message"] = f"Successfully downloaded {zip_name} to {self._temp_dir}"
+        self.logger.info(f"Downloaded {zip_name} to {self._temp_dir}")
 
         return out_res
     
     def unzip(self, zip_path: Path) -> cResponse:
         '''Unzips the contents of the ZIP file into the temporary directory.'''
-        res: cResponse = utils.generate_response(message=f"Extracted files to {self.temp_dir}")
+        res: cResponse = utils.generate_response(message=f"Extracted files to {self._temp_dir}")
 
         if zip_path is None or not zip_path.exists():
             res["status"] = "error"
             res["message"] = f"An unexpected error occurred while extracting the ZIP file"
 
             self.logger.error(f"Given zip_path {zip_path} does not exist")
-            self.logger.debug(f"Temp directory location: {self.temp_dir}")
+            self.logger.debug(f"Temp directory location: {self._temp_dir}")
 
             return res
 
         with ZipFile(zip_path, "r") as file:
-            file.extractall(self.temp_dir)
+            file.extractall(self._temp_dir)
         
         return res
     
@@ -135,7 +138,7 @@ class Updater:
 
         ignore_set: set[str] = {f.lower() for f in ignore_files}
 
-        for file in self.temp_dir.iterdir():
+        for file in self._temp_dir.iterdir():
             file_name: str = file.name
             file_root: Path = self.project_root / file_name
 
@@ -201,10 +204,17 @@ class Updater:
     
     def cleanup(self) -> None:
         '''Removes the temporary folder holding the files for the Updater class.'''
-        utils.unlink_path(self.temp_dir)
+        utils.unlink_path(self._temp_dir)
     
-    def get_zippath(self) -> Path | None:
-        '''Returns the path of the ZIP file output.
-        If `download_zip` was never invoked then this will return `None`.
+    @property
+    def zip_file(self) -> Path | None:
+        '''Returns the Path to the zip file.
+        
+        If `download_zip` was not called, this will return None.
         '''
-        return self.zip_path
+        return self._zip_file_path
+    
+    @property
+    def temp_dir(self) -> Path:
+        '''Returns the Path to the temporary directory '''
+        return self._temp_dir
