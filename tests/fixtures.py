@@ -2,7 +2,7 @@ from backend.logger import Log
 from pathlib import Path
 from backend.core.json_reader import Reader
 from backend.api.api import API
-from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, DEFAULT_OPCO_MAP
+from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, DEFAULT_OPCO_MAP, FILE_NAMES
 from backend.core.updater import Updater
 from unittest.mock import patch
 import pandas as pd
@@ -65,8 +65,10 @@ def df():
 
     yield df
 
+TEST_PROGRAM_FILES: str = "Program Files"
+
 @pytest.fixture
 def updater(tmp_path: Path):
-    upd: Updater = Updater(tmp_path)
+    upd: Updater = Updater(tmp_path / TEST_PROGRAM_FILES / FILE_NAMES["project_folder"] / FILE_NAMES["apps_folder"])
 
     yield upd
