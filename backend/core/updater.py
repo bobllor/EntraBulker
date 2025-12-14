@@ -12,25 +12,29 @@ class Updater:
     def __init__(self, project_root: Path, *, logger: Log = None):
         '''Updater class.
         
-        This does not replace the updater itself, and only replaces the other
-        files. For the updater to be replaced, it will require manual updates.
+        This does not replace the updater.exe itself, only replacing the primary
+        application files. For the updater to be replaced, it will require 
+        manual updates.
 
         Parameters
         ----------
             project_root: Path
-                The project root, the ZIP file is downloaded in the root's parent.
+                The project root. This is not the Path of the entire application folder, 
+                but is the Path to the folder that holds the main application files.
             
             logger: Log, default None
                 The Log class. By default it is None, printing to stdout.
         '''
         self.project_root: Path = project_root
         self.logger: Log = logger or Log()
+
+        self._create_app_folder()
         
         # all files will be worked on in here before being moved into the main directory
         # this also makes it easier to clean up everything
-        self._temp_dir: Path = self.project_root / "temp"
-        # the single folder in the zip
-        self._zip_folder: Path = self._temp_dir / FILE_NAMES["zip_folder"]
+        # the temp dir will not be in the main project root, but will be in the outside parent.
+        self._temp_dir: Path = self.project_root.parent / "temp"
+        self._project_folder: Path = self._temp_dir / FILE_NAMES["project_folder"]
 
         if self._temp_dir.exists() and self._temp_dir.is_dir():
             utils.unlink_path(self._temp_dir)
@@ -123,27 +127,35 @@ class Updater:
         
         return res
     
-    def update(self, *, ignore_files: Iterable[str] = []) -> cResponse:
+    def update(self, files_path: Path, *, ignore_files: Iterable[str] = []) -> cResponse:
         '''Updates the application by moving the files from the temporary folder
         into the project root.
 
         Parameters
         ----------
+            files_path: Path
+                The path to the unzipped files. Since the ZIP file contains a single folder that
+                holds all the other files, this is expected to be that folder name.
+
             ignore_files: Iterable[str], default []
                 Any Iterable of strings that are the file names, not the full path,
-                used to ignore during replacement. By default it is an empty list. 
+                used to ignore during replacement. The file names in the Path 
+                are checked with the list. By default it is an empty list. 
         '''
         res: cResponse = utils.generate_response(message="Successfully updated application")
+        self._create_app_folder()
+
         self.logger.debug(f"Files to ignore for update: {ignore_files}")
+        self.logger.info(f"Replacing files in root {self.project_root} with {files_path}")
 
         ignore_set: set[str] = {f.lower() for f in ignore_files}
 
-        for file in self._temp_dir.iterdir():
+        for file in files_path.iterdir():
             file_name: str = file.name
             file_root: Path = self.project_root / file_name
 
             if file_name.lower() in ignore_set:
-                self.logger.info(f"Given file {file} cannot be replaced")
+                self.logger.warning(f"Given file {file} cannot be replaced")
                 continue
 
             # if for some reason the files still exist, we will manually remove it here.
@@ -158,6 +170,7 @@ class Updater:
                 self.logger.info(f"Removed file {file_root}")
 
             os.replace(file, file_root)
+            self.logger.info(f"Replaced file {file_root}")
         
         return res
     
@@ -206,9 +219,17 @@ class Updater:
         '''Removes the temporary folder holding the files for the Updater class.'''
         utils.unlink_path(self._temp_dir)
     
+    def _create_app_folder(self) -> None:
+        '''Creates the main application folder, if it does not exist.'''
+        main_app: Path = self.project_root.parent / FILE_NAMES["apps_folder"]
+
+        if not main_app.exists():
+            self.logger.warning(f"Missing apps folder, folder {main_app} generated")
+            main_app.mkdir(parents=True, exist_ok=True)
+    
     @property
     def zip_file(self) -> Path | None:
-        '''Returns the Path to the zip file.
+        '''The Path to the zip file.
         
         If `download_zip` was not called, this will return None.
         '''
@@ -216,5 +237,10 @@ class Updater:
     
     @property
     def temp_dir(self) -> Path:
-        '''Returns the Path to the temporary directory '''
+        '''The Path to the temporary folder.'''
         return self._temp_dir
+    
+    @property
+    def project_folder(self) -> Path:
+        '''The Path of the project folder located in the temporary folder.'''
+        return self._project_folder
