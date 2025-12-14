@@ -31,11 +31,12 @@ class Metadata(TypedDict):
 
 class FileNames(TypedDict):
     '''The main files of the application in the project root.'''
-    main_app: str
-    main_app_dist: str
-    updater: str 
+    app_exe: str
+    app_dist: str
+    updater_exe: str 
     updater_dist: str
-    zip_folder: str
+    project_folder: str
+    apps_folder: str
 
 # for subsititions, the text must contain enclosed brackets [] around
 # the following three keys (CASE-SENSITIVE): NAME, PASSWORD, USERNAME

@@ -15,11 +15,12 @@ UPDATER_PATH: Path = PROJECT_ROOT / "updater"
 REPO_URL: str = "  https://api.github.com/repos/bobllor/entra-bulker/releases"
 
 FILE_NAMES: FileNames = {
-    "updater": "updater.exe",
-    "main_app": "entrabulker.exe",
+    "updater_exe": "updater.exe",
+    "app_exe": "entrabulker.exe",
     "updater_dist": "udist",
-    "main_app_dist": "appdist",
-    "zip_folder": "entrabulker",
+    "app_dist": "appdist",
+    "project_folder": "entrabulker",
+    "apps_folder": "apps",
 }
 
 # NOTE: these are default mappings used to initialize the data.
