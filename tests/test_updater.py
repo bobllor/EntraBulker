@@ -8,6 +8,8 @@ from zipfile import ZipFile, ZipInfo
 from io import BytesIO
 from backend.support.vars import FILE_NAMES
 import tests.utils as ttils
+import backend.support.utils as utils
+import datetime, time
 
 URL: str = "https://fakeurl.com/api/stuff"
 
@@ -45,7 +47,7 @@ def test_unzip(get: MagicMock, updater: Updater):
         
     updater.unzip(updater.zip_file)
 
-    unzipped_files: list[str] = ttils.get_paths(updater.temp_dir)
+    unzipped_files: list[str] = utils.get_paths(updater.temp_dir)
 
     assert len(unzipped_files) != 0
 
@@ -57,7 +59,7 @@ def test_normal_update(get: MagicMock, tmp_path: Path, updater: Updater):
     updater.download_zip(URL)
     updater.unzip(updater.zip_file)
 
-    base_files: list[str] = ttils.get_paths(updater.project_root)
+    base_files: list[str] = utils.get_paths(updater.project_root)
 
     for file in base_files:
         path: Path = Path(file)
@@ -67,7 +69,7 @@ def test_normal_update(get: MagicMock, tmp_path: Path, updater: Updater):
 
     updater.update(updater.project_folder / FILE_NAMES["apps_folder"], ignore_files=[FILE_NAMES["updater_exe"], "udist"])
 
-    new_files: list[str] = ttils.get_paths(tmp_path)
+    new_files: list[str] = utils.get_paths(updater.project_root)
 
     # since mk_app does not generate the entrabulker.exe in the apps folder,
     # this will be used to check if the update was successful.
@@ -82,10 +84,31 @@ def test_normal_update(get: MagicMock, tmp_path: Path, updater: Updater):
     
     assert found
 
-def mk_app(path: Path) -> None:
+@patch('backend.core.updater.requests.get')
+def test_cleanup(get: MagicMock, updater: Updater):
+    set_mock_response(get)
+
+    updater.download_zip(URL)
+    updater.unzip(updater.zip_file)
+
+    updater.cleanup()
+
+    assert not updater.project_folder.exists()
+
+def mk_app(path: Path, sleep: int | float = 0) -> None:
     '''Creates the folder structure of the application in the given path.
     
     This does not create the `entrabulker.exe` file.
+
+    Parameters
+    ----------
+        path: Path
+            The Path the application files will be made in.
+
+        sleep: int | float, default `0`
+            The sleep time after creating the folders. This is used
+            to delay the time creation before the updater is called
+            for making new files. By default it is 0 seconds.
     ''' 
     # unzip -l tests/zip-test.zip to get the folder structure
     append_path = lambda x: path / TEST_PROGRAM_FILES /project_folder / x
@@ -111,8 +134,11 @@ def mk_app(path: Path) -> None:
             file.touch()
         else:
             file.mkdir(parents=True, exist_ok=True)
+    
+    time.sleep(sleep)
         
 def set_mock_response(get: get) -> MagicMock:
+    '''Sets up the and returns the mock object for requests'''
     mock: Any = get.return_value
     mock.status_code = 200
     mock.json.return_value = [{"assets": [
