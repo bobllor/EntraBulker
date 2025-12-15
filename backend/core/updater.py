@@ -217,15 +217,20 @@ class Updater:
     
     def cleanup(self) -> None:
         '''Removes the temporary folder holding the files for the Updater class.'''
+        self.logger.info(f"Removing contents of {self._temp_dir}")
         utils.unlink_path(self._temp_dir)
     
     def _create_app_folder(self) -> None:
-        '''Creates the main application folder, if it does not exist.'''
+        '''Creates the main application folder, if it does not exist.
+        
+        This shouldn't occur in production, it is more of a testing issue.
+        '''
         main_app: Path = self.project_root.parent / FILE_NAMES["apps_folder"]
 
         if not main_app.exists():
-            self.logger.warning(f"Missing apps folder, folder {main_app} generated")
+            self.logger.warning(f"Missing apps folder, created {main_app}")
             main_app.mkdir(parents=True, exist_ok=True)
+            self.logger.debug(f"Files of parent: {utils.get_paths(self.project_root.parent)}")
     
     @property
     def zip_file(self) -> Path | None:
