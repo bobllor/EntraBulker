@@ -69,6 +69,9 @@ TEST_PROGRAM_FILES: str = "Program Files"
 
 @pytest.fixture
 def updater(tmp_path: Path):
-    upd: Updater = Updater(tmp_path / TEST_PROGRAM_FILES / FILE_NAMES["project_folder"] / FILE_NAMES["apps_folder"])
+    upd: Updater = Updater(
+        tmp_path / TEST_PROGRAM_FILES / FILE_NAMES["project_folder"] / FILE_NAMES["apps_folder"],
+        ignore_app_creation=False,
+    )
 
     yield upd
