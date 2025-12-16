@@ -9,7 +9,7 @@ import support.utils as utils
 import requests, os, shutil
 
 class Updater:
-    def __init__(self, project_root: Path, *, logger: Log = None):
+    def __init__(self, project_root: Path, *, logger: Log = None, ignore_app_creation: bool = True):
         '''Updater class.
         
         This does not replace the updater.exe itself, only replacing the primary
@@ -24,11 +24,16 @@ class Updater:
             
             logger: Log, default None
                 The Log class. By default it is None, printing to stdout.
+            
+            ignore_app_creation: bool, default True
+                Ignores creating the application folder of the program. This only
+                applies on instance creation.
         '''
         self.project_root: Path = project_root
         self.logger: Log = logger or Log()
 
-        self._create_app_folder()
+        if not ignore_app_creation:
+            self._create_app_folder()
         
         # all files will be worked on in here before being moved into the main directory
         # this also makes it easier to clean up everything
@@ -215,10 +220,18 @@ class Updater:
 
         return res
     
-    def cleanup(self) -> None:
-        '''Removes the temporary folder holding the files for the Updater class.'''
-        self.logger.info(f"Removing contents of {self._temp_dir}")
-        utils.unlink_path(self._temp_dir)
+    def cleanup(self) -> cResponse:
+        '''Removes the temporary folder holding the files for the Updater class.
+        
+        It will always return success.
+        '''
+        res: cResponse = utils.generate_response(message=f"Removed temporary files from {self._temp_dir}")
+
+        if self._temp_dir.exists():
+            self.logger.info(f"Removing contents of {self._temp_dir}")
+            utils.unlink_path(self._temp_dir)
+        
+        return res
     
     def _create_app_folder(self) -> None:
         '''Creates the main application folder, if it does not exist.
