@@ -139,7 +139,7 @@ class AzureWriter:
                 df: pd.DataFrame = pd.DataFrame(self._headers_data)
                 df.to_csv(temp_path, mode="a", index=False, header=keep_headers)
 
-                os.replace(temp_path, path)
+            os.replace(temp_path, path)
         except Exception as e:
             self.logger.critical(f"Failed to write CSV file: {e}")
 
@@ -225,7 +225,7 @@ class AzureWriter:
                 temp_file: Path = Path(file.name)
                 file.write(text_res["content"])
 
-                os.replace(temp_file, path / file_name)
+            os.replace(temp_file, path / file_name)
 
         self.logger.info(f"Successful template writes: {text_count} | Failed template writes: {failed_count}")
 
