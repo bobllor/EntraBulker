@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+:root {
+    --default-shadow: 0 3px 8px 1px rgba(0,0,0,.15);
+}
+
+.default-shadow{
+    box-shadow: var(--default-shadow);
+}
