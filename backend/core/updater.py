@@ -9,7 +9,7 @@ import support.utils as utils
 import requests, os, shutil
 
 class Updater:
-    def __init__(self, project_root: Path, *, logger: Log = None, ignore_app_creation: bool = True):
+    def __init__(self, project_root: Path, *, logger: Log = None):
         '''Updater class.
         
         This does not replace the updater.exe itself, only replacing the primary
@@ -24,28 +24,19 @@ class Updater:
             
             logger: Log, default None
                 The Log class. By default it is None, printing to stdout.
-            
-            ignore_app_creation: bool, default True
-                Ignores creating the application folder of the program. This only
-                applies on instance creation.
         '''
         self.project_root: Path = project_root
         self.logger: Log = logger or Log()
-
-        if not ignore_app_creation:
-            self._create_app_folder()
         
         # all files will be worked on in here before being moved into the main directory
         # this also makes it easier to clean up everything
         # the temp dir will not be in the main project root, but will be in the outside parent.
-        self._temp_dir: Path = self.project_root.parent / "temp"
-        self._project_folder: Path = self._temp_dir / FILE_NAMES["project_folder"]
+        self._temp_dir: Path = self.project_root / "temp"
+        self._temp_project_folder: Path = self._temp_dir / FILE_NAMES["project_folder"]
 
         if self._temp_dir.exists() and self._temp_dir.is_dir():
             utils.unlink_path(self._temp_dir)
-
-        if not self._temp_dir.exists():
-            self._temp_dir.mkdir(exist_ok=True, parents=True)
+        self._create_temp_dir()
 
         self._zip_file_path: Path = None
     
@@ -61,27 +52,43 @@ class Updater:
                 The url to the ZIP file. This is expected to be the
                 GitHub API releases url.
         '''
+        out_res: cResponse = utils.generate_response(message="")
+
         url = url.strip()
-        res: Response = requests.get(url)
+        try:
+            res: Response = requests.get(url)
+        except Exception as e:
+            out_res["status"] = "error"
+            out_res["message"] = "Failed to request data"
+            self.logger.error(f"Failed to request url {url}: {e}")
+
+            return out_res
+
         self.logger.info("Starting ZIP file download")
         self.logger.debug(f"Request on {url}")
-
-        out_res: cResponse = utils.generate_response(message="")
 
         self.logger.debug(f"GET status: {res.status_code}")
         if res.status_code != 200:
             out_res["status"] = "error"
-            out_res["message"] = "Failed to download ZIP file"
-            self.logger.error(f"Failed to request, url: {url} | GET status: {res.status_code}")
+            out_res["message"] = f"Failed to request data"
+            self.logger.error(f"Failed to request on url {url}: {res.status_code}")
 
             return out_res
 
-        content_res: list[dict[str, Any]] = res.json()
+        try:
+            content_res: list[dict[str, Any]] = res.json()
+        except requests.exceptions.JSONDecodeError as e:
+            out_res["status"] = "error"
+            out_res["message"] = f"Unexpected data received"
+
+            self.logger.error(f"Failed to parse JSON on url {url}: {e}")
+
+            return out_res
 
         if len(content_res) < 1:
             out_res["status"] = "error"
-            out_res["message"] = "Unknown error occurred"
-            self.logger.error(f"Content response is empty: {content_res}")
+            out_res["message"] = f"Failed to read data"
+            self.logger.error(f"Response for content is empty: {content_res}")
 
             return out_res
 
@@ -89,9 +96,11 @@ class Updater:
         zip_url: str = content["assets"][0]["browser_download_url"]
         zip_name: str = zip_url.split("/")[-1]
 
+        self._create_temp_dir()
         try:
             with requests.get(zip_url) as r:
                 # TODO: error handle here please!
+                r.raise_for_status()
                 # NOTE: there was a massive headache when writing my test cases
                 # it turns out for some reason, NamedTemporaryFile does not write
                 # file bytes properly, it always attempts to decode with utf-8 causing errors.
@@ -103,20 +112,20 @@ class Updater:
             self.logger.error(f"Exception occurred while downloading file: {e}")
 
             out_res["status"] = "error"
-            out_res["message"] = "An error occurred while downloading the files"
+            out_res["message"] = "Failed to download the data"
 
             return out_res
         
         self._zip_file_path = self._temp_dir / zip_name
 
-        out_res["message"] = f"Successfully downloaded {zip_name} to {self._temp_dir}"
+        out_res["message"] = f"Downloaded {zip_name} to temp"
         self.logger.info(f"Downloaded {zip_name} to {self._temp_dir}")
 
         return out_res
     
     def unzip(self, zip_path: Path) -> cResponse:
         '''Unzips the contents of the ZIP file into the temporary directory.'''
-        res: cResponse = utils.generate_response(message=f"Extracted files to {self._temp_dir}")
+        res: cResponse = utils.generate_response(message=f"Extracted files to temp")
 
         if zip_path is None or not zip_path.exists():
             res["status"] = "error"
@@ -130,15 +139,17 @@ class Updater:
         with ZipFile(zip_path, "r") as file:
             file.extractall(self._temp_dir)
         
+        self.logger.info(f"Extracted ZIP contents to {self._temp_dir}")
+        
         return res
     
-    def update(self, files_path: Path, *, ignore_files: Iterable[str] = []) -> cResponse:
+    def update(self, apps_path: Path, *, ignore_files: Iterable[str] = []) -> cResponse:
         '''Updates the application by moving the files from the temporary folder
         into the project root.
 
         Parameters
         ----------
-            files_path: Path
+            apps_path: Path
                 The path to the unzipped files. Since the ZIP file contains a single folder that
                 holds all the other files, this is expected to be that folder name.
 
@@ -147,15 +158,14 @@ class Updater:
                 used to ignore during replacement. The file names in the Path 
                 are checked with the list. By default it is an empty list. 
         '''
-        res: cResponse = utils.generate_response(message="Successfully updated application")
-        self._create_app_folder()
+        res: cResponse = utils.generate_response(message="Updated application")
 
         self.logger.debug(f"Files to ignore for update: {ignore_files}")
-        self.logger.info(f"Replacing files in root {self.project_root} with {files_path}")
+        self.logger.info(f"Replacing files in root {self.project_root} with {apps_path}")
 
         ignore_set: set[str] = {f.lower() for f in ignore_files}
 
-        for file in files_path.iterdir():
+        for file in apps_path.iterdir():
             file_name: str = file.name
             file_root: Path = self.project_root / file_name
 
@@ -179,53 +189,12 @@ class Updater:
         
         return res
     
-    def remove_app_folders(self, folders: list[Path | str], *, ignore_folders: Iterable[str] = []) -> cResponse:
-        '''Removes the application folders. This removes all files recursively from the given folders.
-
-        Parameters
-        ----------
-            folders: list[Path | str]
-                A list of Paths or string paths for folder removal, prior to being
-                replaced. These are the folders of the application artifacts,
-                not the dynamically generated folders during usage.
-            
-            ignore_folders: Iterable[str], default []
-                Any iterable of strings to ignore. This is expected to be the folder
-                names, not full paths. By default it is an empty list.
-        '''
-        res: Response = utils.generate_response(message="No folders removed")
-
-        self.logger.debug(f"Folders to remove: {folders}")
-        self.logger.debug(f"Folders to ignore: {ignore_folders}")
-
-        folder_remove_count: int = 0
-    
-        ignore_set = {f.lower() for f in ignore_folders}
-
-        for folder in folders:
-            path: Path = folder if isinstance(folder, Path) else Path(folder)
-
-            if path == self.project_root or path.name.lower() in ignore_set:
-                self.logger.warning(f"Given path {path} cannot be removed")
-                continue
-
-            if path.exists():
-                if path.is_dir():
-                    self.logger.info(f"Removing folder {path}")
-                    utils.unlink_path(path)
-                    folder_remove_count += 1
-        
-        if folder_remove_count > 0:
-            res["message"] = f"Removed {folder_remove_count} {'folders' if folder_remove_count > 1 else 'folder'}"
-
-        return res
-    
     def cleanup(self) -> cResponse:
         '''Removes the temporary folder holding the files for the Updater class.
         
         It will always return success.
         '''
-        res: cResponse = utils.generate_response(message=f"Removed temporary files from {self._temp_dir}")
+        res: cResponse = utils.generate_response(message=f"Removed temp folder")
 
         if self._temp_dir.exists():
             self.logger.info(f"Removing contents of {self._temp_dir}")
@@ -233,17 +202,11 @@ class Updater:
         
         return res
     
-    def _create_app_folder(self) -> None:
-        '''Creates the main application folder, if it does not exist.
-        
-        This shouldn't occur in production, it is more of a testing issue.
-        '''
-        main_app: Path = self.project_root.parent / FILE_NAMES["apps_folder"]
-
-        if not main_app.exists():
-            self.logger.warning(f"Missing apps folder, created {main_app}")
-            main_app.mkdir(parents=True, exist_ok=True)
-            self.logger.debug(f"Files of parent: {utils.get_paths(self.project_root.parent)}")
+    def _create_temp_dir(self) -> None:
+        '''Creates the temporary directory, if it does not exist.'''
+        if not self._temp_dir.exists():
+            self._temp_dir.mkdir(parents=True, exist_ok=True)
+            self.logger.info(f"Created temp folder {self._temp_dir}")
     
     @property
     def zip_file(self) -> Path | None:
@@ -259,6 +222,6 @@ class Updater:
         return self._temp_dir
     
     @property
-    def project_folder(self) -> Path:
+    def temp_project_folder(self) -> Path:
         '''The Path of the project folder located in the temporary folder.'''
-        return self._project_folder
+        return self._temp_project_folder
