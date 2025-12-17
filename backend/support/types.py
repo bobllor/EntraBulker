@@ -29,6 +29,15 @@ class OpcoMap(TypedDict):
 class Metadata(TypedDict):
     version: str
 
+class FileNames(TypedDict):
+    '''The main files of the application in the project root.'''
+    app_exe: str
+    app_dist: str
+    updater_exe: str 
+    updater_dist: str
+    project_folder: str
+    apps_folder: str
+
 # for subsititions, the text must contain enclosed brackets [] around
 # the following three keys (CASE-SENSITIVE): NAME, PASSWORD, USERNAME
 class TemplateMap(TypedDict):
