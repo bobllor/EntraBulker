@@ -65,9 +65,11 @@ def test_normal_update(get: MagicMock, tmp_path: Path, updater: Updater):
         path: Path = Path(file)
         file_name: str = path.name.lower()
 
-        assert FILE_NAMES["app_exe"].lower() != file_name
+        if not str(updater.temp_dir) in str(path):
+            assert FILE_NAMES["app_exe"] != file_name
 
-    updater.update(updater.project_folder / FILE_NAMES["apps_folder"], ignore_files=[FILE_NAMES["updater_exe"], "udist"])
+    updater.update(updater.temp_project_folder / FILE_NAMES["apps_folder"], ignore_files=[FILE_NAMES["updater_exe"], "udist"])
+    updater.cleanup()
 
     new_files: list[str] = utils.get_paths(updater.project_root)
 
@@ -93,7 +95,7 @@ def test_cleanup(get: MagicMock, updater: Updater):
 
     updater.cleanup()
 
-    assert not updater.project_folder.exists()
+    assert not updater.temp_project_folder.exists()
 
 def mk_app(path: Path, sleep: int | float = 0) -> None:
     '''Creates the folder structure of the application in the given path.
