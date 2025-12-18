@@ -400,3 +400,21 @@ def run_cmd(cmd: list[str]) -> None:
     err: str = process.stderr.decode()
 
     return out, err
+
+def get_paths(path: Path) -> list[str]:
+    '''Traverses a given path and returns a list of absolute paths of all files
+    in the given path.
+
+    The first element in the list is the given path.
+    '''
+    data: list[str] = []
+
+    for child in path.iterdir():
+        data.append(str(child))
+
+        if child.is_dir():
+            temp_data: list[str] = get_paths(child)
+
+            data.extend(temp_data)
+
+    return data

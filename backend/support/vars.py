@@ -1,5 +1,5 @@
 from pathlib import Path
-from .types import HeaderMap, OpcoMap, TemplateMap, APISettings, AzureHeaders, Metadata
+from .types import HeaderMap, OpcoMap, TemplateMap, APISettings, AzureHeaders, Metadata, FileNames
 from typing import Literal
 
 VERSION: str = "v1.0.0"
@@ -11,7 +11,18 @@ META: Metadata = {
 # used as the baseline root path
 PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
 # name of the updater application for updating the application
-UPDATER_PATH: Path = PROJECT_ROOT / "updater"
+
+FILE_NAMES: FileNames = {
+    "updater_exe": "updater.exe",
+    "app_exe": "entrabulker.exe",
+    "updater_dist": "udist",
+    "app_dist": "appdist",
+    "project_folder": "entrabulker",
+    "apps_folder": "apps",
+}
+
+MAIN_APP_PATH: Path = PROJECT_ROOT / FILE_NAMES["app_exe"]
+UPDATER_PATH: Path = PROJECT_ROOT.parent / FILE_NAMES["updater_exe"]
 
 # NOTE: these are default mappings used to initialize the data.
 # the data is based off of ServiceNow naming, but the values can be changed.

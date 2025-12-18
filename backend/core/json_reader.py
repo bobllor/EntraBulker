@@ -100,8 +100,9 @@ class Reader:
             temp_file: str = file.name
 
             json.dump(data, file)
-            os.replace(temp_file, self.path)
-            self.logger.info(f"File {self._name} written")
+
+        os.replace(temp_file, self.path)
+        self.logger.info(f"File {self._name} written")
     
     def insert(self, key: str, value: Any) -> dict[str, Any]:
         '''Inserts a single key-value pair into the structure.
@@ -361,7 +362,7 @@ class Reader:
             with tf.NamedTemporaryFile("w", delete=False, dir=self._project_root) as file:
                 file.write("{}")
 
-                os.replace(file.name, self.path)
+            os.replace(file.name, self.path)
 
             self.logger.info(f"JSON file did not exist, created JSON file: {self.path}")
         
