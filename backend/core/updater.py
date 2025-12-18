@@ -9,7 +9,7 @@ import support.utils as utils
 import requests, os, shutil
 
 class Updater:
-    def __init__(self, project_root: Path, *, logger: Log = None):
+    def __init__(self, project_root: Path, *, temp_project_folder: Path = None, logger: Log = None):
         '''Updater class.
         
         This does not replace the updater.exe itself, only replacing the primary
@@ -22,6 +22,10 @@ class Updater:
                 The project root. This is not the Path of the entire application folder, 
                 but is the Path to the folder that holds the main application files.
             
+            temp_project_folder: Path
+                The path to the project folder of the ZIP file. This is the extracted files in the
+                temporary folder. By default it is None, using `entrabulker` as its default folder name.
+            
             logger: Log, default None
                 The Log class. By default it is None, printing to stdout.
         '''
@@ -32,7 +36,7 @@ class Updater:
         # this also makes it easier to clean up everything
         # the temp dir will not be in the main project root, but will be in the outside parent.
         self._temp_dir: Path = self.project_root / "temp"
-        self._temp_project_folder: Path = self._temp_dir / FILE_NAMES["project_folder"]
+        self._temp_project_folder: Path = temp_project_folder or self._temp_dir / FILE_NAMES["project_folder"]
 
         if self._temp_dir.exists() and self._temp_dir.is_dir():
             utils.unlink_path(self._temp_dir)
@@ -99,7 +103,6 @@ class Updater:
         self._create_temp_dir()
         try:
             with requests.get(zip_url) as r:
-                # TODO: error handle here please!
                 r.raise_for_status()
                 # NOTE: there was a massive headache when writing my test cases
                 # it turns out for some reason, NamedTemporaryFile does not write
@@ -108,11 +111,11 @@ class Updater:
                 with open(self._temp_dir / zip_name, "wb") as file:
                     for chunk in r.iter_content(8024):
                         file.write(chunk)
-        except Exception as e:
-            self.logger.error(f"Exception occurred while downloading file: {e}")
+        except (Exception, requests.exceptions.HTTPError) as e:
+            self.logger.error(f"Error while downloading from {url}: {e}")
 
             out_res["status"] = "error"
-            out_res["message"] = "Failed to download the data"
+            out_res["message"] = "Failed to download the ZIP file"
 
             return out_res
         
@@ -165,6 +168,14 @@ class Updater:
 
         ignore_set: set[str] = {f.lower() for f in ignore_files}
 
+        if not apps_path.exists():
+            res["message"] = f"Unable to find project folder {apps_path.name}"
+            res["status"] = "error"
+
+            self.logger.warning(f"Failed to find {apps_path}")
+
+            return res
+
         for file in apps_path.iterdir():
             file_name: str = file.name
             file_root: Path = self.project_root / file_name
@@ -192,7 +203,7 @@ class Updater:
     def cleanup(self) -> cResponse:
         '''Removes the temporary folder holding the files for the Updater class.
         
-        It will always return success.
+        It will always return a success.
         '''
         res: cResponse = utils.generate_response(message=f"Removed temp folder")
 
