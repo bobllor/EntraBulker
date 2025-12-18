@@ -50,6 +50,8 @@ class UpdaterAPI:
     
     def start_main_app(self) -> None:
         '''Starts the main application. This will quit the current application.'''
+        # NOTE: this might need to be manually tested.
+        # as on 12/17/2025 2:59 PM: it confirm works.
         self.logger.info(f"Starting main application")
         app_path: str = str(PROJECT_ROOT / FILE_NAMES["app_exe"])
 
