@@ -2,19 +2,19 @@ import React, { useEffect, useState } from 'react';
 import './App.css'
 import ProgressBar from './components/ProgressBar'
 import "./pywebFunctions";
-import { clean, downloadZip, startMainApp, unzip } from './pywebFunctions';
+import { clean, downloadZip, startMainApp, unzip, update } from './pywebFunctions';
 import ProgressText from './components/ProgressText';
 
 // TODO: once ready, remove the comments
 const FUNCTIONS = [
   {func: downloadZip, initialText: "Downloading ZIP file"},
   {func: unzip, initialText: "Extracting file contents to temp folder"},
-  //{func: update, initialText: "Updating application files"},
+  {func: update, initialText: "Updating application files"},
   {func: clean, initialText: "Removing temp folder"},
-  //{func: startMainApp, initialText: "Starting application"},
+  {func: startMainApp, initialText: "Starting application"},
 ];
 const PERCENT = Math.floor(100 / FUNCTIONS.length);
-const IS_TEST = true;
+const IS_TEST = false;
 const TEXT_COLORS = {
   0: "text-black",
   1: "text-black/80",
@@ -24,14 +24,15 @@ const TEXT_COLORS = {
 }
 
 export default function App() {
-  const [innerProgressBarWidth, setInnerProgressBarWidth] = useState(1);
+  const [innerProgressBarWidth, setInnerProgressBarWidth] = useState(0);
   const [progressText, setProgressText] = useState([{text: "Starting updating process...", status: "success"}]);
+  const [failedUpdate, setFailedUpdate] = useState(false);
 
   useEffect(() => {
     // timeout is required due to pywebview still loading initially. i think.
     if(!IS_TEST){
       setTimeout(() => {
-        startRun(FUNCTIONS, setProgressText, setInnerProgressBarWidth, PERCENT);
+        startRun(FUNCTIONS, setProgressText, setFailedUpdate, setInnerProgressBarWidth, PERCENT);
       }, 600)
     }
   }, [])
@@ -50,14 +51,14 @@ export default function App() {
             ))
           }
         </div>
-        <ProgressBar innerProgressBarWidth={innerProgressBarWidth} /> 
-        {IS_TEST && <button onClick={() => startRun(FUNCTIONS, setProgressText, setInnerProgressBarWidth, PERCENT)}>Test</button>}
+        <ProgressBar innerProgressBarWidth={innerProgressBarWidth} failed={failedUpdate} /> 
+        {IS_TEST && <button onClick={() => startRun(FUNCTIONS, setProgressText, setFailedUpdate, setInnerProgressBarWidth, PERCENT)}>Test</button>}
       </div>
     </>
   )
 }
 
-async function startRun(arrObj, setText, setNumber, add){
+async function startRun(arrObj, setText, setFail, setNumber, add){
   const errorMsg = "ERROR: Failed to update";
   let failedUpdate = false;
 
@@ -73,6 +74,7 @@ async function startRun(arrObj, setText, setNumber, add){
       // keeping the actual restart error message black, red is where it failed.
       setText(prev => [{text: errorMsg, status: "success"}, ...prev]);
       failedUpdate = true;
+      setFail(true);
       break;
     }
   }
