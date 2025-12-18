@@ -7,7 +7,7 @@ import webview, sys
 if __name__ == "__main__":
     updater: Updater = Updater(PROJECT_ROOT) 
     api: UpdaterAPI = UpdaterAPI(updater)
-    size: tuple[int, int] = (400, 250)
+    size: tuple[int, int] = (400, 200)
     
     # TODO: add a flag checker to ensure this cant be run normally, only through the main app.
     flag: str = sys.argv[-1]
