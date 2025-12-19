@@ -1,16 +1,17 @@
 from pathlib import Path
 from backend.api.api import API
-from tests.fixtures import api, df
+from tests.fixtures import api, df, get
 from typing import Any
 from backend.core.parser import Parser
-from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, AZURE_HEADERS 
+from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, AZURE_HEADERS, VERSION
 from backend.support.types import ManualCSVProps, APISettings, Formatting, Response
 from io import BytesIO
+from unittest.mock import patch, MagicMock
 import numpy as np
 import pandas as pd
 import backend.support.utils as utils
 import tests.utils as ttils
-import random, string
+import random, string, requests
 
 def test_generate_csv_normal(tmp_path: Path, api: API, df: pd.DataFrame):
     # creating a baseline dataframe for comparison in the end
@@ -595,3 +596,46 @@ def test_generate_bad_password(api: API):
 
     assert res["status"] == "success" and "default values" in res["message"].lower() \
         and len(res["content"]) == DEFAULT_SETTINGS_MAP["password"]["length"]
+
+@patch("backend.api.api.requests.get")
+def test_check_version(get: MagicMock, api: API):
+    mock = get.return_value
+
+    mock.status_code = 200
+    mock.content = b'v1.1.5'
+
+    url: str = "https://afakeurl-goeshere.com/api/text.txt"
+
+    res: Response = api.check_version(url)
+
+    assert res["has_update"] == True
+
+    mock.content = VERSION.encode()
+
+    res = api.check_version(url)
+
+    assert res["has_update"] == False
+
+@patch("backend.api.api.requests.get")
+def test_error_status_check_version(get: MagicMock, api: API):
+    mock = get.return_value
+
+    mock.status_code = 400
+    mock.content = b"v1.2.2"
+
+    url: str = "https://afakeurl-goeshere.com/api/text.txt"
+    res: Response = api.check_version(url)
+
+    assert res["status"] == "error"
+
+@patch("backend.api.api.requests.get", side_effect=requests.ConnectionError("Connection failed"))
+def test_exception_check_version(get: MagicMock, api: API):
+    mock = get.return_value
+
+    mock.status_code = 200
+    mock.content = b"v1.2.2"
+
+    url: str = "https://afakeurl-goeshere.com/api/text.txt"
+    res: Response = api.check_version(url)
+
+    assert res["status"] == "error"
