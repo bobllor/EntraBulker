@@ -1,16 +1,10 @@
-import { JSX } from "react";
+import React, { JSX } from "react";
 import { NavigateFunction } from "react-router";
 import { useNavigate } from "react-router";
 import { useModalContext } from "../context/ModalContext";
 import { FormStateProps } from "./FormComponents/manualUtils/types";
-import { FaHammer, FaHome } from "react-icons/fa";
 
-const buttons: Array<MainNavigationProps> = [
-    {label: 'Home', url: '/', icon: <FaHome size={20}/>},
-    {label: 'Custom', url: '/custom', icon: <FaHammer size={20} />}
-]
-
-export default function Navigation({formState}: {formState: FormStateProps}
+export default function Navigation({buttons, formState}: {buttons: Array<MainNavigationProps>, formState: FormStateProps}
     ): JSX.Element{
     let navigate: NavigateFunction = useNavigate();
 
@@ -36,21 +30,28 @@ export default function Navigation({formState}: {formState: FormStateProps}
     
     return (
         <>  
+        <div className="flex flex-col gap-1 relative">
             {buttons.map((obj, i) => (
-              <div key={i}
-              onClick={() => clickWrapper(obj.url)}
-              className={`p-2 w-25 flex justify-between items-center rounded-xl bg-gray-300
-              hover:bg-gray-500/60 gap-1 text-center`}>
-                {obj.icon && 
-                  <span>
-                    {obj.icon}
-                  </span>
-                }
-                <div className="flex justify-start items-center w-full select-none">
-                  {obj.label}
+              <React.Fragment key={i}>
+                <div className="relative flex justify-center items-center group">
+                  <div key={i}
+                  onClick={() => clickWrapper(obj.url)}
+                  className={`p-4 w-fit flex justify-between items-center rounded-xl bg-gray-300
+                  hover:bg-gray-500/60 gap-1 text-center`}>
+                    {obj.icon && 
+                      <span>
+                        {obj.icon}
+                      </span>
+                    }
+                  </div>
+                  <div className="absolute translate-x-18 w-20 border border-gray-400 pointer-events-none items-center justify-center
+                  hidden group-hover:flex p-2 rounded-xl default-shadow bg-gray-300">
+                    {obj.label}
+                  </div>
                 </div>
-              </div>
+              </React.Fragment>
             ))}
+          </div>
         </>
     )
 }
