@@ -1,5 +1,7 @@
 import React, { useEffect } from "react";
 import { NavigateFunction, useLocation, useNavigate } from "react-router";
+import { checkVersion, runUpdater } from "./pywebviewFunctions";
+import { Response } from "./pywebviewTypes";
 
 /**
  * Dismisses a component by using an HTML element for listening and
@@ -68,5 +70,42 @@ export function useDisableShortcuts(){
                 }
             }
         })
+    }, [])
+}
+
+/**
+ * Disables the context menu.
+ */
+export function useDisableContext(){
+    useEffect(() => {
+        window.addEventListener("contextmenu", (event) => {
+            event.preventDefault();
+        })
+    }, [])
+}
+
+/**
+ * Checks an update for the program. This is only called once on load, until the program restart.
+ */
+export function useCheckUpdate(revealModal: (text: string) => Promise<boolean>, text: string){
+    useEffect(() => {
+        setTimeout(async () => {
+            let res: Response = await checkVersion();
+            
+            // errors will be ignored completely.
+            if(res.status == "success"){
+                const hasUpdate: boolean = res["has_update"];
+                
+                if(!hasUpdate){
+                    const modalAction: boolean = await revealModal(text);
+                    
+                    if(modalAction){
+                        res = await runUpdater();
+
+                        console.log(res);
+                    }
+                }
+            }
+        }, 2000)
     }, [])
 }
