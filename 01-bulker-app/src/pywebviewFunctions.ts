@@ -46,3 +46,21 @@ export async function updateSetting(key: string, value: any, parent?: string): P
 
     return res;
 }
+
+/**
+ * Checks if an update is needed for the program
+ * @returns Response Promise
+ */
+export async function checkVersion(): Promise<Response>{
+    return await window.pywebview.api.check_version();
+}
+
+/**
+ * Runs the updater. This will exit the current program if successful.
+ * @returns Response Promise if successful
+ */
+export async function runUpdater(): Promise<Response>{
+    const res: Response = await window.pywebview.api.run_updater();
+
+    return res;
+}
