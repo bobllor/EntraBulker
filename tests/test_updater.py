@@ -9,7 +9,7 @@ from io import BytesIO
 from backend.support.vars import FILE_NAMES
 import tests.utils as ttils
 import backend.support.utils as utils
-import datetime, time
+import requests, time
 
 URL: str = "https://fakeurl.com/api/stuff"
 
@@ -96,6 +96,21 @@ def test_cleanup(get: MagicMock, updater: Updater):
     updater.cleanup()
 
     assert not updater.temp_project_folder.exists()
+
+@patch('backend.core.updater.requests.get', side_effect=requests.HTTPError("HTTP error"))
+def test_error_download_zip(get: MagicMock, updater: Updater):
+    set_mock_response(get)
+    res: Response = updater.download_zip(URL)
+
+    assert res["status"] == "error"
+
+def test_fail_unzip(get: MagicMock, tmp_path: Path, updater: Updater):
+    set_mock_response(get)
+    updater.download_zip(URL)
+
+    res: Response = updater.unzip(tmp_path / "nonexistent.zip")
+
+    assert res["status"] == "error"
 
 def mk_app(path: Path, sleep: int | float = 0) -> None:
     '''Creates the folder structure of the application in the given path.
