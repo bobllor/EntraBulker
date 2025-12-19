@@ -26,10 +26,11 @@ if __name__ == '__main__':
         logger=logger,
         project_root=PROJECT_ROOT
     )
-    size: tuple[int, int] = (1600, 900)
+    size: tuple[int, int] = (1080, 720)
 
     title: str = f'EntraBulker {VERSION}'
     url: str = 'http://localhost:5173/'
 
-    webview.create_window(title, url, js_api=api, min_size=size)
+    window: webview.Window = webview.create_window(title, url, js_api=api, min_size=size)
+    api.set_window(window)
     webview.start(debug=True)
