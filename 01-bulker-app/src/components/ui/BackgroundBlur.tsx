@@ -1,10 +1,12 @@
 import React, { JSX, useRef } from "react";
 import { useDismissRoute } from "../../hooks";
 
-export default function BackgroundBlur({setComponentState}: {setComponentState: React.Dispatch<React.SetStateAction<boolean>>}): JSX.Element{
+export default function BackgroundBlur({setComponentState = null}: {setComponentState: React.Dispatch<React.SetStateAction<boolean>> | null}): JSX.Element{
     const bgDivRef = useRef<HTMLDivElement>(null);
 
-    useDismissRoute(bgDivRef, setComponentState);
+    if(setComponentState){
+        useDismissRoute(bgDivRef, setComponentState);
+    }
 
     return (
         <>
