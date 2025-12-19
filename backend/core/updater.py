@@ -92,7 +92,7 @@ class Updater:
         if len(content_res) < 1:
             out_res["status"] = "error"
             out_res["message"] = f"Failed to read data"
-            self.logger.error(f"Response for content is empty: {content_res}")
+            self.logger.error(f"Response for {url} is empty: {content_res}")
 
             return out_res
 

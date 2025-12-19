@@ -6,8 +6,7 @@ from pathlib import Path
 import support.utils as utils
 import webview
 
-URL: str = "https://api.github.com/repos/bobllor/entra-bulker/releases"
-test: str = "https://api.github.com/repos/bobllor/teklabeler/releases"
+URL: str = "https://api.github.com/repos/bobllor/entrabulker/releases"
 
 class UpdaterAPI:
     def __init__(self, updater: Updater, *, logger: Log = None):
@@ -24,7 +23,7 @@ class UpdaterAPI:
 
     def download_zip(self) -> Response:
         '''Begins the ZIP download process.'''
-        res: Response = self.updater.download_zip(test)
+        res: Response = self.updater.download_zip(URL)
 
         return res
     
