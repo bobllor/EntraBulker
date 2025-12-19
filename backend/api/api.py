@@ -8,10 +8,11 @@ from io import BytesIO
 from logger import Log
 from pathlib import Path
 from typing import Any, Literal, TypedDict, Callable
-from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH
+from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH, VERSION
 from copy import deepcopy
 import support.utils as utils
 import pandas as pd
+import webview, requests
 
 ReaderType = Literal["excel", "opco", "settings"]
 AzureFileState = TypedDict(
@@ -57,6 +58,8 @@ class API:
         self.settings: Reader = settings_reader
         self.opco: Reader = opco_reader
         self.logger: Log = logger or Log()
+
+        self._window: webview.Window = None
 
         self.readers: dict[ReaderType, Reader] = {
             "settings": self.settings,
@@ -440,6 +443,10 @@ class API:
 
         return res
     
+    def set_window(self, window: webview.Window) -> None:
+        '''Sets the pywebview window.'''
+        self._window = window
+    
     def _get_azure_writer(self, *,
         full_names: list[str],
         usernames: list[str],
@@ -695,18 +702,85 @@ class API:
     def get_metadata(self) -> Metadata:
         '''Gets the metadata in a dictionary response.'''
         return META
-
-    def run_updater(self) -> None:
-        '''Runs the Updater for the application.
+    
+    def check_version(self) -> Response:
+        '''Checks the version of the program from the repsitory through a request. This
+        compares the version of the program to the one in the repository.
         
-        WARNING: This will exit the current program with a code 3 and run the separate update installer.
+        It returns a Response with a new key `has_update` of a bool indicating if an update
+        is needed or not.
+
+        In case of any errors, this will always return False.
         '''
+        # NOTE: the message is not intended to be used on the frontend.
+
+        res: Response = utils.generate_response(message="Successfully checked version")
+        url: str = "https://raw.githubusercontent.com/bobllor/EntraBulker/refs/heads/dev/main-app/VERSION.txt"
+        repo_version: str = ""
+
+        has_update: bool = False
+        res["has_update"] = has_update
+
+        try:
+            r: requests.Response = requests.get(url)
+
+            if r.status_code != 200:
+                res["status"] = "error"
+                res["message"] = "Failed to receive response from request"
+
+                self.logger.error(f"Failed to request {url}: {r.status_code}")
+
+                return res
+            
+            if not r.content or len(r.content) == 0:
+                res["status"] = "error"
+                res["message"] = "Response does not have any data"
+
+                self.logger.error(f"Content has no data: {r.content}")
+
+                return res
+
+            self.logger.debug(f"Request content: {r.content}")
+            repo_version = r.content.decode()
+
+            has_update = VERSION.lower() != repo_version.strip().lower()
+        except Exception as e:
+            self.logger.error(f"Failed version with {url}: {e}")
+
+            res["message"] = "Failed to check version"
+            res["status"] = "error"
+
+            return res
+        
+        res["has_update"] = has_update
+        
+        return res
+
+    def run_updater(self) -> Response:
+        '''Runs the Updater for the application.
+
+        This will end the current application and launch the updater.
+
+        In case of a failure or the path doesn't exist, then an error will occur and return to the program
+        with a Response.
+        '''
+        res: Response = utils.generate_response(message="Updating application")
         updater_cmd: list[str] = [
             str(UPDATER_PATH)
         ]
 
+        if not UPDATER_PATH.exists():
+            res["status"] = "error"
+            res["message"] = f"{UPDATER_PATH} does not exist"
+
+            return res
+
         self.logger.info("Updating application")
         self.logger.debug(f"Updater path: {UPDATER_PATH}")
 
+        self._window.destroy()
         utils.run_cmd(updater_cmd)
-        exit(3)
+        exit(0)
+        
+        # this will never be reached but leaving it here for best practices.
+        return res
