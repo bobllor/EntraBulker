@@ -2,7 +2,7 @@ from pathlib import Path
 from .types import HeaderMap, OpcoMap, TemplateMap, APISettings, AzureHeaders, Metadata, FileNames
 from typing import Literal
 
-VERSION: str = "v1.0.0"
+VERSION: str = "v1.0.0" # this must start with a "v"
 
 META: Metadata = {
     "version": VERSION,
