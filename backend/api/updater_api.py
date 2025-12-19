@@ -4,7 +4,6 @@ from support.vars import PROJECT_ROOT, FILE_NAMES
 from support.types import Response
 from pathlib import Path
 import support.utils as utils
-import webview
 
 URL: str = "https://api.github.com/repos/bobllor/entra-bulker/releases"
 test: str = "https://api.github.com/repos/bobllor/teklabeler/releases"
@@ -16,10 +15,17 @@ class UpdaterAPI:
 
         self.updater: Updater = updater
 
+        # pywebview, not added in due to CI fails
         self._window = None
     
-    def set_window(self, window: webview.Window):
-        '''Sets the Window for pywebview.'''
+    def set_window(self, window):
+        '''Sets the Window for pywebview.
+
+        Parameters
+        ----------
+        window: webview.Window
+            The pywebview Window. 
+        '''
         self._window = window
 
     def download_zip(self) -> Response:

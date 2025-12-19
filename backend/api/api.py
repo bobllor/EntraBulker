@@ -12,7 +12,7 @@ from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH,
 from copy import deepcopy
 import support.utils as utils
 import pandas as pd
-import webview, requests
+import requests
 
 ReaderType = Literal["excel", "opco", "settings"]
 AzureFileState = TypedDict(
@@ -59,7 +59,8 @@ class API:
         self.opco: Reader = opco_reader
         self.logger: Log = logger or Log()
 
-        self._window: webview.Window = None
+        # pywebview, not added in due to CI fails
+        self._window = None
 
         self.readers: dict[ReaderType, Reader] = {
             "settings": self.settings,
@@ -443,8 +444,12 @@ class API:
 
         return res
     
-    def set_window(self, window: webview.Window) -> None:
-        '''Sets the pywebview window.'''
+    def set_window(self, window) -> None:
+        '''Sets the pywebview window.
+        
+        window: webview.Window
+            The pywebview Window.
+        '''
         self._window = window
     
     def _get_azure_writer(self, *,
@@ -703,7 +708,7 @@ class API:
         '''Gets the metadata in a dictionary response.'''
         return META
     
-    def check_version(self) -> Response:
+    def check_version(self, url: str = None) -> Response:
         '''Checks the version of the program from the repsitory through a request. This
         compares the version of the program to the one in the repository.
         
@@ -711,18 +716,25 @@ class API:
         is needed or not.
 
         In case of any errors, this will always return False.
+
+        Parameters
+        ----------
+            url: str, default None
+                The URL for the request. By default it is None, and will use a default URL.
         '''
         # NOTE: the message is not intended to be used on the frontend.
 
         res: Response = utils.generate_response(message="Successfully checked version")
-        url: str = "https://raw.githubusercontent.com/bobllor/EntraBulker/refs/heads/dev/main-app/VERSION.txt"
+        if url is None:
+            url = "https://raw.githubusercontent.com/bobllor/EntraBulker/refs/heads/dev/main-app/VERSION.txt"
+
         repo_version: str = ""
 
         has_update: bool = False
         res["has_update"] = has_update
 
         try:
-            r: requests.Response = requests.get(url)
+            r: requests.Response = requests.get(url, timeout=10)
 
             if r.status_code != 200:
                 res["status"] = "error"
@@ -731,7 +743,8 @@ class API:
                 self.logger.error(f"Failed to request {url}: {r.status_code}")
 
                 return res
-            
+
+            # probably will never not happen but just in case. 
             if not r.content or len(r.content) == 0:
                 res["status"] = "error"
                 res["message"] = "Response does not have any data"
@@ -745,7 +758,7 @@ class API:
 
             has_update = VERSION.lower() != repo_version.strip().lower()
         except Exception as e:
-            self.logger.error(f"Failed version with {url}: {e}")
+            self.logger.error(f"Failed check with {url}: {e}")
 
             res["message"] = "Failed to check version"
             res["status"] = "error"
