@@ -96,7 +96,7 @@ export function useCheckUpdate(revealModal: (text: string) => Promise<boolean>, 
             if(res.status == "success"){
                 const hasUpdate: boolean = res["has_update"];
                 
-                if(!hasUpdate){
+                if(hasUpdate){
                     const modalAction: boolean = await revealModal(text);
                     
                     if(modalAction){
