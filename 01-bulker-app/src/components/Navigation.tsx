@@ -11,7 +11,7 @@ export default function Navigation({buttons, formState}: {buttons: Array<MainNav
     const { revealModal } = useModalContext();
 
     async function clickWrapper(url: string): Promise<void>{
-      // FIXME: when its ready to be packaged into an app this has to be changed.
+      console.log(url, window.location.pathname);
       if(window.location.pathname == url) return;
 
       // only used if a form has been edited before navigation
