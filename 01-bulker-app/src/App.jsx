@@ -42,7 +42,7 @@ export default function App() {
 
   useDisableShortcuts();
   // FIXME: when production -> uncomment
-  //useDisableContext();
+  useDisableContext();
   useCheckUpdate(revealModal, "An update has been found. Would you like to start the update?");
 
   return (
@@ -68,14 +68,14 @@ export default function App() {
           <div className="h-screen w-20 flex flex-col items-center gap-1 py-10 justify-between">
             <Navigation buttons={navigationButtons} formState={{state: formEdited, func: setFormEdited}} />
             <div
-            className={`flex justify-center items-center rounded-2xl p-1 z-3 
-            hover:bg-gray-500 ${showSetting && "pointer-events-none"}`}>
-              <button
-              className="outline-none"
-              tabIndex={-1}
-              onClick={() => navigate("/settings", {replace: true, state: {previousLocation: location}})}>
-                <FaCog size={32} />
-              </button>
+            onClick={() => navigate("/settings", {replace: true, state: {previousLocation: location}})}
+            className={`flex justify-center items-center rounded-2xl p-4 z-3 bg-gray-300 
+            hover:bg-gray-500/60 ${showSetting && "pointer-events-none"} group outline-0`}>
+                <FaCog size={20} />
+                <div className="absolute translate-x-18 w-20 border border-gray-400 pointer-events-none items-center justify-center
+                  hidden group-hover:flex p-2 rounded-xl default-shadow bg-gray-300">
+                  Settings
+                </div>
             </div>
           </div>
         </div>
