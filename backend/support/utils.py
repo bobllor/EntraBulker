@@ -2,7 +2,9 @@ from core.names import NameFormatter, NoSpace, Period
 from typing import Literal, Any, Callable
 from support.types import Response
 from pathlib import Path
-import string, re, uuid, subprocess
+import http.server as http
+import string, re, uuid, subprocess, sys, os
+import threading
 
 def format_name(name: str, *, keep_full: bool = False) -> str:
     '''Formats and validates a name, by default the First and Last name only.
@@ -314,7 +316,7 @@ def generate_text(*,
     Parameters
     ----------
         text: str
-            The text used that is being replaced, it has a max length of 500. The words being replaced
+            The text used that is being replaced, it has a max length of 1250. The words being replaced
             **must be surrounded by brackets**, e.g. [NAME].
         
         username: str, default ''
@@ -418,3 +420,27 @@ def get_paths(path: Path) -> list[str]:
             data.extend(temp_data)
 
     return data
+
+def is_prod() -> bool:
+    '''Returns a boolean determining if the script ran is a bundled application or
+    a normal script run.
+    '''
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        return True
+    
+    return False
+
+def init_window() -> tuple[bool, Path | None]:
+    '''Returns a tuple for the pywebview Window setup, based on
+    if it is in development or production.
+
+    It returns the debug mode status and the log path.
+    '''
+    debug: bool = False
+    log_path: Path = Path("logs")
+
+    if not is_prod():
+        debug = True
+        log_path = None
+    
+    return debug, log_path
