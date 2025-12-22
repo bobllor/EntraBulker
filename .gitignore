@@ -28,8 +28,11 @@ dist-ssr
 *.XLSX
 *.csv
 *.CSV
+*.spec
 temp
 /config/
+build
+entrabulker
 
 # python
 __pycache__/
