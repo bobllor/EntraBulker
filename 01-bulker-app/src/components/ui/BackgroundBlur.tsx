@@ -11,7 +11,7 @@ export default function BackgroundBlur({setComponentState = null}: {setComponent
     return (
         <>
             <div ref={bgDivRef}
-            className="bg-gray-300/40 backdrop-blur-2xl absolute w-full h-full z-3" />
+            className="bg-black/20 backdrop-blur-xs absolute w-full h-full z-3" />
         </>
     )    
 }
