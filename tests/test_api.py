@@ -132,9 +132,9 @@ def test_generate_csv_bad_two_names(tmp_path: Path, api: API, df: pd.DataFrame):
 
 def test_generate_csv_multiple_template(tmp_path: Path, api: API, df: pd.DataFrame):
     res: Response = api.update_setting("enabled", True, "template")
+    res: Response = api.update_setting("text", "[NAME] is cool", "template")
 
-    if res["status"] == "error":
-        raise AssertionError(f"Failed to update setting key: {res}")
+    assert res["status"] != "error"
 
     parser: Parser = Parser(df)
     parser.apply(DEFAULT_HEADER_MAP["name"], func=utils.format_name)
@@ -144,8 +144,7 @@ def test_generate_csv_multiple_template(tmp_path: Path, api: API, df: pd.DataFra
     for frame in dataframes:
         res = api.generate_azure_csv(frame)
 
-        if res["status"] == "error":
-            raise AssertionError(f"Failed to generate CSV: {res}")
+        assert res["status"] != "error"
 
     base_len: int = len(dataframes)
     base_row_len: int = len(parser.get_df()) * 2
