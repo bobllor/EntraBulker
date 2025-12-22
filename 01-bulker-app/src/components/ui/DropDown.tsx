@@ -5,7 +5,7 @@ export default function DropDown({obj, objId, defaultValue, func}: DropDownProps
     return (
         <>
             <select
-            className="outline-none min-w-[30%] max-w-[30%]"
+            className="outline-1 min-w-[30%] max-w-[30%] rounded-sm p-1"
             tabIndex={-1}
             defaultValue={defaultValue}
             onChange={(e) => handleOnChangeSelect(e, objId, func)}>
