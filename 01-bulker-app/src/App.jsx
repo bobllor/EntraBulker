@@ -41,7 +41,6 @@ export default function App() {
   }, [location])
 
   useDisableShortcuts();
-  // FIXME: when production -> uncomment
   useDisableContext();
   useCheckUpdate(revealModal, "An update has been found. Would you like to start the update?");
 
