@@ -475,6 +475,12 @@ class API:
 
     def _generate_template(self, text: str, writer: AzureWriter, file_name: str) -> Response:
         res: Response = utils.generate_response(message="")
+        if text.strip() == "":
+            res["status"] = "error"
+            res["message"] = ", unable to generate text files due to empty text entry"
+
+            return res
+
         template_res: Response = writer.write_template(
             self.settings.get("output_dir"), 
             text=text, 
@@ -483,10 +489,10 @@ class API:
 
         if template_res["status"] == "error":
             res["status"] = "error"
-            res["message"] = ", failed to generate template files"
+            res["message"] = ", failed to generate text files"
         elif template_res["status"] == "success":
             # NOTE: this is appended to the final successful message
-            res["message"] = " and generated template files"
+            res["message"] = " and generated text files"
         
         return res
     
@@ -726,7 +732,7 @@ class API:
 
         res: Response = utils.generate_response(message="Successfully checked version")
         if url is None:
-            url = "https://raw.githubusercontent.com/bobllor/EntraBulker/refs/heads/dev/main-app/VERSION.txt"
+            url = "https://raw.githubusercontent.com/bobllor/EntraBulker/refs/heads/dev/main/VERSION.txt"
 
         repo_version: str = ""
 
