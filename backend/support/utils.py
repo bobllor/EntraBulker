@@ -430,14 +430,19 @@ def is_prod() -> bool:
     
     return False
 
-def init_window() -> tuple[bool, Path | None]:
+def init_window(dir_name: str = "logs") -> tuple[bool, Path | None]:
     '''Returns a tuple for the pywebview Window setup, based on
     if it is in development or production.
 
     It returns the debug mode status and the log path.
+
+    Parameters
+    ----------
+        dir_name: str, default logs
+            The directory name of the logs folder. By default, it will be `logs`.
     '''
     debug: bool = False
-    log_path: Path = Path("logs")
+    log_path: Path = Path(dir_name)
 
     if not is_prod():
         debug = True
