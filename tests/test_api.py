@@ -607,13 +607,13 @@ def test_check_version(get: MagicMock, api: API):
 
     res: Response = api.check_version(url)
 
-    assert res["has_update"] == True
+    assert res["content"] == True
 
     mock.content = VERSION.encode()
 
     res = api.check_version(url)
 
-    assert res["has_update"] == False
+    assert res["content"] == False
 
 @patch("backend.api.api.requests.get")
 def test_error_status_check_version(get: MagicMock, api: API):
