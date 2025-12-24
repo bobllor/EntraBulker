@@ -75,7 +75,7 @@ class Updater:
         if res.status_code != 200:
             out_res["status"] = "error"
             out_res["message"] = f"Failed to request data"
-            self.logger.error(f"Failed to request on url {url}: {res.status_code}")
+            self.logger.error(f"Got non-200 status code on {url}: {res.status_code}")
 
             return out_res
 
