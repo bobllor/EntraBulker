@@ -1,6 +1,6 @@
 from logger import Log
 from core.updater import Updater
-from support.vars import PROJECT_ROOT, FILE_NAMES
+from support.vars import PROJECT_ROOT, FILE_NAMES, VERSION
 from support.types import Response
 from pathlib import Path
 import support.utils as utils
@@ -8,12 +8,13 @@ import support.utils as utils
 URL: str = "https://api.github.com/repos/bobllor/entrabulker/releases"
 
 class UpdaterAPI:
-    def __init__(self, updater: Updater, *, logger: Log = None):
+    def __init__(self, updater: Updater, *, logger: Log = None, is_prod: bool = False):
         '''Updater API. Each method must be called manually in the front end.'''
         self.logger: Log = logger or Log()
 
         self.updater: Updater = updater
 
+        self.is_prod: bool = is_prod
         # pywebview, not added in due to CI fails
         self._window = None
     
@@ -26,6 +27,15 @@ class UpdaterAPI:
             The pywebview Window. 
         '''
         self._window = window
+    
+    def is_production(self) -> Response:
+        '''Returns a response with `content` boolean indicating if the program
+        is in production or development.
+        '''
+        self.logger.debug(f"Is production: {self.is_prod}")
+        res: Response = utils.generate_response(message="Request successful", content=self.is_prod)
+
+        return res
 
     def download_zip(self) -> Response:
         '''Begins the ZIP download process.'''
@@ -42,6 +52,30 @@ class UpdaterAPI:
     def clean(self) -> Response:
         '''Cleans up the files from the download.'''
         res: Response = self.updater.cleanup()
+
+        return res
+    
+    def check_version(self, url: str = None) -> Response:
+        '''Checks the version and returns a Response.
+        
+        It contains a new key `content` that holds a bool value, indicating
+        if an update is needed or not.
+        '''
+        if url is None:
+            url = "https://raw.githubusercontent.com/bobllor/EntraBulker/refs/heads/dev/main/VERSION.txt"
+
+        out_res: Response = utils.get_version(url)
+
+        self.logger.debug(f"Version response: {out_res}")
+        
+        res: Response = utils.generate_response(message="Version check successful", content=False)
+        res["content"] = VERSION.lower() != out_res["content"].lower()
+
+        if out_res["status"] == "error" or out_res["exception"] is not None:
+            self.logger.error(f"Failed to request on {url}: {out_res}")
+            res["message"] = out_res["message"]
+            res["content"] = False
+            res["status"] = "error"
 
         return res
     

@@ -739,7 +739,7 @@ class API:
         self.logger.debug(f"Version response: {out_res}")
 
         if out_res["status"] == "error" or out_res["exception"] is not None:
-            self.logger.error(f"Failed to request on {url}: {res}")
+            self.logger.error(f"Failed to request on {url}: {out_res}")
             res["message"] = out_res["message"]
             res["content"] = False
             res["status"] = "error"
