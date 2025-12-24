@@ -742,6 +742,7 @@ class API:
             self.logger.error(f"Failed to request on {url}: {res}")
             res["message"] = out_res["message"]
             res["content"] = False
+            res["status"] = "error"
 
             return res
         
