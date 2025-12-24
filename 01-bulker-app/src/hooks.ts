@@ -94,12 +94,13 @@ export function useCheckUpdate(revealModal: (text: string) => Promise<boolean>, 
             
             // errors will be ignored completely.
             if(res.status == "success"){
-                const hasUpdate: boolean = res["has_update"];
+                const hasUpdate: boolean = res["content"];
                 
                 if(hasUpdate){
                     const modalAction: boolean = await revealModal(text);
                     
                     if(modalAction){
+                        // do nothing if it fails.
                         res = await runUpdater();
 
                         console.log(res);
