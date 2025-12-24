@@ -729,49 +729,21 @@ class API:
                 The URL for the request. By default it is None, and will use a default URL.
         '''
         # NOTE: the message is not intended to be used on the frontend.
-
-        res: Response = utils.generate_response(message="Successfully checked version")
+        res: Response = utils.generate_response(message="Successfully checked version", content=False)
         if url is None:
             url = "https://raw.githubusercontent.com/bobllor/EntraBulker/refs/heads/dev/main/VERSION.txt"
 
-        repo_version: str = ""
+        out_res: Response = utils.get_version(url)
+        res["content"] = VERSION.lower() != out_res["content"].strip().lower()
 
-        has_update: bool = False
-        res["has_update"] = has_update
+        self.logger.debug(f"Version response: {out_res}")
 
-        try:
-            r: requests.Response = requests.get(url, timeout=10)
-
-            if r.status_code != 200:
-                res["status"] = "error"
-                res["message"] = "Failed to receive response from request"
-
-                self.logger.error(f"Failed to request {url}: {r.status_code}")
-
-                return res
-
-            # probably will never not happen but just in case. 
-            if not r.content or len(r.content) == 0:
-                res["status"] = "error"
-                res["message"] = "Response does not have any data"
-
-                self.logger.error(f"Content has no data: {r.content}")
-
-                return res
-
-            self.logger.debug(f"Request content: {r.content}")
-            repo_version = r.content.decode()
-
-            has_update = VERSION.lower() != repo_version.strip().lower()
-        except Exception as e:
-            self.logger.error(f"Failed check with {url}: {e}")
-
-            res["message"] = "Failed to check version"
-            res["status"] = "error"
+        if out_res["status"] == "error" or out_res["exception"] is not None:
+            self.logger.error(f"Failed to request on {url}: {res}")
+            res["message"] = out_res["message"]
+            res["content"] = False
 
             return res
-        
-        res["has_update"] = has_update
         
         return res
 
