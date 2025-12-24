@@ -2,9 +2,10 @@ from backend.logger import Log
 from pathlib import Path
 from backend.core.json_reader import Reader
 from backend.api.api import API
+from backend.api.updater_api import UpdaterAPI
 from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, DEFAULT_OPCO_MAP, FILE_NAMES
 from backend.core.updater import Updater
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 import pandas as pd
 import pytest
 
@@ -53,9 +54,17 @@ def api(tmp_path: Path):
     yield api
 
 @pytest.fixture
-def get():
-    with patch('requests.get') as get:
-        yield get
+def updater_api(tmp_path: Path):
+    upd: Updater = Updater(
+        tmp_path / TEST_PROGRAM_FILES / FILE_NAMES["project_folder"] / FILE_NAMES["apps_folder"],
+    )
+    updater_api: UpdaterAPI = UpdaterAPI(upd)
+
+    yield updater_api
+    
+@pytest.fixture
+def mock():
+    yield Mock
 
 @pytest.fixture
 def df():

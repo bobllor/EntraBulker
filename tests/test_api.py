@@ -1,12 +1,12 @@
 from pathlib import Path
 from backend.api.api import API
-from tests.fixtures import api, df, get
+from tests.fixtures import api, df, mock
 from typing import Any
 from backend.core.parser import Parser
 from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, AZURE_HEADERS, VERSION
 from backend.support.types import ManualCSVProps, APISettings, Formatting, Response
 from io import BytesIO
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, Mock
 import numpy as np
 import pandas as pd
 import backend.support.utils as utils
@@ -597,11 +597,11 @@ def test_generate_bad_password(api: API):
         and len(res["content"]) == DEFAULT_SETTINGS_MAP["password"]["length"]
 
 @patch("backend.api.api.requests.get")
-def test_check_version(get: MagicMock, api: API):
-    mock = get.return_value
+def test_check_version(mock: Mock, api: API):
+    mocko = mock.return_value
 
-    mock.status_code = 200
-    mock.content = b'v1.1.5'
+    mocko.status_code = 200
+    mocko.content = b'v1.1.5'
 
     url: str = "https://afakeurl-goeshere.com/api/text.txt"
 
@@ -609,18 +609,18 @@ def test_check_version(get: MagicMock, api: API):
 
     assert res["content"] == True
 
-    mock.content = VERSION.encode()
+    mocko.content = VERSION.encode()
 
     res = api.check_version(url)
 
     assert res["content"] == False
 
 @patch("backend.api.api.requests.get")
-def test_error_status_check_version(get: MagicMock, api: API):
-    mock = get.return_value
+def test_error_status_check_version(mock: Mock, api: API):
+    mocko = mock.return_value
 
-    mock.status_code = 400
-    mock.content = b"v1.2.2"
+    mocko.status_code = 400
+    mocko.content = b"v1.2.2"
 
     url: str = "https://afakeurl-goeshere.com/api/text.txt"
     res: Response = api.check_version(url)
@@ -628,11 +628,11 @@ def test_error_status_check_version(get: MagicMock, api: API):
     assert res["status"] == "error"
 
 @patch("backend.api.api.requests.get", side_effect=requests.ConnectionError("Connection failed"))
-def test_exception_check_version(get: MagicMock, api: API):
-    mock = get.return_value
+def test_exception_check_version(mock: Mock, api: API):
+    mocko = mock.return_value
 
-    mock.status_code = 200
-    mock.content = b"v1.2.2"
+    mocko.status_code = 200
+    mocko.content = b"v1.2.2"
 
     url: str = "https://afakeurl-goeshere.com/api/text.txt"
     res: Response = api.check_version(url)
