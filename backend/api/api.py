@@ -731,7 +731,7 @@ class API:
         # NOTE: the message is not intended to be used on the frontend.
         res: Response = utils.generate_response(message="Successfully checked version", content=False)
         if url is None:
-            url = "https://raw.githubusercontent.com/bobllor/EntraBulker/refs/heads/main/VERSION.txt"
+            url = META["version_url"]
 
         out_res: Response = utils.get_version(url)
         res["content"] = VERSION.lower() != out_res["content"].strip().lower()
