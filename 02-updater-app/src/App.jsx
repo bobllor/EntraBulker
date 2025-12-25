@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import './App.css'
 import ProgressBar from './components/ProgressBar'
 import "./pywebFunctions";
-import { clean, downloadZip, startMainApp, unzip, update } from './pywebFunctions';
+import { checkVersion, clean, downloadZip, isProduction, startMainApp, unzip, update } from './pywebFunctions';
 import ProgressText from './components/ProgressText';
 
-// TODO: once ready, remove the comments
 const FUNCTIONS = [
   {func: downloadZip, initialText: "Downloading ZIP file"},
   {func: unzip, initialText: "Extracting file contents to temp folder"},
@@ -14,7 +12,6 @@ const FUNCTIONS = [
   {func: startMainApp, initialText: "Starting application"},
 ];
 const PERCENT = Math.floor(100 / FUNCTIONS.length);
-const IS_TEST = false;
 const TEXT_COLORS = {
   0: "text-black",
   1: "text-black/80",
@@ -26,16 +23,37 @@ const TEXT_COLORS = {
 export default function App() {
   const [innerProgressBarWidth, setInnerProgressBarWidth] = useState(0);
   const [progressText, setProgressText] = useState([{text: "Starting updating process...", status: "success"}]);
-  const [failedUpdate, setFailedUpdate] = useState(false);
+  const [failedUpdate, setFailedUpdate] = useState(true);
+
+  // must be initially false otherwise it will run
+  const [isProd, setIsProd] = useState(null);
+
+  // used to get production/test environments
+  useEffect(() => {
+    setTimeout(async () => {
+      const prodStatus = await isProduction();
+
+      setIsProd(prodStatus);
+      console.log("Initial status:", isProd);
+    }, 500)
+  }, [])
 
   useEffect(() => {
-    // timeout is required due to pywebview still loading initially. i think.
-    if(!IS_TEST){
-      setTimeout(() => {
-        startRun(FUNCTIONS, setProgressText, setFailedUpdate, setInnerProgressBarWidth, PERCENT);
+    console.log("Final status:", isProd);
+    if(isProd){
+      setTimeout(async ()=> {
+        const res = await checkVersion();
+
+        if(res["content"]){
+          run(FUNCTIONS, setProgressText, setFailedUpdate, setInnerProgressBarWidth, PERCENT);
+        }else{
+          const text = "No update found";
+          setProgressText(prev => [{text: text, status: "error"}, ...prev]);
+          setFailedUpdate(true);
+        }
       }, 600)
     }
-  }, [])
+  }, [isProd])
 
   return (
     <>
@@ -52,13 +70,31 @@ export default function App() {
           }
         </div>
         <ProgressBar innerProgressBarWidth={innerProgressBarWidth} failed={failedUpdate} /> 
-        {IS_TEST && <button onClick={() => startRun(FUNCTIONS, setProgressText, setFailedUpdate, setInnerProgressBarWidth, PERCENT)}>Test</button>}
+        {!isProd && isProd != null && 
+          <button onClick={
+            () => run(
+              FUNCTIONS, 
+              setProgressText, 
+              setFailedUpdate, 
+              setInnerProgressBarWidth, 
+              PERCENT)}>
+            Test
+          </button>
+        }
       </div>
     </>
   )
 }
 
-async function startRun(arrObj, setText, setFail, setNumber, add){
+/**
+ * Starts the updating process.
+ * @param {*} arrObj An array of objects holding the `func` updating functions and a `initialText` update text
+ * @param {*} setText The setter function for the progress text state
+ * @param {*} setFail The setter function for the state tracking if the update fails
+ * @param {*} setNumber The setter function to update the progress bar
+ * @param {*} add The calculated percent addition derived from the length of `arrObj`, added to the progress bar
+ */
+async function run(arrObj, setText, setFail, setNumber, add){
   const errorMsg = "ERROR: Failed to update";
   let failedUpdate = false;
 
