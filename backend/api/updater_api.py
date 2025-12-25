@@ -1,6 +1,6 @@
 from logger import Log
 from core.updater import Updater
-from support.vars import PROJECT_ROOT, FILE_NAMES, VERSION
+from support.vars import PROJECT_ROOT, FILE_NAMES, VERSION, META
 from support.types import Response
 from pathlib import Path
 import support.utils as utils
@@ -62,7 +62,7 @@ class UpdaterAPI:
         if an update is needed or not.
         '''
         if url is None:
-            url = "https://raw.githubusercontent.com/bobllor/EntraBulker/refs/heads/dev/main/VERSION.txt"
+            url = META["version_url"]
 
         out_res: Response = utils.get_version(url)
 

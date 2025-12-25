@@ -28,6 +28,7 @@ class OpcoMap(TypedDict):
 
 class Metadata(TypedDict):
     version: str
+    version_url: str
 
 class FileNames(TypedDict):
     '''The main files of the application in the project root.'''
