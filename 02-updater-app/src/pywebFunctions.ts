@@ -44,3 +44,21 @@ export async function startMainApp(): Promise<Response>{
 
     return new Promise((resolve) => resolve({"message": "Exiting updater, starting application", "status": "success"}));
 }
+
+/**
+ * Gets the environment for the application, development or production.
+ */
+export async function isProduction(): Promise<boolean>{
+    const res: Response = await window.pywebview.api.is_production();
+
+    return res["content"];
+}
+
+/**
+ * Checks the version of the program and returns a Response with a boolean value 
+ * if an update is needed or not.
+ * @returns Response Promise
+ */
+export async function checkVersion(): Promise<Response>{
+    return await window.pywebview.api.check_version();
+}
