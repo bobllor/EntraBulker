@@ -2,7 +2,8 @@ from core.names import NameFormatter, NoSpace, Period
 from typing import Literal, Any, Callable
 from support.types import Response
 from pathlib import Path
-import string, re, uuid, subprocess
+import string, re, uuid, subprocess, sys
+import requests
 
 def format_name(name: str, *, keep_full: bool = False) -> str:
     '''Formats and validates a name, by default the First and Last name only.
@@ -314,7 +315,7 @@ def generate_text(*,
     Parameters
     ----------
         text: str
-            The text used that is being replaced, it has a max length of 500. The words being replaced
+            The text used that is being replaced, it has a max length of 1250. The words being replaced
             **must be surrounded by brackets**, e.g. [NAME].
         
         username: str, default ''
@@ -418,3 +419,78 @@ def get_paths(path: Path) -> list[str]:
             data.extend(temp_data)
 
     return data
+
+def is_prod() -> bool:
+    '''Returns a boolean determining if the script ran is a bundled application or
+    a normal script run.
+    '''
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        return True
+    
+    return False
+
+def init_window(dir_name: str = "logs") -> tuple[bool, Path | None]:
+    '''Returns a tuple for the pywebview Window setup, based on
+    if it is in development or production.
+
+    It returns the debug mode status and the log path.
+
+    Parameters
+    ----------
+        dir_name: str, default logs
+            The directory name of the logs folder. By default, it will be `logs`.
+    '''
+    debug: bool = False
+    log_path: Path = Path(dir_name)
+
+    if not is_prod():
+        debug = True
+        log_path = None
+    
+    return debug, log_path
+
+def get_version(url: str) -> Response:
+    '''Requests from a url pointing to a text file containing the version
+    number.
+
+    It will return a Response with the `content` value being the version, if any.
+    If the request fails, then the Response error will return instead with an empty
+    `content` value. 
+
+    Any exceptions that occur in the function will be the `exception` key, otherwise
+    it will default to None.
+
+    Parameters
+    ----------
+        url: str, default None
+            The url to the raw text for the version number. By default it is None,
+            using a default url.
+    '''
+    res: Response = generate_response(message="Successfully checked version", content="", exception=None)
+
+    try:
+        r: requests.Response = requests.get(url, timeout=10)
+
+        if r.status_code != 200:
+            res["status"] = "error"
+            res["message"] = f"Failed to receive response from request ({r.status_code})"
+
+            return res
+
+        # probably will never not happen but just in case. 
+        if not r.content or len(r.content) == 0:
+            res["status"] = "error"
+            res["message"] = "Response does not have any data"
+
+            return res
+
+        repo_version = r.content.decode()
+        res["content"] = repo_version
+    except Exception as e:
+        res["message"] = "Failed to check version"
+        res["status"] = "error"
+        res["exception"] = e
+
+        return res
+    
+    return res

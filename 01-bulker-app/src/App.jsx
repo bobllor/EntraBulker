@@ -11,12 +11,16 @@ import General from "./components/SettingsComponents/OptionsComponents/General";
 import HeadersMapping from "./components/SettingsComponents/OptionsComponents/HeadersMapping";
 import OpcoMapping from "./components/SettingsComponents/OptionsComponents/OpcoMapping";
 import TextForm from "./components/SettingsComponents/OptionsComponents/TextForm";
-import { FaCog } from "react-icons/fa";
 import Password from "./components/SettingsComponents/OptionsComponents/Password";
-import { useDisableShortcuts } from "./hooks";
+import { useCheckUpdate, useDisableContext, useDisableShortcuts } from "./hooks";
 import { useMetaContext } from "./context/MetaContext";
+import { FaHome, FaHammer, FaCog } from "react-icons/fa";
 
 const fullPageStyle = 'h-screen w-screen flex flex-col justify-center items-center overflow-hidden relative p-3'
+const navigationButtons = [
+    {label: 'Home', url: '/', icon: <FaHome size={20} />},
+    {label: 'Custom', url: '/custom', icon: <FaHammer size={20} />}
+]
 
 export default function App() {
   // used for buttons and the manual form for the unload.
@@ -27,7 +31,7 @@ export default function App() {
   let location = useLocation();
   const navigate = useNavigate();
 
-  const { showModal } = useModalContext();
+  const { showModal, revealModal } = useModalContext();
   const { version } = useMetaContext();
 
   useEffect(() => {
@@ -37,6 +41,8 @@ export default function App() {
   }, [location])
 
   useDisableShortcuts();
+  useDisableContext();
+  useCheckUpdate(revealModal, "An update has been found. Would you like to start the update?");
 
   return (
     <> 
@@ -57,18 +63,20 @@ export default function App() {
             </Route>
           </Routes>
         }
-        <div
-        className={`absolute flex justify-center items-center rounded-2xl p-1 left-10 bottom-5 m-10 z-3 
-        hover:bg-gray-500 ${showSetting && "pointer-events-none"}`}>
-          <button
-          className="outline-none"
-          tabIndex={-1}
-          onClick={() => navigate("/settings", {replace: true, state: {previousLocation: location}})}>
-            <FaCog size={32} strokeWidth={10} stroke="black" color="gray"/>
-          </button>
-        </div>
-        <div className="absolute left-10 top-5 z-2 flex flex-col justify-center items-center gap-2">
-          <Navigation formState={{state: formEdited, func: setFormEdited}}/>
+        <div className="absolute left-0 z-2 flex flex-col justify-center items-center gap-2">
+          <div className="h-screen w-20 flex flex-col items-center gap-1 py-10 justify-between">
+            <Navigation buttons={navigationButtons} formState={{state: formEdited, func: setFormEdited}} />
+            <div
+            onClick={() => navigate("/settings", {replace: true, state: {previousLocation: location}})}
+            className={`flex justify-center items-center rounded-2xl p-4 z-3 bg-gray-300 
+            hover:bg-gray-500/60 ${showSetting && "pointer-events-none"} group outline-0`}>
+                <FaCog size={20} />
+                <div className="absolute translate-x-18 w-20 border border-gray-400 pointer-events-none items-center justify-center
+                  hidden group-hover:flex p-2 rounded-xl default-shadow bg-gray-300">
+                  Settings
+                </div>
+            </div>
+          </div>
         </div>
         <Routes location={location.state?.previousLocation || location}>
             <Route path='/' element={<Home />} />
@@ -76,7 +84,7 @@ export default function App() {
               formState={{state: formEdited, func: setFormEdited}}/>} />
             <Route path="settings" element={<Settings setShowSetting={setShowSetting} />} />
         </Routes>
-        <div className="w-full flex justify-end items-center px-5">
+        <div className="w-full flex justify-end items-center px-5 fixed bottom-0">
           {version}
         </div>
       </div>

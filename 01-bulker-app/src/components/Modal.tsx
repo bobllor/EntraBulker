@@ -31,22 +31,24 @@ export default function Modal(): JSX.Element{
 
     return (
         <>
-            <div className="flex flex-col p-10 rounded-xl border-1 gap-9
-            bg-white w-100 h-50 z-4 absolute justify-center items-center">
+        <div className="w-screen h-screen absolute flex justify-center items-center z-5">
+            <div className="flex flex-col p-10 rounded-xl border-1 border-gray-300 gap-9
+            bg-white w-100 h-50 z-4 absolute justify-center items-center default-shadow">
                 <div>
                     <span>{modalText}</span>
                 </div>
                 <div
-                className="flex gap-10">
+                className="flex gap-5">
                     {buttons.map((obj, i) => (
                     <button
-                    className="bg-blue-500/90 p-2 rounded-xl w-30 h-10 hover:bg-blue-400/60 text-white" 
+                    className="bg-blue-500 p-2 rounded-xl w-30 h-10 hover:bg-blue-400 text-white default-shadow" 
                     key={i} onClick={obj.func}>
                         {obj.name}
                     </button>
                     ))}
                 </div>
             </div>
+        </div>
         </>
     )
 }

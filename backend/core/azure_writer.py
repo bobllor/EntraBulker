@@ -188,7 +188,7 @@ class AzureWriter:
 
         res: Response = self._validates_template_write(names, usernames, passwords)
 
-        # used for testing
+        # used for testing, can be safely ignored anywhere else
         res["output_dir"] = str(path)
 
         if res["status"] == "error":

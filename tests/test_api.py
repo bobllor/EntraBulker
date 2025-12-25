@@ -1,16 +1,17 @@
 from pathlib import Path
 from backend.api.api import API
-from tests.fixtures import api, df
+from tests.fixtures import api, df, mock
 from typing import Any
 from backend.core.parser import Parser
-from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, AZURE_HEADERS 
+from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, AZURE_HEADERS, VERSION
 from backend.support.types import ManualCSVProps, APISettings, Formatting, Response
 from io import BytesIO
+from unittest.mock import patch, Mock
 import numpy as np
 import pandas as pd
 import backend.support.utils as utils
 import tests.utils as ttils
-import random, string
+import random, string, requests
 
 def test_generate_csv_normal(tmp_path: Path, api: API, df: pd.DataFrame):
     # creating a baseline dataframe for comparison in the end
@@ -131,9 +132,9 @@ def test_generate_csv_bad_two_names(tmp_path: Path, api: API, df: pd.DataFrame):
 
 def test_generate_csv_multiple_template(tmp_path: Path, api: API, df: pd.DataFrame):
     res: Response = api.update_setting("enabled", True, "template")
+    res: Response = api.update_setting("text", "[NAME] is cool", "template")
 
-    if res["status"] == "error":
-        raise AssertionError(f"Failed to update setting key: {res}")
+    assert res["status"] != "error"
 
     parser: Parser = Parser(df)
     parser.apply(DEFAULT_HEADER_MAP["name"], func=utils.format_name)
@@ -143,8 +144,7 @@ def test_generate_csv_multiple_template(tmp_path: Path, api: API, df: pd.DataFra
     for frame in dataframes:
         res = api.generate_azure_csv(frame)
 
-        if res["status"] == "error":
-            raise AssertionError(f"Failed to generate CSV: {res}")
+        assert res["status"] != "error"
 
     base_len: int = len(dataframes)
     base_row_len: int = len(parser.get_df()) * 2
@@ -595,3 +595,46 @@ def test_generate_bad_password(api: API):
 
     assert res["status"] == "success" and "default values" in res["message"].lower() \
         and len(res["content"]) == DEFAULT_SETTINGS_MAP["password"]["length"]
+
+@patch("backend.api.api.requests.get")
+def test_check_version(mock: Mock, api: API):
+    mocko = mock.return_value
+
+    mocko.status_code = 200
+    mocko.content = b'v1.1.5'
+
+    url: str = "https://afakeurl-goeshere.com/api/text.txt"
+
+    res: Response = api.check_version(url)
+
+    assert res["content"] == True
+
+    mocko.content = VERSION.encode()
+
+    res = api.check_version(url)
+
+    assert res["content"] == False
+
+@patch("backend.api.api.requests.get")
+def test_error_status_check_version(mock: Mock, api: API):
+    mocko = mock.return_value
+
+    mocko.status_code = 400
+    mocko.content = b"v1.2.2"
+
+    url: str = "https://afakeurl-goeshere.com/api/text.txt"
+    res: Response = api.check_version(url)
+
+    assert res["status"] == "error"
+
+@patch("backend.api.api.requests.get", side_effect=requests.ConnectionError("Connection failed"))
+def test_exception_check_version(mock: Mock, api: API):
+    mocko = mock.return_value
+
+    mocko.status_code = 200
+    mocko.content = b"v1.2.2"
+
+    url: str = "https://afakeurl-goeshere.com/api/text.txt"
+    res: Response = api.check_version(url)
+
+    assert res["status"] == "error"

@@ -1,15 +1,20 @@
 from pathlib import Path
-from .types import HeaderMap, OpcoMap, TemplateMap, APISettings, AzureHeaders, Metadata, FileNames
+from .types import HeaderMap, OpcoMap, APISettings, AzureHeaders, Metadata, FileNames
 from typing import Literal
+from .utils import is_prod
+import sys
 
-VERSION: str = "v1.0.0"
+VERSION: str = "v1.0.0" # this must start with a "v"
 
 META: Metadata = {
     "version": VERSION,
 }
 
 # used as the baseline root path
-PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
+if is_prod():
+    PROJECT_ROOT: Path = Path(sys.executable).parent
+else:
+    PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
 # name of the updater application for updating the application
 
 FILE_NAMES: FileNames = {

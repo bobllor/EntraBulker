@@ -8,10 +8,11 @@ from io import BytesIO
 from logger import Log
 from pathlib import Path
 from typing import Any, Literal, TypedDict, Callable
-from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH
+from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH, VERSION
 from copy import deepcopy
 import support.utils as utils
 import pandas as pd
+import requests
 
 ReaderType = Literal["excel", "opco", "settings"]
 AzureFileState = TypedDict(
@@ -57,6 +58,9 @@ class API:
         self.settings: Reader = settings_reader
         self.opco: Reader = opco_reader
         self.logger: Log = logger or Log()
+
+        # pywebview, not added in due to CI fails
+        self._window = None
 
         self.readers: dict[ReaderType, Reader] = {
             "settings": self.settings,
@@ -440,6 +444,14 @@ class API:
 
         return res
     
+    def set_window(self, window) -> None:
+        '''Sets the pywebview window.
+        
+        window: webview.Window
+            The pywebview Window.
+        '''
+        self._window = window
+    
     def _get_azure_writer(self, *,
         full_names: list[str],
         usernames: list[str],
@@ -463,6 +475,12 @@ class API:
 
     def _generate_template(self, text: str, writer: AzureWriter, file_name: str) -> Response:
         res: Response = utils.generate_response(message="")
+        if text.strip() == "":
+            res["status"] = "error"
+            res["message"] = ", unable to generate text files due to empty text entry"
+
+            return res
+
         template_res: Response = writer.write_template(
             self.settings.get("output_dir"), 
             text=text, 
@@ -471,10 +489,10 @@ class API:
 
         if template_res["status"] == "error":
             res["status"] = "error"
-            res["message"] = ", failed to generate template files"
+            res["message"] = ", failed to generate text files"
         elif template_res["status"] == "success":
             # NOTE: this is appended to the final successful message
-            res["message"] = " and generated template files"
+            res["message"] = " and generated text files"
         
         return res
     
@@ -695,18 +713,66 @@ class API:
     def get_metadata(self) -> Metadata:
         '''Gets the metadata in a dictionary response.'''
         return META
-
-    def run_updater(self) -> None:
-        '''Runs the Updater for the application.
+    
+    def check_version(self, url: str = None) -> Response:
+        '''Checks the version of the program from the repsitory through a request. This
+        compares the version of the program to the one in the repository.
         
-        WARNING: This will exit the current program with a code 3 and run the separate update installer.
+        It returns a Response with a new key `has_update` of a bool indicating if an update
+        is needed or not.
+
+        In case of any errors, this will always return False.
+
+        Parameters
+        ----------
+            url: str, default None
+                The URL for the request. By default it is None, and will use a default URL.
         '''
+        # NOTE: the message is not intended to be used on the frontend.
+        res: Response = utils.generate_response(message="Successfully checked version", content=False)
+        if url is None:
+            url = "https://raw.githubusercontent.com/bobllor/EntraBulker/refs/heads/dev/main/VERSION.txt"
+
+        out_res: Response = utils.get_version(url)
+        res["content"] = VERSION.lower() != out_res["content"].strip().lower()
+
+        self.logger.debug(f"Version response: {out_res}")
+
+        if out_res["status"] == "error" or out_res["exception"] is not None:
+            self.logger.error(f"Failed to request on {url}: {out_res}")
+            res["message"] = out_res["message"]
+            res["content"] = False
+            res["status"] = "error"
+
+            return res
+        
+        return res
+
+    def run_updater(self) -> Response:
+        '''Runs the Updater for the application.
+
+        This will end the current application and launch the updater.
+
+        In case of a failure or the path doesn't exist, then an error will occur and return to the program
+        with a Response.
+        '''
+        res: Response = utils.generate_response(message="Updating application")
         updater_cmd: list[str] = [
             str(UPDATER_PATH)
         ]
 
+        if not UPDATER_PATH.exists():
+            res["status"] = "error"
+            res["message"] = f"{UPDATER_PATH} does not exist"
+
+            return res
+
         self.logger.info("Updating application")
         self.logger.debug(f"Updater path: {UPDATER_PATH}")
 
+        self._window.destroy()
         utils.run_cmd(updater_cmd)
-        exit(3)
+        exit(0)
+        
+        # this will never be reached but leaving it here for best practices.
+        return res

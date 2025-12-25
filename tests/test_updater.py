@@ -1,21 +1,21 @@
-from tests.fixtures import updater, get, TEST_PROGRAM_FILES
+from tests.fixtures import updater, mock, TEST_PROGRAM_FILES
 from backend.core.updater import Updater
 from backend.support.types import Response
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, Mock
 from typing import Any
 from zipfile import ZipFile, ZipInfo
 from io import BytesIO
 from backend.support.vars import FILE_NAMES
 import tests.utils as ttils
 import backend.support.utils as utils
-import datetime, time
+import requests, time
 
 URL: str = "https://fakeurl.com/api/stuff"
 
 @patch('backend.core.updater.requests.get')
-def test_download_zip(get: MagicMock, tmp_path: Path, updater: Updater):
-    set_mock_response(get)
+def test_download_zip(mock: Mock, updater: Updater):
+    set_mock_response(mock)
 
     zip_bytes: bytes = get_zip()
 
@@ -40,8 +40,8 @@ def test_download_zip(get: MagicMock, tmp_path: Path, updater: Updater):
     assert len(downloaded_file_names) == len(base_file_names)
 
 @patch('backend.core.updater.requests.get')
-def test_unzip(get: MagicMock, updater: Updater):
-    set_mock_response(get)
+def test_unzip(mock: Mock, updater: Updater):
+    set_mock_response(mock)
 
     updater.download_zip(URL)
         
@@ -52,9 +52,9 @@ def test_unzip(get: MagicMock, updater: Updater):
     assert len(unzipped_files) != 0
 
 @patch('backend.core.updater.requests.get')
-def test_normal_update(get: MagicMock, tmp_path: Path, updater: Updater):
+def test_normal_update(mock: Mock, tmp_path: Path, updater: Updater):
     mk_app(tmp_path)
-    set_mock_response(get)
+    set_mock_response(mock)
 
     updater.download_zip(URL)
     updater.unzip(updater.zip_file)
@@ -87,8 +87,8 @@ def test_normal_update(get: MagicMock, tmp_path: Path, updater: Updater):
     assert found
 
 @patch('backend.core.updater.requests.get')
-def test_cleanup(get: MagicMock, updater: Updater):
-    set_mock_response(get)
+def test_cleanup(mock: Mock, updater: Updater):
+    set_mock_response(mock)
 
     updater.download_zip(URL)
     updater.unzip(updater.zip_file)
@@ -96,6 +96,35 @@ def test_cleanup(get: MagicMock, updater: Updater):
     updater.cleanup()
 
     assert not updater.temp_project_folder.exists()
+
+@patch('backend.core.updater.requests.get', side_effect=requests.HTTPError("HTTP error"))
+def test_error_download_zip(mock: Mock, updater: Updater):
+    set_mock_response(mock)
+
+    res: Response = updater.download_zip(URL)
+
+    assert res["status"] == "error"
+
+@patch('backend.core.updater.requests.get')
+def test_status_code_download_zip(mock: Mock, updater: Updater):
+    mock = set_mock_response(mock)
+
+    mock.status_code = 400
+    res: Response = updater.download_zip(URL)
+
+    assert res["status"] == "error"
+
+def test_fail_update(tmp_path: Path, updater: Updater):
+    mk_app(tmp_path)
+
+    res: Response = updater.update(updater.temp_project_folder)
+
+    assert res["status"] == "error" and "unable to find" in res["message"].lower()
+
+def test_fail_unzip(tmp_path: Path, updater: Updater):
+    res: Response = updater.unzip(tmp_path / "nonexistent.zip")
+
+    assert res["status"] == "error"
 
 def mk_app(path: Path, sleep: int | float = 0) -> None:
     '''Creates the folder structure of the application in the given path.
@@ -139,21 +168,21 @@ def mk_app(path: Path, sleep: int | float = 0) -> None:
     
     time.sleep(sleep)
         
-def set_mock_response(get: get) -> MagicMock:
+def set_mock_response(mock: Any) -> Any:
     '''Sets up the and returns the mock object for requests'''
-    mock: Any = get.return_value
-    mock.status_code = 200
-    mock.json.return_value = [{"assets": [
+    mocko: Any = mock.return_value
+    mocko.status_code = 200
+    mocko.json.return_value = [{"assets": [
         {"browser_download_url": "https://fakeurl.com/api/stuff/zip-test.zip"}
     ]}]
     
     zip_bytes: bytes = get_zip()
 
-    mock.iter_content.return_value = [zip_bytes]
-    mock.__enter__.return_value = mock
-    mock.__exit__.return_value = None
+    mocko.iter_content.return_value = [zip_bytes]
+    mocko.__enter__.return_value = mocko
+    mocko.__exit__.return_value = None
 
-    return mock
+    return mocko
 
 def get_zip() -> bytes:
     '''Gets the ZIP file in list of bytes.'''

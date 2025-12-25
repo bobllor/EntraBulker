@@ -38,6 +38,10 @@ class Reader:
                 before being moved into the given path. By default it is None, using the
                 temporary FS as the location.
         '''
+        self.logger: Log = logger or Log()
+
+        self.logger.debug(f"Reader path: {path}")
+
         # NOTE: because i code on linux this has to be a string due to a PosixPath issue with pywebview
         self.path: str = str(path)
         self._pathpath: Path = Path(path) if isinstance(path, str) else path
@@ -45,7 +49,6 @@ class Reader:
 
         self._project_root: Path = project_root
 
-        self.logger: Log = logger or Log()
         self.update_only: bool = update_only
         self._is_test: bool = is_test
 
@@ -358,11 +361,14 @@ class Reader:
         
         if not self._pathpath.exists():
             self._pathpath.touch()
+
+            temp_file: str = ""
             # need to initialize it with a empty data
             with tf.NamedTemporaryFile("w", delete=False, dir=self._project_root) as file:
                 file.write("{}")
+                temp_file = file.name
 
-            os.replace(file.name, self.path)
+            os.replace(temp_file, self.path)
 
             self.logger.info(f"JSON file did not exist, created JSON file: {self.path}")
         

@@ -50,7 +50,7 @@ export default function General(): JSX.Element{
             label: "Generate Text", 
             element: <SliderButton status={apiSettings.template.enabled}
                 func={(status: boolean) => setTextGenerationState(status, setApiSettings)}/>,
-            optElement: <ToolTip text="Enables a template text generation for each user in the file" />,
+            optElement: <ToolTip text="Enables text generation for each user in the file based on a template" />,
             optElementDirection: "row",
         },
         {
