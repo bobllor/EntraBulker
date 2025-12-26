@@ -6,8 +6,8 @@ import sys
 
 # this value will be the same as soon as the server is launched.
 # this keeps all logs in one day on the same day.
-DEFAULT_FILENAME: datetime = datetime.now().strftime("server-%Y-%m-%d.log")
-DEFAULT_DATEFMT: Literal["%Y-%m-%d %H:%M:%S"] = "%Y-%m-%d %H:%M:%S"
+DEFAULT_FILENAME: str = datetime.now().strftime("%Y-%m-%d.log")
+DEFAULT_DATEFMT: str = "%Y-%m-%d %H:%M:%S"
 
 class LogLevelOptions(TypedDict):
     log_level: str | int
@@ -21,8 +21,9 @@ class Log(Logger):
     log_dir: Path | str = None,
     levels: LogLevelOptions = {},
     stream: TextIO = sys.stdout,
+    file_name: str = None,
     logfmt: str = "%(asctime)s:%(filename)s:%(name)s [%(levelname)s] %(message)s",
-    datefmt: str = DEFAULT_DATEFMT):
+    datefmt: str = "%Y-%m-%d %H:%M:%S"):
         '''Create a new logging instance.
         
         Parameters
@@ -42,17 +43,25 @@ class Log(Logger):
             stream: TextIO default sys.stdout
                 The stream output of the StreamHandler. By default it prints out to the console, sys.stdout.
             
+            file_name: str, default None
+                The file name of the log. By default it is None and will use an attached date formatted as 
+                `%Y-%m-%d.log`.
+            
             logfmt: str default TIME FILENAME LOGNAME [LEVEL] MESSAGE
                 The format of the log message.
         
             datefmt: str default YY-MM-DD HH-MM-SS
-                The format for the date.
+                The format for the date of the log.
         '''
         super().__init__(name)
 
         stream_handler: StreamHandler = StreamHandler(stream)
         file_handler: FileHandler = None
         formatter: Formatter = Formatter(fmt=logfmt, datefmt=datefmt)
+        if file_name is None:
+            file_name = DEFAULT_FILENAME
+        else:
+            file_name = datetime.now().strftime(file_name)
 
         if log_dir is not None:
             new_log_dir: Path = Path("")
@@ -64,7 +73,7 @@ class Log(Logger):
             if not new_log_dir.exists():
                 new_log_dir.mkdir(parents=True, exist_ok=True)
 
-            log_file: Path = new_log_dir / DEFAULT_FILENAME
+            log_file: Path = new_log_dir / file_name
             file_handler = FileHandler(log_file)
 
         handlers: list[tuple[str, Handler]] = [

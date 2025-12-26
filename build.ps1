@@ -8,9 +8,9 @@ param (
 $outFolder = "entrabulker"
 $projRoot = (pwd).path
 
+rm -recurse ".\$outFolder" -ea 0
 mkdir ".\$outFolder" -ea 0
 mkdir ".\$outFolder\apps" -ea 0
-rm ".\$outFolder\apps\$fileName.exe" -ea 0
 
 $mainReact = "01-bulker-app"
 $updaterReact = "02-updater-app"

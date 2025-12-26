@@ -6,10 +6,12 @@ from support.utils import is_prod, init_window
 from support.vars import PROJECT_ROOT, FILE_NAMES
 import webview
 
-if __name__ == "__main__":
-    debug, log_path = init_window("updater-logs")
+# NOTE: updater is located outside of the apps folder, which is where the main application is held.
 
-    logger: Log = Log(log_dir=log_path)
+if __name__ == "__main__":
+    debug, log_path = init_window("logs")
+
+    logger: Log = Log(log_dir=log_path, file_name="updater-%Y-%m-%d.log")
 
     updater: Updater = Updater(PROJECT_ROOT, logger=logger) 
     size: tuple[int, int] = (400, 200)
