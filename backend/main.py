@@ -6,6 +6,8 @@ from support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, DEFAULT_SETTINGS_
 from support.utils import init_window, is_prod
 import webview
 
+# NOTE: main app is in the apps folder
+
 EXCEL_FILE: str = 'excel-mapping.json'
 SETTINGS_FILE: str = 'settings.json'
 OPCO_FILE: str = "opco-mapping.json"
@@ -13,7 +15,8 @@ OPCO_FILE: str = "opco-mapping.json"
 EXCEL_PATH: str = f'{str(PROJECT_ROOT)}/config/{EXCEL_FILE}'
 SETTINGS_PATH: str = f'{str(PROJECT_ROOT)}/config/{SETTINGS_FILE}'
 OPCO_PATH: str = f"{str(PROJECT_ROOT)}/config/{OPCO_FILE}"
-LOGS_PATH: str = f"{str(PROJECT_ROOT)}/logs"
+# same log location with updater logs
+LOGS_PATH: str = f"{str(PROJECT_ROOT.parent)}/logs"
 
 if __name__ == '__main__':
     # will use the npm port, this is changed if in prod
@@ -25,9 +28,9 @@ if __name__ == '__main__':
         server.run()
         url = server.url
 
-    debug, log_path = init_window()
+    debug, log_path = init_window(LOGS_PATH)
 
-    logger: Log = Log(log_dir=log_path)
+    logger: Log = Log(log_dir=log_path, file_name="app-%Y-%m-%d.log")
 
     logger.debug(f"Log path: {log_path} | URL: {url} | Debug: {debug} | Root: {PROJECT_ROOT}")
 
