@@ -438,7 +438,9 @@ def init_window(dir_name: str = "logs") -> tuple[bool, Path | None]:
     Parameters
     ----------
         dir_name: str, default logs
-            The directory name of the logs folder. By default, it will be `logs`.
+            The directory name of the logs folder. By default, it will be `logs`. If
+            a value is given, it will overwrite the default value. However, if it is
+            in development, this will not effect the return value.
     '''
     debug: bool = False
     log_path: Path = Path(dir_name)
