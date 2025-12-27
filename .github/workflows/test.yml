@@ -26,7 +26,11 @@ jobs:
         run: |
           echo "Current directory: $(pwd)"
           .\build.ps1
+      - name: ZIP packaging
+        run: |
+          $versionName = $(type .\VERSION.txt)
+          compress-archive .\entrabulker\ ".\entrabulker-$versionName.zip" -compressionlevel fastest
       - name: File confirmation
         run: |
+          ls
           ls entrabulker
-          echo "Ref: ${{ github.ref }}"
