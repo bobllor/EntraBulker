@@ -1,9 +1,7 @@
-name: artifacts
+name: artifact-upload
 
 on:
   push:
-    branches:
-      - 'workflow/**'
     tags:
       - v*
   workflow_dispatch:
@@ -28,9 +26,13 @@ jobs:
           .\build.ps1
       - name: ZIP packaging
         run: |
-          $versionName = $(type .\VERSION.txt)
-          compress-archive .\entrabulker\ ".\entrabulker-$versionName.zip" -compressionlevel fastest
+          compress-archive .\entrabulker\ ".\entrabulker-$(type .\VERSION.txt).zip" -compressionlevel fastest
       - name: File confirmation
         run: |
           ls
           ls entrabulker
+      - name: Artifact upload
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
+        with:
+          files: "*.zip"
