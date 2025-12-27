@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    if: github.ref_type == 'tag'
     name: Artifact creation
     runs-on: windows-latest
     steps:
