@@ -18,6 +18,10 @@ $updaterReact = "02-updater-app"
 # main app packaging
 if(!($SkipMainBuild)){
     cd "$mainReact"
+
+    if(!(test-path "node_modules")){
+        npm install
+    }
     npm run build
 
     cd "$projRoot"
@@ -36,6 +40,10 @@ if(!($SkipMainApp)){
 # all updater contents will be in the parent folder from the root (apps)
 if(!($SkipUpdaterBuild)){
     cd "$updaterReact"
+
+    if(!(test-path "node_modules")){
+        npm install
+    }
     npm run build
 
     cd "$projRoot"
