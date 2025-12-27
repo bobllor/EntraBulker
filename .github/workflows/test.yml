@@ -1,0 +1,29 @@
+name: artifacts
+
+on:
+  push:
+    branches:
+      - 'workflow/**'
+    tags:
+      - v*
+    workflow_dispatch:
+
+jobs:
+  build:
+    name: Artifact creation
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.11'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '>=3.11 <3.14'
+      - name: Python setup
+        run: pip install -r requirements.txt
+      - name: Artifact build
+        run: |
+          .\build.ps1
+      - name: File confirmation
+        run: ls entrabulker
