@@ -24,7 +24,9 @@ jobs:
         run: pip install -r requirements.txt
       - name: Artifact build
         run: |
-          echo "Current directory: $(pwd).path"
+          echo "Current directory: $(pwd)"
           .\build.ps1
       - name: File confirmation
-        run: ls entrabulker
+        run: |
+          ls entrabulker
+          echo "Ref: ${{ github.ref }}"
