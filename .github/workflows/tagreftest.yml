@@ -1,0 +1,18 @@
+name: tag-test
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Artifact creation
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: File confirmation
+        run: |
+          ls
+          echo "Ref: ${{ github.ref }}"
