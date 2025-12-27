@@ -1,10 +1,12 @@
-name: backend
+name: backend-tests
 
 on:
   push:
     paths:
       - '**.py'
       - '!tests/**'
+    branches-ignore:
+      - '*test*'
   pull_request:
     paths:
       - '**.py'
