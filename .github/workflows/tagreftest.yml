@@ -16,3 +16,4 @@ jobs:
         run: |
           ls
           echo "Ref: ${{ github.ref }}"
+          echo "Ref type: ${{ github.ref_type }}"
