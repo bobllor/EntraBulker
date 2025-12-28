@@ -1,0 +1,65 @@
+name: backend-artifacts
+
+on:
+  push:
+    paths:
+      - '**.py'
+      - '!tests/**'
+    tags:
+      - 'v*'
+    branches-ignore:
+      - '*test*'
+  pull_request:
+    paths:
+      - '**.py'
+      - '!tests/**'
+  workflow_dispatch:
+
+jobs:
+  python-tests:
+    name: Python tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '>=3.11 <3.14'
+          cache: 'pip'
+      - name: Setup
+        run: pip install -r requirements.txt
+      - name: pytest run
+        run: |
+          pytest
+  artifacts:
+    if: github.ref_type == 'tag'
+    needs: python-tests
+    name: Artifact upload
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.11'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '>=3.11 <3.14'
+      - name: Python setup
+        run: |
+          pip install -r requirements.txt
+      - name: Artifact build
+        run: |
+          echo "Current directory: $(pwd)"
+          .\build.ps1
+      - name: ZIP packaging
+        run: |
+          compress-archive .\entrabulker\ ".\entrabulker-$(type .\VERSION.txt).zip" -compressionlevel fastest
+      - name: File confirmation
+        run: |
+          if(!(test-path ".\entrabulker-$(type .\VERSION.txt).zip")){
+            echo "Failed to create ZIP file"
+            exit 1
+          }
+      - name: Artifact upload
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.zip"
