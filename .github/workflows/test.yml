@@ -13,6 +13,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
+        id: checkout
+        run: echo "VERSION=$(type .\VERSION.txt)" >> $GITHUB_OUTPUT
       - uses: actions/setup-node@v6
         with:
           node-version: '22.11'
@@ -26,14 +28,16 @@ jobs:
           echo "Current directory: $(pwd)"
           .\build.ps1
       - name: ZIP packaging
+        id: package
         run: |
-          compress-archive .\entrabulker\ ".\entrabulker-$(type .\VERSION.txt).zip" -compressionlevel fastest
+          compress-archive .\entrabulker\ ".\entrabulker-${{ steps.checkout.outputs.VERSION }}.zip" -compressionlevel fastest
       - name: File confirmation
         run: |
-          ls
-          ls entrabulker
-          echo "Ref: ${{ github.ref }}"
+          if(!(test-path ".\entrabulker-${{ steps.checkout.outputs.VERSION }}.zip")){
+            echo "Failed to create ZIP file"
+            exit 1
+          }
       - name: Artifact upload
         uses: softprops/action-gh-release@v2
         with:
-          files: "*.zip"
+          files: "./entrabulker-${{ steps.checkout.outputs.VERSION }}.zip"
