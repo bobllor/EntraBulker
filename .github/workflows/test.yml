@@ -14,7 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         id: checkout
-        run: echo "VERSION=$(type .\VERSION.txt)" >> $GITHUB_OUTPUT
+        with:
+          run: echo "VERSION=$(type .\VERSION.txt)" >> $GITHUB_OUTPUT
       - uses: actions/setup-node@v6
         with:
           node-version: '22.11'
