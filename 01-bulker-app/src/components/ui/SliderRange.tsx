@@ -19,7 +19,7 @@ export default function SliderRange({targetKey, baseValue, parent = undefined, u
         }, timeout));
 
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 accent-blue-400">
             <span>{sliderValue}</span>
             <input 
             defaultValue={sliderValue}
