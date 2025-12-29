@@ -515,6 +515,8 @@ def compare_version(base_version: str, arg_version: str) -> bool:
             The version that is being compared to the base version.
     '''
     pattern: str = r'^v([0-9]+)\.([0-9]+)\.([0-9]+)$'
+    base_version = base_version.strip().lower()
+    arg_version = arg_version.strip().lower()
 
     # if for some reason the versions are incorrect, always return False.
     if any([re.fullmatch(pattern, version) is None for version in [base_version, arg_version]]):
