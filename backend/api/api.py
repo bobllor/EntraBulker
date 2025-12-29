@@ -12,7 +12,7 @@ from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH,
 from copy import deepcopy
 import support.utils as utils
 import pandas as pd
-import requests
+import webview
 
 ReaderType = Literal["excel", "opco", "settings"]
 AzureFileState = TypedDict(
@@ -33,6 +33,7 @@ class API:
             opco_reader: Reader, 
             logger: Log = None,
             project_root: Path = PROJECT_ROOT,
+            window: webview.Window = None,
         ):
         '''API class.
         
@@ -53,6 +54,10 @@ class API:
             project_root: Path, default `PROJECT_ROOT`
                 The project root folder. This is only used for writing to files,
                 it ensures that the files are working in the same file system. 
+            
+            window: webview.Window, default None
+                The window of webview. By default it is None, and can be set
+                via the method set_window.
         '''
         self.excel: Reader = excel_reader
         self.settings: Reader = settings_reader
@@ -60,7 +65,7 @@ class API:
         self.logger: Log = logger or Log()
 
         # pywebview, not added in due to CI fails
-        self._window = None
+        self._window: webview.Window = window
 
         self.readers: dict[ReaderType, Reader] = {
             "settings": self.settings,
@@ -444,7 +449,7 @@ class API:
 
         return res
     
-    def set_window(self, window) -> None:
+    def set_window(self, window: webview.Window) -> None:
         '''Sets the pywebview window.
         
         window: webview.Window
@@ -736,7 +741,7 @@ class API:
         out_res: Response = utils.get_version(url)
         res["content"] = VERSION.lower() != out_res["content"].strip().lower()
 
-        self.logger.debug(f"Version response: {out_res}")
+        self.logger.debug(f"Check version response: {out_res}")
 
         if out_res["status"] == "error" or out_res["exception"] is not None:
             self.logger.error(f"Failed to request on {url}: {out_res}")
@@ -745,6 +750,8 @@ class API:
             res["status"] = "error"
 
             return res
+
+        self.logger.debug(f"Version response: {res}")
         
         return res
 
