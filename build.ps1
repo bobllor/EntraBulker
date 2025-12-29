@@ -2,8 +2,18 @@ param (
     [switch] $SkipMainBuild,
     [switch] $SkipMainApp,
     [switch] $SkipUpdaterBuild,
-    [switch] $SkipUpdaterApp
+    [switch] $SkipUpdaterApp,
+    [switch] $SkipExe
 )
+
+function compile(){
+    param (
+        [string] $FileName,
+        [string] $Path
+    )
+
+    pyinstaller --onefile --noconsole --icon ".\icon.ico" --name "$FileName" "$Path"
+}
 
 $outFolder = "entrabulker"
 $projRoot = (pwd).path
@@ -30,7 +40,7 @@ if(!($SkipMainBuild)){
 }
 if(!($SkipMainApp)){
     $fileName = "EntraBulker"
-    pyinstaller --onefile --noconsole --name "$fileName" ".\backend\main.py"
+    compile "$fileName" ".\backend\main.py"
 
     mv ".\dist\$fileName.exe" ".\$outFolder\apps\$fileName.exe" -force
     rmdir ".\dist" -ea 0
@@ -52,8 +62,25 @@ if(!($SkipUpdaterBuild)){
 
 if(!($SkipUpdaterApp)){
     $fileName = "EntraUpdater"
-    pyinstaller --onefile --noconsole --name "$fileName" ".\backend\updater_main.py"
+    compile "$fileName" ".\backend\updater_main.py"
 
     mv ".\dist\$fileName.exe" ".\$outFolder\$fileName.exe" -force
     rmdir ".\dist" -ea 0
+}
+
+if(!($SkipExe)){
+    # assumes that the inno setup has a PATH entry, if that fails
+    # then assume that inno setup is installed.
+    # mainly used for the runner.
+    try{
+        ISCC.exe ".\entrabulker.iss" "/DSrcPath=$($pwd.path)" "/DMyAppVersion=$(type ".\VERSION.txt")"
+    }catch{
+        $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+
+        if(test-path $isccPath){
+            & "$isccPath" ".\entrabulker.iss" "/DSrcPath=$($pwd.path)" "/DMyAppVersion=$(type ".\VERSION.txt")"
+        }else{
+            echo "Inno Setup is not installed on the device"
+        }
+    }
 }
