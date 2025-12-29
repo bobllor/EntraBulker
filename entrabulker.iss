@@ -2,15 +2,16 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 ; must use iscc.exe to pass in arguments!
+; args: 
+;   MyAppVersion: The version of the application
+;   SrcPath: The root path holding the application folder "entrabulker"
 
 #define MyAppName "EntraBulker"
-#define MyAppVersion "1.0.0"
 #define MyAppURL "https://github.com/bobllor/EntraBulker"
 #define MyAppExeName "EntraBulker.exe"
 #define MyAppAssocName MyAppName + " File"
 #define MyAppAssocExt ".myp"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
-; this must be in the parent directory of the entrabulker application folder
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
