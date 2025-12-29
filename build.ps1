@@ -69,11 +69,18 @@ if(!($SkipUpdaterApp)){
 }
 
 if(!($SkipExe)){
-    $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+    # assumes that the inno setup has a PATH entry, if that fails
+    # then assume that inno setup is installed.
+    # mainly used for the runner.
+    try{
+        ISCC.exe ".\entrabulker.iss" "/DSrcPath=$($pwd.path)" "/DMyAppVersion=$(type ".\VERSION.txt")"
+    }catch{
+        $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 
-    if(test-path $isccPath){
-        & "$isccPath" .\entrabulker.iss "/DSrcPath=$($pwd.path)"
-    }else{
-        echo "Inno Setup is not installed on the device"
+        if(test-path $isccPath){
+            & "$isccPath" ".\entrabulker.iss" "/DSrcPath=$($pwd.path)" "/DMyAppVersion=$(type ".\VERSION.txt")"
+        }else{
+            echo "Inno Setup is not installed on the device"
+        }
     }
 }
