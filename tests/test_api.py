@@ -596,12 +596,14 @@ def test_generate_bad_password(api: API):
     assert res["status"] == "success" and "default values" in res["message"].lower() \
         and len(res["content"]) == DEFAULT_SETTINGS_MAP["password"]["length"]
 
-@patch("backend.api.api.requests.get")
+@patch("backend.api.api.utils.get_version")
 def test_check_version(mock: Mock, api: API):
-    mocko = mock.return_value
-
-    mocko.status_code = 200
-    mocko.content = b'v1.1.5'
+    mock.return_value = {
+        "status": "success",
+        "message": "Successfully checked version",
+        "content": "v1.1.5",
+        "exception": None,
+    }
 
     url: str = "https://afakeurl-goeshere.com/api/text.txt"
 
@@ -609,30 +611,39 @@ def test_check_version(mock: Mock, api: API):
 
     assert res["content"] == True
 
-    mocko.content = VERSION.encode()
+    mock.return_value = {
+        "status": "success",
+        "message": "Successfully checked version",
+        "content": VERSION,
+        "exception": None,
+    }
 
     res = api.check_version(url)
 
     assert res["content"] == False
 
-@patch("backend.api.api.requests.get")
+@patch("backend.api.api.utils.get_version")
 def test_error_status_check_version(mock: Mock, api: API):
-    mocko = mock.return_value
-
-    mocko.status_code = 400
-    mocko.content = b"v1.2.2"
+    mock.return_value = {
+        "status": "error",
+        "message": "Failed to receive response from request (400)",
+        "content": VERSION,
+        "exception": None,
+    }
 
     url: str = "https://afakeurl-goeshere.com/api/text.txt"
     res: Response = api.check_version(url)
 
     assert res["status"] == "error"
 
-@patch("backend.api.api.requests.get", side_effect=requests.ConnectionError("Connection failed"))
+@patch("backend.api.api.utils.get_version")
 def test_exception_check_version(mock: Mock, api: API):
-    mocko = mock.return_value
-
-    mocko.status_code = 200
-    mocko.content = b"v1.2.2"
+    mock.return_value = {
+        "status": "error",
+        "message": "Failed to check version",
+        "content": VERSION,
+        "exception": requests.ConnectionError("Connection failed")
+    }
 
     url: str = "https://afakeurl-goeshere.com/api/text.txt"
     res: Response = api.check_version(url)

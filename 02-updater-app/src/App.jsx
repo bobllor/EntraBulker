@@ -72,12 +72,10 @@ export default function App() {
         <ProgressBar innerProgressBarWidth={innerProgressBarWidth} failed={failedUpdate} /> 
         {!isProd && isProd != null && 
           <button onClick={
-            () => run(
-              FUNCTIONS, 
-              setProgressText, 
-              setFailedUpdate, 
-              setInnerProgressBarWidth, 
-              PERCENT)}>
+            () => {
+              checkVersion().then(res => console.log(res));
+              run(FUNCTIONS, setProgressText, setFailedUpdate, setInnerProgressBarWidth, PERCENT);
+            }}>
             Test
           </button>
         }

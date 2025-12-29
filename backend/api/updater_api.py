@@ -4,21 +4,39 @@ from support.vars import PROJECT_ROOT, FILE_NAMES, VERSION, META
 from support.types import Response
 from pathlib import Path
 import support.utils as utils
-
-URL: str = "https://api.github.com/repos/bobllor/entrabulker/releases"
+import webview
 
 class UpdaterAPI:
-    def __init__(self, updater: Updater, *, logger: Log = None, is_prod: bool = False):
-        '''Updater API. Each method must be called manually in the front end.'''
+    def __init__(self, updater: Updater, *, logger: Log = None, window: webview.Window = None, is_prod: bool = False):
+        '''Updater API. Each method must be called manually in the front end.
+        This does **not** update the updater itself.
+        
+        Parameters
+        ----------
+            updater: Updater
+                The Updater class used to update the program in its application files.
+            
+            logger: Log, default None
+                The Log class. By default it is None, using an instance that defaults to
+                the stdout terminal.
+            
+            window: webview.Window, default None
+                The window of the webview. By default it is None, and can be set via the
+                set_window method.
+            
+            is_prod: bool, default False
+                Indicates whether or not the API should be in production or development mode.
+                This is only used by the frontend.
+        '''
         self.logger: Log = logger or Log()
 
         self.updater: Updater = updater
 
         self.is_prod: bool = is_prod
         # pywebview, not added in due to CI fails
-        self._window = None
+        self._window: webview.Window = window
     
-    def set_window(self, window):
+    def set_window(self, window: webview.Window) -> None:
         '''Sets the Window for pywebview.
 
         Parameters
@@ -37,9 +55,12 @@ class UpdaterAPI:
 
         return res
 
-    def download_zip(self) -> Response:
+    def download_zip(self, url: str = None) -> Response:
         '''Begins the ZIP download process.'''
-        res: Response = self.updater.download_zip(URL)
+        if url is None:
+            url = META["releases_url"]
+
+        res: Response = self.updater.download_zip(url)
 
         return res
     
@@ -66,7 +87,7 @@ class UpdaterAPI:
 
         out_res: Response = utils.get_version(url)
 
-        self.logger.debug(f"Version response: {out_res}")
+        self.logger.debug(f"Check version response: {out_res}")
         
         res: Response = utils.generate_response(message="Version check successful", content=False)
         res["content"] = VERSION.lower() != out_res["content"].lower()
@@ -76,6 +97,8 @@ class UpdaterAPI:
             res["message"] = out_res["message"]
             res["content"] = False
             res["status"] = "error"
+        
+        self.logger.debug(f"Version response: {res}")
 
         return res
     
@@ -87,8 +110,21 @@ class UpdaterAPI:
 
         return res
     
-    def start_main_app(self) -> None:
+    def start_main_app(self) -> Response:
         '''Starts the main application. This will quit the current application.'''
+        # due to the updater application being out of the main app folder, this
+        # path is different
+        main_app: Path = Path(FILE_NAMES["apps_folder"]) / FILE_NAMES["app_exe"]
+        res: Response = utils.generate_response(message="Successfully started application")
+
+        if not main_app.exists():
+            res["status"] = "error"
+            res["message"] = "Application does not exist"
+
+            self.logger.warning(f"{main_app} does not exist")
+
+            return res
+
         # NOTE: this might need to be manually tested.
         # as on 12/17/2025 2:59 PM: it confirm works.
         self.logger.info(f"Starting main application")
@@ -98,3 +134,5 @@ class UpdaterAPI:
 
         utils.run_cmd([app_path]) 
         exit(0)
+
+        return res

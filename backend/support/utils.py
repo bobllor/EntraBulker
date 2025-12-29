@@ -5,6 +5,8 @@ from pathlib import Path
 import string, re, uuid, subprocess, sys
 import requests
 
+# NOTE: consider making this file into a class. will need a full backend rewrite however!
+
 def format_name(name: str, *, keep_full: bool = False) -> str:
     '''Formats and validates a name, by default the First and Last name only.
     
