@@ -90,7 +90,7 @@ class UpdaterAPI:
         self.logger.debug(f"Check version response: {out_res}")
         
         res: Response = utils.generate_response(message="Version check successful", content=False)
-        res["content"] = VERSION.lower() != out_res["content"].lower()
+        res["content"] = utils.compare_version(VERSION, out_res["content"])
 
         if out_res["status"] == "error" or out_res["exception"] is not None:
             self.logger.error(f"Failed to request on {url}: {out_res}")
