@@ -51,7 +51,33 @@ def test_generate_csv_normal(tmp_path: Path, api: API, df: pd.DataFrame):
     for username in usernames:
         if username not in created_usernames:
             raise AssertionError(f"Username {username} not found, CSV generation failed")
-    
+
+def test_generate_csv_empty_names(tmp_path: Path, api: API, df: pd.DataFrame):
+    parser: Parser = Parser(df) 
+
+    name_series: pd.Series = parser.df[DEFAULT_HEADER_MAP["name"]].copy()
+    name_series = name_series.apply(func=lambda x: x if random.randint(0, 2) > 1 else "")
+
+    empty_values: int = 0
+    base_len: int = len(name_series)
+    for name in name_series.to_list():
+        if name == "":
+            empty_values += 1
+
+    parser.df[DEFAULT_HEADER_MAP["name"]] = name_series
+
+    res: Response = api.generate_azure_csv(parser.get_df())
+
+    assert "missing values" in res["message"]
+
+    csv_path: Path | None = ttils.get_csv(tmp_path)
+
+    assert csv_path is not None
+
+    df: pd.DataFrame = pd.read_csv(csv_path)
+
+    assert len(df) == base_len - (base_len - len(df))
+
 def test_generate_csv_two_names(tmp_path: Path, api: API, df: pd.DataFrame):
     api.generate_azure_csv(df)
     base_csv: Path = ttils.get_csv(tmp_path)
