@@ -33,6 +33,7 @@ temp
 /config/
 build
 entrabulker
+Output
 
 # python
 __pycache__/
