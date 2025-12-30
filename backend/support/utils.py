@@ -498,3 +498,40 @@ def get_version(url: str) -> Response:
         return res
     
     return res
+
+def compare_version(base_version: str, arg_version: str) -> bool:
+    '''Compares two version strings and returns a boolean based on if the
+    version values of base version is greater or less than the argument version.
+
+    If it returns True, then the argument is greater than the base.
+
+    Parameters
+    ----------
+        base_version: str
+            The base version that is being compared to. This is the version
+            hardcoded into the program.
+
+        arg_version: str
+            The version that is being compared to the base version.
+    '''
+    pattern: str = r'^v([0-9]+)\.([0-9]+)\.([0-9]+)$'
+    base_version = base_version.strip().lower()
+    arg_version = arg_version.strip().lower()
+
+    # if for some reason the versions are incorrect, always return False.
+    if any([re.fullmatch(pattern, version) is None for version in [base_version, arg_version]]):
+        return False
+    
+    base_nums: list[int] = [int(num) for num in base_version.lstrip("v").split(".")]
+    arg_nums: list[int] = [int(num) for num in arg_version.lstrip("v").split(".")]
+
+    for i, base_num in enumerate(base_nums):
+        arg_num: int = arg_nums[i]
+
+        if base_num > arg_num:
+            return False
+        elif base_num < arg_num:
+            return True
+
+    # if the loop did not return, that means both versions are equal. 
+    return False

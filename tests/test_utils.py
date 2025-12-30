@@ -170,3 +170,21 @@ def test_err_run_cmd():
     _, err = utils.run_cmd(cmd)
 
     assert err != "" and f"cannot access '{file}'" in err
+
+def test_compare_version():
+    base: str = "v1.0.0"
+    args: list[str] = ["v1.0.1", "v1.1.0", "v5.1.3", "v11.3.5"]
+    
+    for arg in args:
+        assert utils.compare_version(base, arg) == True
+
+    args = ["v1.0.00", "v1.0.0", "v0.00.5"]
+    for arg in args:
+        assert utils.compare_version(base, arg) == False
+
+def test_invalid_arg_compare_version():
+    base: str = "v1.0.0"
+    args: list[str] = ["v.1.0.0", "v1.0.0aa", "", "test_example", "v1.0.b"]
+
+    for arg in args:
+        assert utils.compare_version(base, arg) == False

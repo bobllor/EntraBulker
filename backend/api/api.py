@@ -739,7 +739,7 @@ class API:
             url = META["version_url"]
 
         out_res: Response = utils.get_version(url)
-        res["content"] = VERSION.lower() != out_res["content"].strip().lower()
+        res["content"] = utils.compare_version(VERSION, out_res["content"])
 
         self.logger.debug(f"Check version response: {out_res}")
 
