@@ -97,7 +97,6 @@ class Updater:
             return out_res
 
         content: dict[str, Any] = content_res[0]
-        self.logger.debug(f"Payload: {content}")
         content_assets: list[dict[str, Any]] = content["assets"]
 
         zip_url: str | None = None
@@ -173,7 +172,7 @@ class Updater:
         
         return res
     
-    def update(self, apps_path: Path, *, ignore_files: Iterable[str] = []) -> cResponse:
+    def update(self, apps_path: Path, target_path: Path, *, ignore_files: Iterable[str] = []) -> cResponse:
         '''Updates the application by moving the files from the temporary folder
         into the project root.
 
@@ -182,6 +181,9 @@ class Updater:
             apps_path: Path
                 The path to the unzipped files. Since the ZIP file contains a single folder that
                 holds all the other files, this is expected to be that folder name.
+            
+            target_path: Path
+                The path in which the files are being replaced in.
 
             ignore_files: Iterable[str], default []
                 Any Iterable of strings that are the file names, not the full path,
@@ -191,7 +193,7 @@ class Updater:
         res: cResponse = utils.generate_response(message="Updated application")
 
         self.logger.debug(f"Files to ignore for update: {ignore_files}")
-        self.logger.info(f"Replacing files in root {self.project_root} with {apps_path}")
+        self.logger.info(f"Replacing files in {target_path} with {apps_path}")
 
         ignore_set: set[str] = {f.lower() for f in ignore_files}
 
@@ -205,25 +207,25 @@ class Updater:
 
         for file in apps_path.iterdir():
             file_name: str = file.name
-            file_root: Path = self.project_root / file_name
+            target_file: Path = target_path / file_name
 
             if file_name.lower() in ignore_set:
                 self.logger.warning(f"Given file {file} cannot be replaced")
                 continue
 
             # if for some reason the files still exist, we will manually remove it here.
-            if file_root.exists():
-                self.logger.warning(f"File {file_root} exists in the root folder")
+            if target_file.exists():
+                self.logger.warning(f"File {target_file} exists in the root folder")
 
-                if not file_root.is_dir():
-                    file_root.unlink()
+                if not target_file.is_dir():
+                    target_file.unlink()
                 else:
-                    shutil.rmtree(file_root, ignore_errors=True)
+                    shutil.rmtree(target_file, ignore_errors=True)
 
-                self.logger.info(f"Removed file {file_root}")
+                self.logger.info(f"Removed file {target_file}")
 
-            os.replace(file, file_root)
-            self.logger.info(f"Replaced file {file_root}")
+            os.replace(file, target_file)
+            self.logger.info(f"Replaced file {target_file}")
         
         return res
     
