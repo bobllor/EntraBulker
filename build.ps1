@@ -9,10 +9,11 @@ param (
 function compile(){
     param (
         [string] $FileName,
-        [string] $Path
+        [string] $Path,
+        [string] $Icon
     )
 
-    pyinstaller --onefile --noconsole --icon ".\icon.ico" --name "$FileName" "$Path"
+    pyinstaller --onefile --noconsole --icon "$Icon" --name "$FileName" "$Path"
 }
 
 $outFolder = "entrabulker"
@@ -40,7 +41,7 @@ if(!($SkipMainBuild)){
 }
 if(!($SkipMainApp)){
     $fileName = "EntraBulker"
-    compile "$fileName" ".\backend\main.py"
+    compile "$fileName" ".\backend\main.py" ".\assets\main.ico"
 
     mv ".\dist\$fileName.exe" ".\$outFolder\apps\$fileName.exe" -force
     rmdir ".\dist" -ea 0
@@ -62,7 +63,7 @@ if(!($SkipUpdaterBuild)){
 
 if(!($SkipUpdaterApp)){
     $fileName = "EntraUpdater"
-    compile "$fileName" ".\backend\updater_main.py"
+    compile "$fileName" ".\backend\updater_main.py" ".\assets\updater.ico"
 
     mv ".\dist\$fileName.exe" ".\$outFolder\$fileName.exe" -force
     rmdir ".\dist" -ea 0
