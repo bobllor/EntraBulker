@@ -17,14 +17,13 @@ if is_prod():
     PROJECT_ROOT: Path = Path(sys.executable).parent
 else:
     PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
-# name of the updater application for updating the application
 
 FILE_NAMES: FileNames = {
-    "updater_exe": "updater.exe",
-    "app_exe": "entrabulker.exe",
+    "updater_exe": "EntraUpdater.exe",
+    "app_exe": "EntraBulker.exe",
     "updater_dist": "udist",
-    "app_dist": "appdist",
-    "project_folder": "entrabulker",
+    "app_dist": "madist",
+    "project_folder": "EntraBulker",
     "apps_folder": "apps",
 }
 
