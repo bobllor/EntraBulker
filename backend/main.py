@@ -4,7 +4,7 @@ from api.api import API
 from logger import Log
 from support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, DEFAULT_SETTINGS_MAP, PROJECT_ROOT, VERSION
 from support.utils import init_window, is_prod
-import webview
+import webview, os
 
 # NOTE: main app is in the apps folder
 
@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     logger: Log = Log(log_dir=log_path, file_name="app-%Y-%m-%d.log")
 
-    logger.debug(f"Log path: {log_path} | URL: {url} | Debug: {debug} | Root: {PROJECT_ROOT}")
+    logger.debug(f"Log path: {log_path} | URL: {url} | Debug: {debug} | Root: {os.getcwd()}")
 
     excel_reader: Reader = Reader(EXCEL_PATH, defaults=DEFAULT_HEADER_MAP, update_only=True, logger=logger, project_root=PROJECT_ROOT)
     settings_reader: Reader = Reader(SETTINGS_PATH, defaults=DEFAULT_SETTINGS_MAP, update_only=True, logger=logger, project_root=PROJECT_ROOT)

@@ -62,6 +62,7 @@ export function useDisableShortcuts(){
             const allowedKeys = new Set<string>([
                 "Backspace", "a", "c", "v", 
                 "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+                "x", "z",
             ]);
             
             if(event.ctrlKey){

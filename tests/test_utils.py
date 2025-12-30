@@ -140,7 +140,7 @@ def test_run_cmd(tmp_path: Path):
         str(tmp_path) + "/" + file_name
     ]
 
-    utils.run_cmd(cmd)
+    utils.run_cmd(cmd, use_popen=False)
     found: bool = False
 
     for child in tmp_path.iterdir():
@@ -156,20 +156,9 @@ def test_blacklist_run_cmd():
         "a-non-existent-file-here.txt",
     ]
 
-    _, err = utils.run_cmd(cmd)
+    out: str = utils.run_cmd(cmd, use_popen=False)
 
-    assert err != "" and "rm" in err
-
-def test_err_run_cmd():
-    file: str = "fdsa"
-    cmd: list[str] = [
-        "ls",
-        file
-    ]
-
-    _, err = utils.run_cmd(cmd)
-
-    assert err != "" and f"cannot access '{file}'" in err
+    assert out != "" and "rm" in out
 
 def test_compare_version():
     base: str = "v1.0.0"

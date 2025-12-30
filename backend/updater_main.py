@@ -4,13 +4,12 @@ from core.updater import Updater
 from core.server import LocalServer
 from support.utils import is_prod, init_window
 from support.vars import PROJECT_ROOT, FILE_NAMES
-import webview
+import webview, os
 
 # NOTE: updater is located outside of the apps folder, which is where the main application is held.
 
 if __name__ == "__main__":
     debug, log_path = init_window("logs")
-
     logger: Log = Log(log_dir=log_path, file_name="updater-%Y-%m-%d.log")
 
     updater: Updater = Updater(PROJECT_ROOT, logger=logger) 
@@ -24,9 +23,11 @@ if __name__ == "__main__":
         server.run()
         url = server.url
 
-    api: UpdaterAPI = UpdaterAPI(updater, logger=logger, is_prod=is_prod())
+    logger.debug(f"Current path: {os.getcwd()} | URL: {url} | Prod status: {is_prod()}")
 
-    window: webview.Window = webview.create_window(title, url, js_api=api, width=size[0], height=size[1], min_size=size, resizable=False)
-    api.set_window(window)
+    u_api: UpdaterAPI = UpdaterAPI(updater, logger=logger, is_prod=is_prod())
+
+    window: webview.Window = webview.create_window(title, url, js_api=u_api, width=size[0], height=size[1], min_size=size, resizable=False)
+    u_api.set_window(window)
 
     webview.start(debug=debug)

@@ -12,7 +12,7 @@ from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH,
 from copy import deepcopy
 import support.utils as utils
 import pandas as pd
-import webview
+import webview, os
 
 ReaderType = Literal["excel", "opco", "settings"]
 AzureFileState = TypedDict(
@@ -772,13 +772,24 @@ class API:
             res["status"] = "error"
             res["message"] = f"{UPDATER_PATH} does not exist"
 
+            self.logger.warning(f"Failed to run updater: {res}, expected path: {UPDATER_PATH}")
+
             return res
 
         self.logger.info("Updating application")
         self.logger.debug(f"Updater path: {UPDATER_PATH}")
 
         self._window.destroy()
-        utils.run_cmd(updater_cmd)
+        out: str = utils.run_cmd(updater_cmd, cwd=str(PROJECT_ROOT.parent))
+        self.logger.info(f"Ran command: {updater_cmd}, out: {out}")
+
+        if out != "":
+            self.logger.error(f"Failed to run updater: {out}")
+            res["status"] = "error"
+            res["message"] = "Failed to run executable"
+
+            return res
+
         exit(0)
         
         # this will never be reached but leaving it here for best practices.

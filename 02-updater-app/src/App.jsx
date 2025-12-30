@@ -5,7 +5,7 @@ import { checkVersion, clean, downloadZip, isProduction, startMainApp, unzip, up
 import ProgressText from './components/ProgressText';
 
 const FUNCTIONS = [
-  {func: downloadZip, initialText: "Downloading ZIP file"},
+  {func: downloadZip, initialText: "Starting ZIP file download"},
   {func: unzip, initialText: "Extracting file contents to temp folder"},
   {func: update, initialText: "Updating application files"},
   {func: clean, initialText: "Removing temp folder"},
