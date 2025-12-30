@@ -97,7 +97,34 @@ class Updater:
             return out_res
 
         content: dict[str, Any] = content_res[0]
-        zip_url: str = content["assets"][0]["browser_download_url"]
+        self.logger.debug(f"Payload: {content}")
+        content_assets: list[dict[str, Any]] = content["assets"]
+
+        zip_url: str | None = None
+        for ele in content_assets:
+            file_name: str = ele.get("name")
+
+            if file_name is None:
+                out_res["status"] = "error"
+                out_res["message"] = "Failed to get file name"
+
+                self.logger.error(f"Missing key 'name' from payload: {content_assets}")
+
+                return out_res
+
+            if "zip" in file_name.lower():
+                zip_url = ele["browser_download_url"]
+                break
+        
+        # NOTE: maybe it is possible to silently install with the .exe, just a note.
+        if zip_url is None:
+            out_res["status"] = "error"
+            out_res["message"] = "Failed to get ZIP file URL"
+
+            self.logger.error(f"Missing ZIP file from payload: {content_assets}")
+
+            return out_res
+
         zip_name: str = zip_url.split("/")[-1]
 
         self._create_temp_dir()
