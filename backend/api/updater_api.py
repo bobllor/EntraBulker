@@ -131,8 +131,16 @@ class UpdaterAPI:
         app_path: str = str(PROJECT_ROOT / FILE_NAMES["app_exe"])
 
         self._window.destroy()
+        out: str = utils.run_cmd([app_path], cwd=str(PROJECT_ROOT / FILE_NAMES["apps_folder"])) 
+        self.logger.info(f"Ran command {[app_path]}, out: {out}")
 
-        utils.run_cmd([app_path]) 
+        if out != "":
+            self.logger.error(f"Failed to run updater: {out}")
+            res["status"] = "error"
+            res["message"] = "Failed to run executable"
+
+            return res
+
         exit(0)
 
         return res
