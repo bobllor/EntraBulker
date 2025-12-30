@@ -104,9 +104,13 @@ class UpdaterAPI:
     
     def update(self) -> Response:
         '''Updates the core files in the project root folder.'''
-        apps_path: Path = self.updater.temp_project_folder
+        apps_path: Path = self.updater.temp_project_folder / FILE_NAMES["apps_folder"]
         # not including the updater files, these have to be manually updated.
-        res: Response = self.updater.update(apps_path, ignore_files=["udist", FILE_NAMES["updater_exe"]])
+        res: Response = self.updater.update(
+            apps_path,
+            PROJECT_ROOT / FILE_NAMES["apps_folder"],
+            ignore_files=["udist", FILE_NAMES["updater_exe"]]
+        )
 
         return res
     
@@ -114,7 +118,7 @@ class UpdaterAPI:
         '''Starts the main application. This will quit the current application.'''
         # due to the updater application being out of the main app folder, this
         # path is different
-        main_app: Path = Path(FILE_NAMES["apps_folder"]) / FILE_NAMES["app_exe"]
+        main_app: Path = PROJECT_ROOT / FILE_NAMES["apps_folder"] / FILE_NAMES["app_exe"]
         res: Response = utils.generate_response(message="Successfully started application")
 
         if not main_app.exists():
@@ -128,11 +132,10 @@ class UpdaterAPI:
         # NOTE: this might need to be manually tested.
         # as on 12/17/2025 2:59 PM: it confirm works.
         self.logger.info(f"Starting main application")
-        app_path: str = str(PROJECT_ROOT / FILE_NAMES["app_exe"])
 
         self._window.destroy()
-        out: str = utils.run_cmd([app_path], cwd=str(PROJECT_ROOT / FILE_NAMES["apps_folder"])) 
-        self.logger.info(f"Ran command {[app_path]}, out: {out}")
+        out: str = utils.run_cmd([str(main_app)], cwd=str(main_app.parent)) 
+        self.logger.info(f"Ran command {[main_app]}, out: {out}")
 
         if out != "":
             self.logger.error(f"Failed to run application: {out}")

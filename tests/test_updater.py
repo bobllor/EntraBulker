@@ -9,7 +9,7 @@ from io import BytesIO
 from backend.support.vars import FILE_NAMES
 import tests.utils as ttils
 import backend.support.utils as utils
-import requests, time
+import requests
 
 URL: str = "https://fakeurl.com/api/stuff"
 
@@ -51,6 +51,7 @@ def test_unzip(mock: Mock, updater: Updater):
 
     assert len(unzipped_files) != 0
 
+# "normal" is needed as running pytest with -k on this command runs all tests for some reason
 @patch('backend.core.updater.requests.get')
 def test_normal_update(mock: Mock, tmp_path: Path, updater: Updater):
     mk_app(tmp_path)
@@ -59,19 +60,33 @@ def test_normal_update(mock: Mock, tmp_path: Path, updater: Updater):
     updater.download_zip(URL)
     updater.unzip(updater.zip_file)
 
-    base_files: list[str] = utils.get_paths(updater.project_root)
+    # in prod, updater.project_root.parent will not use the parent due to
+    # pyinstaller PATH differences. instead it will just use PROJECT_ROOT
+    base_files: list[str] = utils.get_paths(updater.project_root.parent)
+    # does not include temp files
+    base_len: int = 0
 
     for file in base_files:
         path: Path = Path(file)
         file_name: str = path.name.lower()
 
+        if "temp" in str(path):
+            continue
+
         if not str(updater.temp_dir) in str(path):
             assert FILE_NAMES["app_exe"] != file_name
+        
+        base_len += 1
 
-    updater.update(updater.temp_project_folder / FILE_NAMES["apps_folder"], ignore_files=[FILE_NAMES["updater_exe"], "udist"])
+    updater.update(
+        updater.temp_project_folder / FILE_NAMES["apps_folder"],
+        updater.project_root.parent / FILE_NAMES["apps_folder"],
+        ignore_files=[FILE_NAMES["updater_exe"], "udist"]
+    )
     updater.cleanup()
 
-    new_files: list[str] = utils.get_paths(updater.project_root)
+    new_files: list[str] = utils.get_paths(updater.project_root.parent)
+    new_len: int = 0
 
     # since mk_app does not generate the entrabulker.exe in the apps folder,
     # this will be used to check if the update was successful.
@@ -80,11 +95,13 @@ def test_normal_update(mock: Mock, tmp_path: Path, updater: Updater):
         path: Path = Path(file)
         file_name: str = path.name.lower()
 
+        print(path)
         if file_name == FILE_NAMES["app_exe"].lower():
             found = True
-            break
-    
-    assert found
+        
+        new_len += 1
+
+    assert found and new_len == base_len + 1
 
 @patch('backend.core.updater.requests.get')
 def test_cleanup(mock: Mock, updater: Updater):
@@ -117,7 +134,7 @@ def test_status_code_download_zip(mock: Mock, updater: Updater):
 def test_fail_update(tmp_path: Path, updater: Updater):
     mk_app(tmp_path)
 
-    res: Response = updater.update(updater.temp_project_folder)
+    res: Response = updater.update(updater.temp_project_folder, updater.project_root.parent / FILE_NAMES["apps_folder"])
 
     assert res["status"] == "error" and "unable to find" in res["message"].lower()
 
@@ -126,7 +143,7 @@ def test_fail_unzip(tmp_path: Path, updater: Updater):
 
     assert res["status"] == "error"
 
-def mk_app(path: Path, sleep: int | float = 0) -> None:
+def mk_app(path: Path) -> None:
     '''Creates the folder structure of the application in the given path.
     
     This does not create the `entrabulker.exe` file.
@@ -135,29 +152,36 @@ def mk_app(path: Path, sleep: int | float = 0) -> None:
     ----------
         path: Path
             The Path the application files will be made in.
-
-        sleep: int | float, default `0`
-            The sleep time after creating the folders. This is used
-            to delay the time creation before the updater is called
-            for making new files. By default it is 0 seconds.
     ''' 
-    # unzip -l tests/zip-test.zip to get the folder structure
-    append_path = lambda x: path / TEST_PROGRAM_FILES /project_folder / x
-
     # the main project folder and the app for the main files
     project_folder: Path = Path(FILE_NAMES["project_folder"])
+    # unzip -l tests/zip-test.zip to get the folder structure
+    append_path = lambda x: path / TEST_PROGRAM_FILES / project_folder / x
+
     app_folder: Path = append_path(FILE_NAMES["apps_folder"])
     append_app_folder = lambda x: app_folder / x
 
-    # folders inside app (location of the main application files)
+    # files inside app (location of the main application files)
     config_folder: Path = append_app_folder(Path("config"))
-    logs_folder: Path = append_app_folder(Path("logs"))
+    # NOTE: i did not realize but the test zip file structure is incorrect with the dist
+    # its not going to be changed though since it only effects the test cases,
+    # not the actual production code
+    madist_folder: Path = append_app_folder(Path(FILE_NAMES["app_dist"]))
+
+    # files outside app
+    udist_folder: Path = append_path(Path(FILE_NAMES["updater_dist"]))
+    logs_folder: Path = append_path(Path("logs"))
     updater_file: Path = append_path(Path(FILE_NAMES["updater_exe"]))
 
-    # folders outside app
-    udist_folder: Path = append_path(Path(FILE_NAMES["updater_dist"]))
-
-    files_to_make: list[Path] = [updater_file, config_folder / "settings.json", logs_folder / "logs.log", udist_folder]
+    files_to_make: list[Path] = [
+        updater_file, 
+        config_folder / "settings.json", 
+        logs_folder / "logs.log", 
+        udist_folder,
+        madist_folder,
+        madist_folder / "index.html",
+        madist_folder / "styles.css",
+    ]
 
     for file in files_to_make:
         if file.suffix != "":
@@ -165,8 +189,6 @@ def mk_app(path: Path, sleep: int | float = 0) -> None:
             file.touch()
         else:
             file.mkdir(parents=True, exist_ok=True)
-    
-    time.sleep(sleep)
         
 def set_mock_response(mock: Any) -> Any:
     '''Sets up the and returns the mock object for requests'''
