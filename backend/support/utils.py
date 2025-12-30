@@ -386,7 +386,7 @@ def unlink_path(path: Path) -> None:
     else:
         path.unlink()
 
-def run_cmd(cmd: list[str]) -> None:
+def run_cmd(cmd: list[str], *, cwd: str = None, use_popen: bool = True) -> str:
     '''Executes a command through subprocess.'''
     blacklisted_cmd: set[str] = {
         "rm", "rmdir", "ri", "del",
@@ -395,14 +395,16 @@ def run_cmd(cmd: list[str]) -> None:
 
     for string in cmd:
         if string.lower() in blacklisted_cmd:
-            return "", f"Error: blacklisted command {string} used as argument"
+            return f"Error: blacklisted command {string} used as argument"
 
-    process: subprocess.CompletedProcess[bytes] = subprocess.run(cmd, capture_output=True)
+    # adding stderr for some reason prevents files from running properly with the local server in the cmd
+    # an empty string is given out instead.
+    if use_popen:
+        subprocess.Popen(cmd, cwd=cwd)
+    else:
+        subprocess.run(cmd, cwd=cwd)
 
-    out: str = process.stdout.decode()
-    err: str = process.stderr.decode()
-
-    return out, err
+    return ""
 
 def get_paths(path: Path) -> list[str]:
     '''Traverses a given path and returns a list of absolute paths of all files
