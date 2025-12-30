@@ -135,7 +135,7 @@ class UpdaterAPI:
         self.logger.info(f"Ran command {[app_path]}, out: {out}")
 
         if out != "":
-            self.logger.error(f"Failed to run updater: {out}")
+            self.logger.error(f"Failed to run application: {out}")
             res["status"] = "error"
             res["message"] = "Failed to run executable"
 

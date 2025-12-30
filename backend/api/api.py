@@ -782,6 +782,14 @@ class API:
         self._window.destroy()
         out: str = utils.run_cmd(updater_cmd, cwd=str(PROJECT_ROOT.parent))
         self.logger.info(f"Ran command: {updater_cmd}, out: {out}")
+
+        if out != "":
+            self.logger.error(f"Failed to run updater: {out}")
+            res["status"] = "error"
+            res["message"] = "Failed to run executable"
+
+            return res
+
         exit(0)
         
         # this will never be reached but leaving it here for best practices.
