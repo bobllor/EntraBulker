@@ -23,7 +23,7 @@ const TEXT_COLORS = {
 export default function App() {
   const [innerProgressBarWidth, setInnerProgressBarWidth] = useState(0);
   const [progressText, setProgressText] = useState([{text: "Starting updating process...", status: "success"}]);
-  const [failedUpdate, setFailedUpdate] = useState(true);
+  const [failedUpdate, setFailedUpdate] = useState(false);
 
   // must be initially false otherwise it will run
   const [isProd, setIsProd] = useState(null);
