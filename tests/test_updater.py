@@ -194,13 +194,13 @@ def set_mock_response(mock: Any) -> Any:
     '''Sets up the and returns the mock object for requests'''
     mocko: Any = mock.return_value
     mocko.status_code = 200
-    mocko.json.return_value = [
-        {"assets": [
-                {"name": "file.exe", "browser_download_url": "https://fakeurl.com/api/stuff/file.exe"},
-                {"name": "zip-test.zip", "browser_download_url": "https://fakeurl.com/api/stuff/zip-test.zip"},
-            ]
-        }
-    ]
+    mocko.json.return_value = {
+        "name": "v1.0.0",
+        "assets": [
+            {"name": "file.exe", "browser_download_url": "https://fakeurl.com/api/stuff/file.exe"},
+            {"name": "zip-test.zip", "browser_download_url": "https://fakeurl.com/api/stuff/zip-test.zip"},
+        ]
+    }
     
     zip_bytes: bytes = get_zip()
 

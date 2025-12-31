@@ -1,5 +1,5 @@
 const nameLabel: string = "Name";
-const opcoLabel: string = "Operating Company";
+const opcoLabel: string = "Organization";
 
 export const formInputs: Array<{name: string, label: string}> = [
     {name: 'name-input', label: nameLabel},

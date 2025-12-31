@@ -61,7 +61,7 @@ export default function OpcoMapping(): JSX.Element{
                                 e.preventDefault();
                                 // update the base ref after calling this.
                                 if(opcoKeysRef.current.has(inputData.keyOpco)){
-                                    toastError(`Key ${inputData.keyOpco} already exists`);
+                                    toastError(`Key "${inputData.keyOpco}" already exists`);
                                     return;
                                 }else if(inputData.keyOpco.trim() == ""){
                                     toastError(`Key cannot be empty`);
@@ -118,6 +118,8 @@ export default function OpcoMapping(): JSX.Element{
                                     updateOpcoMapping(opcoOptions, baseOpcoRef).then(status => {
                                         if(status){
                                             setUpdateBaseRef(true);
+                                        }else{
+                                            setResetDefault(true);
                                         }
                                     });
                                 }
@@ -179,12 +181,15 @@ export default function OpcoMapping(): JSX.Element{
  * `OpcoRow`.
  * @param opcoOptions - The operating company array mapper.
  * @param baseOpcoRef - The base operating company array mapper, used to prevent calls on unchanged values.
+ * @param opcoKeysSet - A hash set holding the keys of the opco mapping
  * @returns funcStatus - If the function succeeds or not.
  */
 async function updateOpcoMapping(
     opcoOptions: Array<OpcoMap>,
     baseOpcoRef: React.RefObject<Array<OpcoMap>>): Promise<boolean>{
         let hasChanged: boolean = false;
+        
+        // checking if any changes occurred
         for (let i = 0; i < baseOpcoRef.current.length; i++) {
             if(hasChanged){
                 break;
@@ -194,6 +199,19 @@ async function updateOpcoMapping(
             const newOpco: OpcoMap = opcoOptions[i]; 
 
             hasChanged = compareObjects(baseOpco, newOpco);
+        }
+        
+        const opcoKeysSet: Set<string> = new Set();
+        // checking if the new opco option already has a key entry in the set
+        // this will return false if true
+        for(const newOpco of opcoOptions){
+            const opcoKey: string = newOpco.opcoKey.toLowerCase();
+            if(opcoKeysSet.has(opcoKey)){
+                toastError(`Duplicate key "${newOpco.opcoKey}", values have been reset`);
+                return false;
+            }else{
+                opcoKeysSet.add(opcoKey);
+            }
         }
 
         if(hasChanged){

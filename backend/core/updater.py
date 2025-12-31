@@ -80,7 +80,7 @@ class Updater:
             return out_res
 
         try:
-            content_res: list[dict[str, Any]] = res.json()
+            content: dict[str, Any] = res.json()
         except requests.exceptions.JSONDecodeError as e:
             out_res["status"] = "error"
             out_res["message"] = f"Unexpected data received"
@@ -89,14 +89,6 @@ class Updater:
 
             return out_res
 
-        if len(content_res) < 1:
-            out_res["status"] = "error"
-            out_res["message"] = f"Failed to read data"
-            self.logger.error(f"Response for {url} is empty: {content_res}")
-
-            return out_res
-
-        content: dict[str, Any] = content_res[0]
         content_assets: list[dict[str, Any]] = content["assets"]
 
         zip_url: str | None = None

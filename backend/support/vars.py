@@ -9,7 +9,7 @@ VERSION: str = "v1.0.0" # this must start with a "v"
 META: Metadata = {
     "version": VERSION,
     "version_url": "https://raw.githubusercontent.com/bobllor/EntraBulker/refs/heads/main/VERSION.txt",
-    "releases_url": "https://api.github.com/repos/bobllor/entrabulker/releases",
+    "releases_url": "https://api.github.com/repos/bobllor/entrabulker/releases/latest",
 }
 
 # used as the baseline root path
