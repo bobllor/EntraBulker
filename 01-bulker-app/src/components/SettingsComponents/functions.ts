@@ -32,7 +32,6 @@ export async function updateExcelReader(keyName: string, value: string, readerTy
 export async function addOpcoEntry(
     event: React.FormEvent<HTMLFormElement>, 
     setOpcoOptions: React.Dispatch<React.SetStateAction<Array<OpcoMap>>>): Promise<boolean>{
-        event.preventDefault();
         // NOTE: div exists over the input elements.
         const children = event.currentTarget.children[0].children;
 
