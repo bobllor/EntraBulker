@@ -7,16 +7,14 @@ without the need for API access. It is a WebView application built with Python, 
 
 The application is ***only supported on Windows.***
 
-The installation files can be retrieved from the [releases page](https://github.com/bobllor/EntraBulker/releases/).
+The installation files can be retrieved from the [releases page](https://github.com/bobllor/EntraBulker/releases/latest).
 The files consist of either a binary or ZIP file containing the files to run.
 
-The [binary](https://github.com/bobllor/EntraBulker/releases/download/v1.0.0/entrabulker-installer.exe) is a standalone installer
-that installs the program onto your device.
+The binary is a standalone installer that installs the program onto your device.
 - The default installation path is `$HOME\AppData\Programs\EntraBulker`, the path can be changed as needed.
 - It is the recommended way as it creates a shortcut automatically and can be uninstalled via *Control Panel*.
 
-The [ZIP file](https://github.com/bobllor/EntraBulker/releases/download/v1.0.0/entrabulker-v1.0.0.zip)
-has a folder structure like so (which is the same as the binary installer above):
+The ZIP file has a folder structure like so (which is the same as the binary installer above):
 - `entrabulker`
     - `apps`
         - `madist`
@@ -39,13 +37,13 @@ An example input file:
 | Jackson Crane | Company Three |
 | Kyle Shanks | Company One |
 
-The output of the CSV file afterwards (version row excluded):
+The output file (version row excluded):
 
 | Name [displayName] Required | User name [userPrincipalName] Required | Initial password [passwordProfile] Required | Block sign in (Yes/No) [accountEnabled] Required | First name [givenName] | Last name [surname] |
 | --- | --- | --- | --- | --- | --- |
 | John Doe | John.Doe@company.one.org | F7nC?o/i_"N(WvHE | No | John | Doe |
 | Jane Doe | Jane.Doe@company.one.org | FGpE&=mH`{kg6#X, | No | Jane | Doe |
-| James Smith | James.Smith@two.company.com | "_.2yCcr"U!eX|"y | No | James | Smith |
+| James Smith | James.Smith@two.company.com | "_.2yCcr"U!eX\|"y | No | James | Smith |
 | Jackson Crane | Jackson.Crane@company.three.com | "9++z1JtFNmUCKbR | No | Jackson | Crane |
 | Kyle Shanks | Kyle.Shanks@company.one.org | =?y[tYsSiRQA4UxJ | No | Kyle | Shanks |
 
@@ -81,7 +79,7 @@ Before the CSV file is generated, there are side effects during the data parsing
 a number will be attached to *their username*: `John.Doe@domain.com` and `John.Doe1@domain.com`.
 2. **Empty name entries**: If *empty names* are found in any of the three name columns, then *that row
 will be dropped*.
-3. **Passwords are automatically generated**: Password generation is built in and random. The output password
+3. **Passwords**: Password generation is built in, random, and cannot be disabled. The output password
 can be modified in the *Password settings tab*.
 
 ### File Uploading
@@ -104,7 +102,7 @@ do not match your columns. More information can be read [here](./docs/settings/h
 
 ### Manual Entries
 
-If files are not necessary but manual input is required, manual CSV generation is supported. 
+Manual CSV generation is supported if file uploads are not needed.
 The page for manual entries can be accessed via the *Hammer* icon on the navigation bar, known as *Custom*.
 
 There are two field entries:
@@ -112,8 +110,9 @@ There are two field entries:
 2. Organization: The organization of the user 
 
 The organization does not need to be a literal organization, it is used as the value to the key-value mapping
-for a domain name (e.g. `user.one@domain.example.com`). This can be modified in the **Organization settings tab**, 
+for a domain name (e.g. `Conmpany one` -> `user.one@company.one.com`). This can be modified in the **Organization settings tab**, 
 which can be read more about [here](./docs/settings/organization.md).
 
 ## Development
 
+To start development:
