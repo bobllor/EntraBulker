@@ -52,11 +52,11 @@ It is *recommended* to make a shortcut of `EntraBulker.exe` in order to use it o
 ## Usage
 
 **NOTE**: The application does not account for existing identities in Entra ID. The application is solely used to
-bulk accounts, as it is intended to not rely on an API access.
+bulk accounts, as it does not rely on having API access.
 
 The application has two ways to generate CSV files:
-1. File uploading: The home screen/default screen on first launch
-2. Manual entries
+1. **File uploading**: The home screen/default screen on first launch
+2. **Manual entries**
 
 Both ways features a submit button, which when submitted, the files will be generated to an output folder. 
 By default, this is your *home* folder, which can be changed in the *General settings tab*.
@@ -90,10 +90,10 @@ The application only supports CSV (`.csv`) and Excel (`.xlsx`) files.
 
 The files are expected to have the following columns (or any related columns). These columns can be mapped
 to any value as needed in the *Headers settings tab*. The following columns are expected:
-1. Full Name*
-2. Organization
-3. First Name*
-4. Last Name*
+1. **Full Name\***
+2. **Organization**
+3. **First Name\***
+4. **Last Name\***
 
 \*The names are dependent on the option `First/Last Name Headers` in the *General settings tab*, which is *off by default*.
 The program **looks for a Full name column** by default, but if First and Last name columns are required, then enabling the 
@@ -108,8 +108,8 @@ Manual CSV generation is supported if file uploads are not needed.
 The page for manual entries can be accessed via the *Hammer* icon on the navigation bar, known as *Custom*.
 
 There are two field entries:
-1. Name: The name of the account
-2. Organization: The organization of the user 
+1. **Name**: The name of the account
+2. **Organization**: The organization of the user 
 
 The organization does not need to be a literal organization, it is used as the value to the key-value mapping
 for a domain name (e.g. `Conmpany one` -> `user.one@company.one.com`). This can be modified in the **Organization settings tab**, 
@@ -118,7 +118,7 @@ which can be read more about [here](./docs/settings/organization.md).
 ## Development
 
 Development is supported on Linux and Windows. 
-Windows development ***uses Git Bash***, with support scripts being written in Bash.
+Windows is expected to ***use Git Bash***, with support scripts being written in Bash.
 
 *Powershell* is used when compiling the binaries and installer.
 
