@@ -27,6 +27,19 @@ The output file (version row excluded):
 
 The output file can now be uploaded to Azure Entra ID and bulk create all rows of the file.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+    - [Settings](#settings)
+    - [Side Effects](#side-effects)
+    - [File Uploading](#file-uploading)
+    - [Manual Entries](#manual-entries)
+    - [Updating](#updating)
+- [Development](#development)
+    - [Initializing Project](#initializing-project)
+    - [Running the Application](#running-the-application)
+
 ## Installation
 
 The application is ***only supported on Windows.***
@@ -52,11 +65,11 @@ It is *recommended* to make a shortcut of `EntraBulker.exe` in order to use it o
 ## Usage
 
 **NOTE**: The application does not account for existing identities in Entra ID. The application is solely used to
-bulk accounts, as it is intended to not rely on an API access.
+bulk accounts, as it does not rely on having API access.
 
 The application has two ways to generate CSV files:
-1. File uploading: The home screen/default screen on first launch
-2. Manual entries
+1. **File uploading**: The home screen/default screen on first launch
+2. **Manual entries**
 
 Both ways features a submit button, which when submitted, the files will be generated to an output folder. 
 By default, this is your *home* folder, which can be changed in the *General settings tab*.
@@ -90,10 +103,10 @@ The application only supports CSV (`.csv`) and Excel (`.xlsx`) files.
 
 The files are expected to have the following columns (or any related columns). These columns can be mapped
 to any value as needed in the *Headers settings tab*. The following columns are expected:
-1. Full Name*
-2. Organization
-3. First Name*
-4. Last Name*
+1. **Full Name\***
+2. **Organization**
+3. **First Name\***
+4. **Last Name\***
 
 \*The names are dependent on the option `First/Last Name Headers` in the *General settings tab*, which is *off by default*.
 The program **looks for a Full name column** by default, but if First and Last name columns are required, then enabling the 
@@ -108,17 +121,30 @@ Manual CSV generation is supported if file uploads are not needed.
 The page for manual entries can be accessed via the *Hammer* icon on the navigation bar, known as *Custom*.
 
 There are two field entries:
-1. Name: The name of the account
-2. Organization: The organization of the user 
+1. **Name**: The name of the account
+2. **Organization**: The organization of the user 
 
 The organization does not need to be a literal organization, it is used as the value to the key-value mapping
 for a domain name (e.g. `Conmpany one` -> `user.one@company.one.com`). This can be modified in the **Organization settings tab**, 
 which can be read more about [here](./docs/settings/organization.md).
 
+### Updating
+
+If an update is available, the application will prompt a modal informing an update has been found. If accepted,
+an automatic updating process occurs with the binary `EntraUpdater.exe`.
+- This requires an active network connection and Github must be accessible. Having a network connection
+*does not affect normal program usage*.
+
+<img src="./docs/assets/update-modal.png" alt="Update found modal" width="600">
+
+In case of an error or if manual updating is preferred, updating can be done through using the new binary installer
+or replacing the files with the files in the ZIP file.
+- The default path of the application via installer is `$HOME\AppData\Programs\EntraBulker`.
+
 ## Development
 
 Development is supported on Linux and Windows. 
-Windows development ***uses Git Bash***, with support scripts being written in Bash.
+Windows is expected to ***use Git Bash***, with support scripts being written in Bash.
 
 *Powershell* is used when compiling the binaries and installer.
 
@@ -145,7 +171,7 @@ pip install -r requirements.txt
 bash npm-install.sh
 ```
 
-### Running an Application
+### Running the Application
 
 There are two folders for the frontend, each used for a different application:
 1. `01-bulker-app`: The main application
