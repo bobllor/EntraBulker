@@ -27,6 +27,19 @@ The output file (version row excluded):
 
 The output file can now be uploaded to Azure Entra ID and bulk create all rows of the file.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+    - [Settings](#settings)
+    - [Side Effects](#side-effects)
+    - [File Uploading](#file-uploading)
+    - [Manual Entries](#manual-entries)
+    - [Updating](#updating)
+- [Development](#development)
+    - [Initializing Project](#initializing-project)
+    - [Running the Application](#running-the-application)
+
 ## Installation
 
 The application is ***only supported on Windows.***
@@ -115,6 +128,19 @@ The organization does not need to be a literal organization, it is used as the v
 for a domain name (e.g. `Conmpany one` -> `user.one@company.one.com`). This can be modified in the **Organization settings tab**, 
 which can be read more about [here](./docs/settings/organization.md).
 
+### Updating
+
+If an update is available, the application will prompt a modal informing an update has been found. If accepted,
+an automatic updating process occurs with the binary `EntraUpdater.exe`.
+- This requires an active network connection and Github must be accessible. Having a network connection
+*does not affect normal program usage*.
+
+<img src="./docs/assets/update-modal.png" alt="Update found modal" width="600">
+
+In case of an error or if manual updating is preferred, updating can be done through using the new binary installer
+or replacing the files with the files in the ZIP file.
+- The default path of the application via installer is `$HOME\AppData\Programs\EntraBulker`.
+
 ## Development
 
 Development is supported on Linux and Windows. 
@@ -145,7 +171,7 @@ pip install -r requirements.txt
 bash npm-install.sh
 ```
 
-### Running an Application
+### Running the Application
 
 There are two folders for the frontend, each used for a different application:
 1. `01-bulker-app`: The main application

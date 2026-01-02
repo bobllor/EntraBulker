@@ -4,36 +4,47 @@ The General settings has options that modifies the output file and the option to
 
 <img src="./assets/general-settings.png" alt="General settings" width="600" >
 
+## Table of Contents
+
+- [Flatten CSV](#flatten-csv)
+- [Generate Text](#generate-text)
+- [First/Last Name Headers](#firstlast-name-headers)
+    - [Example](#example)
+- [Name Formatting](#name-formatting)
+    - [Format Type](#format-type)
+    - [Format Style](#format-style)
+    - [Format Case](#format-case)
+
 ## Flatten CSV
 
-By default, each file uploaded will have its own output. If a single file is preferred, this option *merges all
-uploaded files into a single output*.
+By default, each file uploaded will have its own CSV output. If a single file is preferred, the
+`Flatten CSV` option *merges all uploaded files into a single CSV output*.
 
-If *Generate Text is enabled*, then all generated files will be outputted to the same folder.
+Additionally, if *Generate Text is enabled*, then all generated template files will be outputted to the same folder.
 
 ## Generate Text
 
-Generate Text enables text file generations for each user in the row. This allows for *sharing login information*
-with a template. This does require a *non-empty text submission* that can be set in the [Text Template settings tab](./text_template.md).
+Generate Text enables text generation for each user in the file. This allows for *sharing login information* or
+creating other types of templates This requires a *non-empty text template* that can be set 
+in the [Text Template settings tab](./text_template.md).
 
 This will create a new folder in the output path called `templates`, and will contain a subfolder that holds the files for
-each uploaded file with a unique hash attached to the name.
-- If `Flatten CSV` is enabled, then all files will instead be outputted into the same subfolder.
+each uploaded file with a unique hash attached to the name. A *new unique subfolder is created for each uploaded input file*.
+- If `Flatten CSV` is enabled, then template files will be generated in the same subfolder for all uploaded files.
 
 ## First/Last Name Headers
 
-This option changes the way the data is parsed by the program. 
+By default, *a single full name column* for the name of the user. `First/Last Name Headers` enables the support of 
+the double column, used if input ifles do not have a full name column but two columns for first/last.
 
-By default, parsing looks for *a single full name column* for the name of the user. In case data files 
-do not use a full name column but two columns for first/last, this option enables the support of the double column.
-
-This changes the program to use the First/Last Name columns as *defined in the Headers tab*.
+The `First/Last Name Headers` option changes this to read two columns instead of one. 
+The First/Last Name columns are as *defined in the [Headers tab](./headers.md)*.
 
 <img src="./assets/headers-first-last.png" alt="First/Last column mapping" width="600" >
 
 ### Example
 
-The example will use the default header values.
+The example will use the default header values (First name/Last name).
 
 Input file:
 
