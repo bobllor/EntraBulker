@@ -190,9 +190,13 @@ one to start the local server and one to start the application.
 ```shell
 # main application
 bash run.sh 01-bulker-app
+
+# ran in second terminal
 py backend/main.py
 
 # updater application
 bash run.sh 02-updater-app
+
+# ran in second terminal
 py backend/updater_main.py
 ```
