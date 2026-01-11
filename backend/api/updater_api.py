@@ -76,7 +76,7 @@ class UpdaterAPI:
 
         return res
     
-    def check_version(self, url: str = None) -> Response:
+    def check_version(self, url: str = None, *, version: str = None) -> Response:
         '''Checks the version and returns a Response.
         
         It contains a new key `content` that holds a bool value, indicating
@@ -84,13 +84,15 @@ class UpdaterAPI:
         '''
         if url is None:
             url = META["version_url"]
+        if version is None:
+            version = VERSION
 
         out_res: Response = utils.get_version(url)
 
         self.logger.debug(f"Check version response: {out_res}")
         
         res: Response = utils.generate_response(message="Version check successful", content=False)
-        res["content"] = utils.compare_version(VERSION, out_res["content"])
+        res["content"] = utils.compare_version(version, out_res["content"])
 
         if out_res["status"] == "error" or out_res["exception"] is not None:
             self.logger.error(f"Failed to request on {url}: {out_res}")

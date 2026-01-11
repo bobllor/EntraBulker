@@ -34,7 +34,9 @@ if __name__ == '__main__':
 
     logger.debug(f"Log path: {log_path} | URL: {url} | Debug: {debug} | Root: {os.getcwd()}")
 
-    excel_reader: Reader = Reader(EXCEL_PATH, defaults=DEFAULT_HEADER_MAP, update_only=True, logger=logger, project_root=PROJECT_ROOT)
+    excel_reader: Reader = Reader(
+        EXCEL_PATH, defaults=DEFAULT_HEADER_MAP, update_only=True, logger=logger, project_root=PROJECT_ROOT, lower_value=True
+    )
     settings_reader: Reader = Reader(SETTINGS_PATH, defaults=DEFAULT_SETTINGS_MAP, update_only=True, logger=logger, project_root=PROJECT_ROOT)
     opco_reader: Reader = Reader(OPCO_PATH, defaults=DEFAULT_OPCO_MAP, logger=logger, project_root=PROJECT_ROOT)
 

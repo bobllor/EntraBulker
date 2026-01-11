@@ -22,7 +22,7 @@ export default function DragZone({showDrop, setShowDrop}: DragZoneProps): JSX.El
             onDragDrop(e, setUploadedFiles);
             disableShowDrop(showDrop, setShowDrop);
         }}
-        className={`absolute border-1 border-dashed bg-gray-300/60 blurs w-[60%] h-[70%] rounded-2xl
+        className={`absolute border-1 border-dashed bg-gray-300/60 blurs w-[80%] h-[75%] rounded-2xl
         ${!showDrop ? "opacity-0" : "opacity-100 z-4"} flex justify-center items-center`}>
             <span className="text-black text-3xl pointer-events-none">
                 Drop file here

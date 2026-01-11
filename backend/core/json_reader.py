@@ -11,7 +11,8 @@ class Reader:
         logger: Log = None,
         update_only: bool = False,
         is_test: bool = False,
-        project_root: Path = None):
+        project_root: Path = None,
+        lower_value: bool = False):
         '''Used to support CRUD operations on JSON data for the program.
         
         Parameters
@@ -33,10 +34,14 @@ class Reader:
                 Boolean to indicate if the Reader is a test instance or not. This enables deletion of default keys,
                 but otherwise functions normally.
             
-            project_root: Path | str, default `None`
+            project_root: Path | str, default None
                 The path to the project root. This is where the temporary files are written to
                 before being moved into the given path. By default it is None, using the
                 temporary FS as the location.
+            
+            lower_value: bool, default False
+                Lower cases all incoming values if it is a string, used for updating and insertion only. 
+                By default it is `False`, taking the value's literal value.
         '''
         self.logger: Log = logger or Log()
 
@@ -51,6 +56,8 @@ class Reader:
 
         self.update_only: bool = update_only
         self._is_test: bool = is_test
+        
+        self._lower_value: bool = lower_value
 
         self._mkfiles()
 
@@ -139,7 +146,7 @@ class Reader:
                 self.logger.warning(f"Insertion failed: key {key} already exists")
                 continue
 
-            self._content[key] = value
+            self._content[key] = value.lower() if isinstance(value, str) and self._lower_value else value
             self.logger.info(f"Inserted key {key} with value: {value}")
             success_ops += 1
 
@@ -173,7 +180,7 @@ class Reader:
             self.logger.error(f"Update failed: key {key} does not exist")
             return utils.generate_response(status="error", message="Failed to update key", status_code=500)
 
-        self._content[key] = value
+        self._content[key] = value.lower() if isinstance(value, str) and self._lower_value else value
         self.write(self._content)
 
         self.logger.info(f"Updated {key} with {value}")
@@ -218,7 +225,7 @@ class Reader:
                     return res
             else:
                 if key in data:
-                    data[key] = value
+                    data[key] = value.lower() if isinstance(value, str) and self._lower_value else value
 
                     debug_val: Any = utils.format_value(value)
 
@@ -244,7 +251,7 @@ class Reader:
         self.logger.debug(f"Given data: {data}")
 
         for key, val in data.items():
-            self._content[key] = val
+            self._content[key] = val.lower() if isinstance(val, str) and self._lower_value else val
 
             if key in self._content:
                 self.logger.info(f"Updated key {key} with {val}")
@@ -395,7 +402,7 @@ class Reader:
             if isinstance(content_val, dict):
                 content_val = self._lower_keys(None, content=content_val)
 
-            new_content[key.lower()] = content_val
+            new_content[key.lower()] = content_val.lower() if isinstance(content_val, str) else content_val
         
         return new_content
     
