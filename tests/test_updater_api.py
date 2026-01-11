@@ -15,7 +15,7 @@ def test_check_version(mock: Mock, updater_api: UpdaterAPI):
         "exception": None,
     }
 
-    res: Response = updater_api.check_version("https://someurl.com/api/version")
+    res: Response = updater_api.check_version("https://someurl.com/api/version", version="v1.0.0")
 
     assert res["status"] == "success" and res["content"] == True
 
