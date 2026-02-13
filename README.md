@@ -1,7 +1,9 @@
 # EntraBulker
 
 *EntraBulker* is a customizable application that generates CSV files for bulking Entra ID identities 
-without the need for API access. It is a WebView application built with Python, TypeScript, and JavaScript.
+without the need for API access. 
+
+It is a WebView application built with Python, TypeScript, and JavaScript.
 
 ## Example
 
