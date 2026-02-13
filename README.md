@@ -87,6 +87,8 @@ The settings allow customization on how the application will function. There are
 4. [Password](./docs/settings/password.md): Password related settings for random password generation
 5. [Text Template](./docs/settings/text_template.md): Settings for generating text templates for each entry in the file
 
+Question marks can be found in all the Setting pages, hovering over them will reveal a tooltip on what it does.
+
 ### Side Effects
 
 Before the CSV file is generated, there are side effects during the data parsing process:
@@ -137,8 +139,7 @@ an automatic updating process occurs with the binary `EntraUpdater.exe`.
 
 <img src="./docs/assets/update-modal.png" alt="Update found modal" width="600">
 
-In case of an error or if manual updating is preferred, updating can be done through using the new binary installer
-or replacing the files with the files in the ZIP file.
+Updating can be done through using the new binary installer or replacing the files with the new files from the ZIP file.
 - The default path of the application via installer is `$HOME\AppData\Programs\EntraBulker`.
 
 ## Development
@@ -146,7 +147,7 @@ or replacing the files with the files in the ZIP file.
 Development is supported on Linux and Windows. 
 Windows is expected to ***use Git Bash***, with support scripts being written in Bash.
 
-*Powershell* is used when compiling the binaries and installer.
+*PowerShell* is used when compiling the binaries and installer.
 
 The following software are required:
 - `Node.js >= 22.11.0`
@@ -177,7 +178,7 @@ There are two folders for the frontend, each used for a different application:
 1. `01-bulker-app`: The main application
 2. `02-updater-app`: The updater application
 
-Due to the two applications, there are *two Python files* that serve each frontend respectively:
+There are *two Python files* that serve each frontend respectively:
 1. `main.py`: The main application
 2. `updater_main.py`: The updater application
 
