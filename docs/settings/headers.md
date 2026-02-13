@@ -3,7 +3,10 @@
 The Headers settings contains the mapping for the column names of the file, this allows the
 program to extract the data from the file and generate the output files.
 
-The column values are ***case insensitive***.
+The column values are ***case insensitive***. The value will be the same as the entry but does not
+have any effect on the program.
+
+<img src="./assets/headers-settings.png" width="600" alt="Header settings page" />
 
 # Column Values
 
@@ -19,8 +22,11 @@ Default value: `full name`
 
 The column representing the *full name* of the user. 
 
-It is expected to be two names or more. If thereis only a single name value in this column, 
+It is expected to be two names or more. If there is only a single name value in this column, 
 that name will be repeated twice in the final output.
+
+If the file being read uses two columns instead, then the option *First/Last Name Headers* should be enabled and 
+the First and Last Name columns should be changed.
 
 ## Organization
 
