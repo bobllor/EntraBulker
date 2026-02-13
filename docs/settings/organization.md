@@ -26,7 +26,7 @@ There are two fields in the form:
 2. *Domain*: The domain used for the account based on the organization value.
 
 The domain entry does not use the `@` symbol, and if included will be removed automatically.
-- By default, the program already appends the `@` symbol to the email.
+- By default, the program already appends the `@` symbol to the username.
 
 When a successful key-value pair is submitted, a new entry will be added into the table below.
 
