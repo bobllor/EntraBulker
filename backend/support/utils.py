@@ -537,3 +537,37 @@ def compare_version(base_version: str, arg_version: str) -> bool:
 
     # if the loop did not return, that means both versions are equal. 
     return False
+
+def get_key(d: dict[Any, Any], k: Any) -> Any | None:
+    '''Recursively searches a dictionary for a key and return its value. 
+    
+    If the key is not found, then it will return None.
+
+    Parameters
+    ----------
+        d: dict[Any, Any]
+            The dictionary being searched in. The recursive call is used to search
+            other nested dictionaries if it exists.
+        
+        k: Any
+            The target key being looked for.
+    '''
+    if k in d:
+        return d[k]
+    
+    val: Any | None = None
+    for sv in d.values():
+        if isinstance(sv, dict):
+            val = get_key(sv, k)
+        elif isinstance(sv, list):
+            for e in sv:
+                if isinstance(e, dict):
+                    val = get_key(e, k)
+
+                    if val is not None:
+                        break
+        
+        if val is not None:
+            return val
+    
+    return val
