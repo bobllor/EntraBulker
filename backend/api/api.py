@@ -10,21 +10,30 @@ from pathlib import Path
 from typing import Any, Literal, TypedDict, Callable
 from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH, VERSION
 from copy import deepcopy
+from dataclasses import dataclass
 import support.utils as utils
 import pandas as pd
 import webview
 
 ReaderType = Literal["excel", "opco", "settings"]
-AzureFileState = TypedDict(
-    "AzureFileState", 
-    {
-        "upload_id": str,
-        "csv_file_name": str,
-        "skip_version_row": bool,
-        "uid": str,
-        "template_name": str,
-    }
-)
+
+@dataclass
+class AzureFileState:
+    '''Primarily used for flattening multiple uploaded files into a single file output. 
+    It tracks the upload ID of the file.
+    '''
+    # The ID of the current upload, used to track files to an AzureState. If given, the
+    # other fields of the class will be reused to flatten into a single file.
+    upload_id: str = ""
+    # The output file name for the bulk CSV. It will also be generated for Graph due to
+    # the initial password login being part of it.
+    output_name: str = ""
+    # The template directory name for the template text files. This is optional and is applied
+    # if the setting for the templates are enabled.
+    template_dir_name: str = ""
+    # Skips the version row in the output, e.g. "version:v1.0". This only applies to
+    # multiple uploaded files, if it is a single file it will do nothing.
+    skip_version_row: bool = False
 
 class API:
     def __init__(self, *, 
@@ -75,14 +84,7 @@ class API:
 
         self._project_root: Path = project_root
 
-        # state tracking for generating csv/graph
-        # a map isnt required as this is a single call.
-        self._auto_azure_state: AzureFileState = {
-            "upload_id": "", 
-            "csv_file_name": "",
-            "skip_version_row": False,
-            "uid": "",
-        }
+        self.file_state: AzureFileState = AzureFileState()
 
     def generate_azure_csv(self, content: GenerateCSVProps | pd.DataFrame, upload_id: str = None) -> Response: 
         '''Generates the Azure CSV file for bulk accounts.
@@ -111,7 +113,9 @@ class API:
             self.logger.critical(f"Failed to parse DataFrame: {parse_res}")
             return parse_res 
 
-        # why i did it this way i dont know. 5-29-26
+        # why i did it this way i dont know. 
+        # any changes now will break a lot of the tests and how
+        # it is designed in the frontend. me: 5-30-26
         res["message"] += parse_res["message"]
         parser: Parser = parse_res["content"]
 
@@ -125,44 +129,31 @@ class API:
             passwords=user_data["passwords"],
         )
 
-        curr_date: str = utils.get_date()
+        self.file_state = self._new_azure_file_state(upload_id)
 
-        # determines whether or not to create a new file or append to an existing file
-        if upload_id != self._auto_azure_state["upload_id"]:
-            # this is always reset on every run (assuming no flatten csv).
-            self._auto_azure_state["upload_id"] = upload_id
-            self._auto_azure_state["skip_version_row"] = False
-
-            self._auto_azure_state["uid"] = utils.get_id()
-            csv_name: str = f"{curr_date}-az-bulk-{self._auto_azure_state['uid']}.csv"
-
-            self._auto_azure_state["csv_file_name"] = csv_name
-            self._auto_azure_state["template_name"] = f"{curr_date}-{self._auto_azure_state['uid']}"
-        else:
-            csv_name: str = self._auto_azure_state["csv_file_name"]
-        
-        def _manage_azure_state(self) -> str:
-            '''Returns the CSV file name. The method also checks for the state of the upload ID,
-            and if merging is enabled, then will write to the same file.
-            
-            Otherwise, it will return a new CSV file name.
-            '''
-            
         writer.write(Path(self.get_reader_value("settings", "output_dir")) 
-            / csv_name, skip_version=self._auto_azure_state["skip_version_row"])
+            / self.file_state.output_name, skip_version=self.file_state.skip_version_row)
+        self.logger.info(f"Generated {self.file_state.output_name} at {self.get_reader_value('settings', 'output_dir')}")
 
-        # only applicable if flatten_csv is true. multi-file operations are not affected by this.
-        # NOTE: flatten csv condition is only used in the front end. it is not used in the backend
-        self._auto_azure_state["skip_version_row"] = True
+        # only applicable if flatten_csv is true. operations where each file generates an output will
+        # not be affected by this.
+        self.file_state.skip_version_row = True
+        
+        self._write_template(writer)
 
-        self.logger.info(f"Generated {csv_name} at {self.get_reader_value('settings', 'output_dir')}")
+        # NOTE: any failures will require an update to the context in the frontend. 
+        self.logger.debug(f"Azure CSV generated: {res}")
 
+        return res
+
+    def _write_template(self, writer: AzureWriter):
+        '''Generates the template text files and folders. This requires the
+        templates option to be enabled, if it is not then it will do nothing.
+        '''
+        res: Response = utils.generate_response(message="")
         templates: TemplateMap = self.settings.get("template")
         if templates["enabled"]:
-            temp_res: Response = self._generate_template(templates["text"], writer, self._auto_azure_state["template_name"])
-
-            res["status"] = temp_res["status"]
-            res["message"] += temp_res["message"]
+            temp_res: Response = self._generate_template(templates["text"], writer, self.file_state.template_dir_name)
 
             # NOTE: the only error here is if the text is too long.
             if temp_res["status"] == "error":
@@ -170,11 +161,6 @@ class API:
 
                 # max char is 1250, and only triggers if the text is > 1250.
                 self.update_setting("text", templates["text"][:1250], "template")
-
-        # NOTE: any failures will require an update to the context in the frontend. 
-        self.logger.debug(f"Azure CSV generated: {res}")
-
-        return res
     
     def generate_graph_azure(self, content: GenerateCSVProps | pd.DataFrame, upload_id: str = None) -> Response:
         '''Parses the content of the file and generates the users via Graph REST API.'''
@@ -317,7 +303,7 @@ class API:
 
         return writer
 
-    def _generate_template(self, text: str, writer: AzureWriter, file_name: str) -> Response:
+    def _generate_template(self, text: str, writer: AzureWriter, dir_name: str) -> Response:
         res: Response = utils.generate_response(message="")
         if text.strip() == "":
             res["status"] = "error"
@@ -328,7 +314,7 @@ class API:
         template_res: Response = writer.write_template(
             self.settings.get("output_dir"), 
             text=text, 
-            file_name=file_name,
+            dir_name=dir_name,
         )
 
         if template_res["status"] == "error":
@@ -826,6 +812,32 @@ class API:
         }
 
         return data
+
+    def _new_azure_file_state(self, upload_id: str) -> AzureFileState:
+        '''Creates a new Azure file state if the given upload ID does not match
+        the current ID in the state.
+
+        If the upload ID matches the current ID, then it will return the original
+        state.
+        '''
+        file_state: AzureFileState = self.file_state
+
+        # determines whether or not to create a new file or append to an existing file
+        # by default file_state.upload_id is empty
+        # this is always reset on every run if flatten csv is not used.
+        if upload_id != self.file_state.upload_id:
+            curr_date: str = utils.get_date()
+            uuid: str = utils.get_id()
+
+            csv_name: str = f"{curr_date}-az-bulk-{uuid}.csv"
+            template_dir_name: str = f"{curr_date}-{uuid}"
+
+            file_state = AzureFileState(upload_id, csv_name, template_dir_name)
+            self.logger.info(f"Created new file state: {file_state.__dict__}")
+        else:
+            self.logger.info(f"State already exists for {upload_id}")
+        
+        return file_state
     
     def _validate_df(self, df: pd.DataFrame, headers: HeaderMap, *, two_name_column_support: bool = False) -> Response:
         '''Validate the DataFrame and its headers. It will return a Response indicating an
