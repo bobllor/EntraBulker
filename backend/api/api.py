@@ -2,7 +2,7 @@ from core.json_reader import Reader
 from core.parser import Parser
 from core.azure_writer import AzureWriter
 from support.types import GenerateCSVProps, ManualCSVProps, APISettings, Response, HeaderMap
-from support.types import Password, Formatting, TemplateMap, Metadata
+from support.types import Password, Formatting, TemplateMap, Metadata, UserData
 from base64 import b64decode
 from io import BytesIO
 from logger import Log
@@ -12,7 +12,7 @@ from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH,
 from copy import deepcopy
 import support.utils as utils
 import pandas as pd
-import webview, os
+import webview
 
 ReaderType = Literal["excel", "opco", "settings"]
 AzureFileState = TypedDict(
@@ -75,7 +75,8 @@ class API:
 
         self._project_root: Path = project_root
 
-        # state tracking for generate_azure_csv
+        # state tracking for generating csv/graph
+        # a map isnt required as this is a single call.
         self._auto_azure_state: AzureFileState = {
             "upload_id": "", 
             "csv_file_name": "",
@@ -97,134 +98,32 @@ class API:
                 correct file. This is only relevant if flatten CSV is enabled.
         '''
         res: Response = utils.generate_response(message="CSV generated")
-        df: pd.DataFrame = None
-
-        if isinstance(content, dict):
-            delimited: list[str] = content['b64'].split(',')
-            file_name: str = content['fileName']
-
-            meta_info: str = delimited[0]
-
-            self.logger.info(f"Received file {file_name}: {meta_info}")
-            if all(file_type not in meta_info.lower() for file_type in ["spreadsheet", "csv"]):
-                return utils.generate_response(status="error", 
-                    message='Invalid file entered, only .csv and .xlsx are allowed'
-                )
-            
-            is_excel: bool = "spreadsheet" in meta_info
-
-            b64_string: str = delimited[-1]
-            decoded_data: bytes = b64decode(b64_string)
-            in_mem_bytes: BytesIO = BytesIO(decoded_data)
-
-            try:
-                if is_excel:
-                    df = pd.read_excel(in_mem_bytes)
-                else:
-                    df = pd.read_csv(in_mem_bytes)
-            except Exception as e:
-                self.logger.critical(f"Failed to parse file: {file_name} | {meta_info}")
-                self.logger.critical(f"Exception: {e}")
-
-                return utils.generate_response("error", message=f"An unknown error occurred while parsing {file_name}")
-
-            self.logger.info(f"File column names: {df.columns.to_list()}")
-        else:
-            df = content
+        df_response: Response = self._get_df(content)
+        if df_response["status"] == "error":
+            return df_response
+        df: pd.DataFrame = df_response["content"]
 
         if upload_id is None:
             upload_id = utils.get_id(divisor=2)
 
-        parser: Parser = Parser(df)
-        base_len: int = parser.length
+        parse_res: Response = self._start_parse_df(df)
+        if parse_res["status"] == "error":
+            self.logger.critical(f"Failed to parse DataFrame: {parse_res}")
+            return parse_res 
 
-        if base_len == 0:
-            res["status"] = "error"
-            res["message"] = "File is empty"
-            
-            return res
-        
-        # the user defined headers (values).
-        # the key is the internal name, the value is the user defined columns.
-        # however there are only two required keys: name and opco.
-        excel_columns: HeaderMap = self.excel.get_content()
-        settings: APISettings = self.settings.get_content()
+        # why i did it this way i dont know. 5-29-26
+        res["message"] += parse_res["message"]
+        parser: Parser = parse_res["content"]
 
-        self.logger.debug(f"Headers: {excel_columns}")
-        validate_dict: Response = self._validate_df(
-            df,
-            excel_columns,
-            two_name_column_support=settings["two_name_column_support"],
+        self._start_nameopco_col_to_string(parser)
+        user_data: UserData = self._start_extract_user_data(parser)
+
+        writer: AzureWriter = self._get_azure_writer(
+            full_names=user_data["full_names"], 
+            usernames=user_data["usernames"], 
+            names=user_data["full_names"],
+            passwords=user_data["passwords"],
         )
-
-        if validate_dict["status"] == "error":
-            self.logger.error(f"Error validating DataFrame, message: {validate_dict['message']}")
-            return validate_dict
-        
-        # creating the name series and adding it into the DataFrame for normalization
-        # only if using two name columns
-        if settings["two_name_column_support"]:
-            full_name_series: pd.Series = parser.create_series(
-                func=self._concat_full_name,
-                args=(parser.df[excel_columns["first_name"]], parser.df[excel_columns["last_name"]])
-            )
-
-            parser.add(excel_columns["name"], full_name_series)
-
-        # maybe read this back? for now i want to keep the full name.
-        #parser.apply(default_excel_columns["name"], func=utils.format_name)
-
-        # converting all values to a string to ensure no errors occur.
-        parser.apply(excel_columns["opco"], func=lambda x: x.lower())
-        
-        dropped_name_rows: int = parser.drop_empty_rows(excel_columns["name"])
-        dropped_opco_rows: int = parser.drop_empty_rows(excel_columns["opco"])
-
-        dropped_rows: int = dropped_name_rows + dropped_opco_rows
-
-        new_len: int = parser.length
-
-        self.logger.debug(f"Dropped names: {dropped_name_rows}/{base_len}")
-        self.logger.debug(f"Dropped opcos: {dropped_opco_rows}/{base_len}")
-        self.logger.debug(f"Total dropped rows: {dropped_rows}/{base_len}")
-
-        if new_len == 0:
-            res["status"] = "error"
-            res["message"] = f"File is empty after validation ({dropped_rows}/{base_len} dropped rows), please correct the data"
-
-            return res
-
-        if dropped_rows > 0:
-            rows_str: str = "rows" if dropped_rows > 1 else "row"
-            res["message"] += f", dropped {dropped_rows}/{base_len} {rows_str} from file due to missing values"
-
-        # ensure only strings are being worked with here. 
-        parser.apply(excel_columns["name"], func=lambda x: str(x))
-        parser.apply(excel_columns["opco"], func=lambda x: str(x))
-
-        excel_names: list[str] = parser.get_rows(excel_columns["name"])
-        opcos: list[str] = parser.get_rows(excel_columns["opco"])
-
-        self.logger.debug(f"Name DF columns: {excel_names}")
-        self.logger.debug(f"Opco DF columns: {opcos}")
-
-        names: list[str] = [utils.format_name(name) for name in excel_names]
-        full_names: list[str] = [utils.format_name(name, keep_full=True) for name in excel_names]
-
-        dupe_names: list[str] = utils.check_duplicate_names(names)
-
-        # the mapping of the operating company to their domain name.
-        opco_mappings: dict[str, str] = self.opco.get_content()
-
-        formatters: Formatting = self.settings.get("format")
-        usernames: list[str] = utils.generate_usernames(
-            dupe_names, opcos, opco_mappings,
-            format_type=formatters["format_type"],
-            format_case=formatters["format_case"], 
-            format_style=formatters["format_style"],
-        )
-
-        writer: AzureWriter = self._get_azure_writer(full_names=full_names, usernames=usernames, names=names)
 
         curr_date: str = utils.get_date()
 
@@ -241,6 +140,13 @@ class API:
             self._auto_azure_state["template_name"] = f"{curr_date}-{self._auto_azure_state['uid']}"
         else:
             csv_name: str = self._auto_azure_state["csv_file_name"]
+        
+        def _manage_azure_state(self) -> str:
+            '''Returns the CSV file name. The method also checks for the state of the upload ID,
+            and if merging is enabled, then will write to the same file.
+            
+            Otherwise, it will return a new CSV file name.
+            '''
             
         writer.write(Path(self.get_reader_value("settings", "output_dir")) 
             / csv_name, skip_version=self._auto_azure_state["skip_version_row"])
@@ -270,102 +176,20 @@ class API:
 
         return res
     
-    def _validate_df(self, df: pd.DataFrame, headers: HeaderMap, *, two_name_column_support: bool = False):
-        '''Validate the DataFrame and its headers. It will return a Response indicating an
-        error/success and a message with the error if applicable.
+    def generate_graph_azure(self, content: GenerateCSVProps | pd.DataFrame, upload_id: str = None) -> Response:
+        '''Parses the content of the file and generates the users via Graph REST API.'''
+        # NOTE: if errors occur the message will be different
+        res: Response = utils.generate_response(message="Added users")
+        df_res: Response = self._get_df(content)
+        if df_res["status"] == "error":
+            return df_res
+        df: pd.DataFrame = df_res["content"]
+
+        valid_res: Response = self._start_validate_df(df)
+        if valid_res["status"] == "error":
+            return valid_res
         
-        Parameters
-        ----------
-            df: DataFrame
-                The DataFrame.
-
-            headers: dict[str, str]
-                Dictionary that maps internal variable names to user-defined names. The keys
-                are the internal names, the values are user-defined names. Used to validate
-                column headers.
-            
-            two_name_column_support: bool, default `False`
-                A boolean used to handle the column for the client name being split
-                into *two columns* (`First name`/`Last name`) instead of a single `Full name` column.
-                By default it is `False`. If true, then it will create a new column `Full name` and remove
-                the two columns for normalization.
-        '''
-        headers_copy: HeaderMap = deepcopy(headers)
-
-        # must remove otherwise column check will fail
-        if not two_name_column_support:
-            del headers_copy["first_name"]
-            del headers_copy["last_name"]
-        else:
-            # this will be added back in the check_df_columns step
-            # after combining the first_name and last_name columns.
-            del headers_copy["name"]
-
-        # check_df_columns must be the last number in the dict
-        # any other functions can be in any order
-        func_dict: dict[int, dict[str, Any]] = {
-            0: {"func": self._check_duplicate_headers, "args": [headers_copy]},
-            1: {"func": self._check_duplicate_columns, "args": [df]},
-            2: {"func": self._check_df_columns, "args": [df, headers_copy]},
-        }
-
-        res: Response = utils.generate_response(message="")
-
-        for i in range(len(func_dict)):
-            func: Callable[[Any], Response] = func_dict[i]["func"]
-            args: tuple[Any] = func_dict[i]["args"]
-
-            if args is not None:
-                res = func(*args)
-            else:
-                res = func()
-
-            if res["status"] == "error":
-                return res
-
-        res["message"] = "Successful validation"
-
-        return res
-    
-    def _concat_full_name(self, first_series: pd.Series, last_series: pd.Series) -> pd.Series:
-        '''Concatenates two name Series into a full name Series. This is used for two column support.
-        
-        If there are empty values in either series or if a non-string is read, then the row will be empty. 
-        This is intended to be used to drop the row.
-
-        Parameters
-        ----------
-            first_series: pd.Series[str]
-                The Series representing the first name column.
-
-            last_series: pd.Series[str]
-                The Series representing the last name column.
-        '''
-        name_func = lambda x: "" if not isinstance(x, str) else x.strip()
-
-        first_series = first_series.fillna("").apply(name_func)
-        last_series = last_series.fillna("").apply(name_func)
-
-        first_list: list[str] = first_series.to_list()
-        last_list: list[str] = last_series.to_list()
-
-        self.logger.debug(f"Concatenating to full name, first name data: {first_list} | last name data: {last_list}")
-
-        full_names: list[str] = []
-
-        for i, f_name in enumerate(first_list):
-            l_name: str = last_list[i]
-
-            if f_name == "" or l_name == "":
-                full_names.append("")
-            else:
-                full_names.append(f_name + " " + l_name)
-        
-        full_series: pd.Series = pd.Series(full_names)
-
-        self.logger.debug(f"Concatenated names: {full_names}")
-
-        return full_series
+        parser: Parser = self._start_parse_df(df)
     
     def generate_manual_csv(self, content: list[ManualCSVProps]) -> dict[str, str]:
         '''Generates the Azure CSV file for bulk accounts through the manual input.
@@ -417,7 +241,8 @@ class API:
         writer: AzureWriter = self._get_azure_writer(
             full_names=full_names,
             usernames=usernames,
-            names=names
+            names=names,
+            passwords=passwords
         )
 
         curr_date: str = utils.get_date()
@@ -460,15 +285,29 @@ class API:
     def _get_azure_writer(self, *,
         full_names: list[str],
         usernames: list[str],
-        names: list[str]) -> AzureWriter:
-        '''Creates an AzureWriter with the data set for writing.'''
+        names: list[str],
+        passwords: list[str]) -> AzureWriter:
+        '''Creates an AzureWriter with the data set for writing.
+        
+        Parameters
+        ----------
+            full_names: list[str]
+                A list of full names that is used as the display name. These are the unedited
+                names.
+            
+            usernames: list[str]
+                A list of user principal names. This is a email login-identifier for Azure, an
+                example being `someuser@domain.com`.
+            
+            names: list[str]
+                A list of names used to fill in the 'givenName' and 'surname' properties (first/last).
+                A list of full names can be given, as it will be parsed into the first and last names
+                automatically.
+            
+            passwords: list[str]
+                A list of passwords for the user.
+        '''
         writer: AzureWriter = AzureWriter(logger=self.logger, project_root=self._project_root)
-
-        passwords: list[str] = []
-        for _ in range(len(names)):
-            password_res: Response = self.generate_password()
-
-            passwords.append(password_res["content"])
 
         writer.set_full_names(full_names)
         writer.set_names(names)
@@ -627,7 +466,7 @@ class API:
             password_settings = DEFAULT_SETTINGS_MAP["password"]
             self.settings.update("password", password_settings)
 
-            res["message"] += ", an error occurred while generating the password and has been reset to its default values"
+            res["message"] += ", the password settings has been reset to its default values due to an error"
 
             update_res: Response = self.update_setting("password", DEFAULT_SETTINGS_MAP["password"])
 
@@ -794,3 +633,295 @@ class API:
         
         # this will never be reached but leaving it here for best practices.
         return res
+    
+    def _get_df(self, content: GenerateCSVProps | pd.DataFrame) -> Response:
+        '''Parses the content and returns a Response containing a DataFrame.
+        
+        If content is already a DataFrame, then it will return the DataFrame. This is only
+        relevant to test cases.
+
+        If an error occurs, then it will return an error Response.
+        '''
+        df: pd.DataFrame = None
+        res: Response = utils.generate_response(content=None)
+        file_name: str = ""
+
+        if isinstance(content, dict):
+            delimited: list[str] = content['b64'].split(',')
+            file_name = content['fileName']
+
+            meta_info: str = delimited[0]
+
+            self.logger.info(f"Received file {file_name}: {meta_info}")
+            if all(file_type not in meta_info.lower() for file_type in ["spreadsheet", "csv"]):
+                return utils.generate_response(status="error", 
+                    message='Invalid file entered, only .csv and .xlsx are allowed'
+                )
+            
+            is_excel: bool = "spreadsheet" in meta_info
+
+            b64_string: str = delimited[-1]
+            decoded_data: bytes = b64decode(b64_string)
+            in_mem_bytes: BytesIO = BytesIO(decoded_data)
+
+            try:
+                if is_excel:
+                    df = pd.read_excel(in_mem_bytes)
+                else:
+                    df = pd.read_csv(in_mem_bytes)
+            except Exception as e:
+                self.logger.critical(f"Failed to parse file: {file_name} | {meta_info}")
+                self.logger.critical(f"Exception: {e}")
+
+                return utils.generate_response("error", message=f"An unknown error occurred while parsing {file_name}")
+
+            self.logger.info(f"File column names: {df.columns.to_list()}")
+        else:
+            df = content
+        
+        res["content"] = df
+        if df is None:
+            self.logger.critical(f"Failed to parse content, got None for DataFrame: {file_name}")
+            res["status"] = "error"
+            res["message"] = "An unknown error occurred while reading file"
+
+        return res
+    
+    def _start_validate_df(self, df: pd.DataFrame) -> Response:
+        '''Starts the validation of the DataFrame. It is a wrapper that calls self._validate_df.
+        
+        It checks the DataFrame and the headers data defined in the Excel mapping configuration file:
+            - The header values are checked for duplicate entries
+            - Columns are checked for duplicate entries
+            - Columns defined in the header values exists in the DataFrame
+        
+        No modifications are done on the DataFrame. It will return a Response indicating if the
+        DataFrame is valid.
+        '''
+        excel_columns: HeaderMap = self.excel.get_content()
+        settings: APISettings = self.settings.get_content()
+
+        self.logger.debug(f"Headers: {excel_columns}")
+        valid_res: Response = self._validate_df(
+            df,
+            excel_columns,
+            two_name_column_support=settings["two_name_column_support"],
+        )
+
+        if valid_res["status"] == "error":
+            self.logger.error(f"Error validating DataFrame, message: {valid_res['message']}")
+
+        return valid_res
+
+    def _start_parse_df(self, df: pd.DataFrame) -> Response:
+        '''Parses the DataFrame and corrects bad data. It will return the Parser used
+        to parse the DataFrame in the 'content' of the Response.
+        
+        Any errors that occur will also be returned as an error Response.
+        '''
+        res: Response = utils.generate_response(message="CSV generated")
+
+        parser: Parser = Parser(df)
+        res["content"] = parser
+
+        base_len: int = parser.length
+
+        excel_columns: HeaderMap = self.excel.get_content()
+        settings: APISettings = self.settings.get_content()
+
+        # creating the name series and adding it into the DataFrame for normalization
+        # only if using two name columns
+        if settings["two_name_column_support"]:
+            full_name_series: pd.Series = parser.create_series(
+                func=self._concat_full_name,
+                args=(parser.df[excel_columns["first_name"]], parser.df[excel_columns["last_name"]])
+            )
+
+            parser.add(excel_columns["name"], full_name_series)
+
+        # maybe read this back? for now i want to keep the full name.
+        #parser.apply(default_excel_columns["name"], func=utils.format_name)
+
+        # converting all values to a string to ensure no errors occur.
+        parser.apply(excel_columns["opco"], func=lambda x: x.lower())
+        
+        dropped_name_rows: int = parser.drop_empty_rows(excel_columns["name"])
+        dropped_opco_rows: int = parser.drop_empty_rows(excel_columns["opco"])
+
+        dropped_rows: int = dropped_name_rows + dropped_opco_rows
+
+        new_len: int = parser.length
+
+        self.logger.debug(f"Dropped names: {dropped_name_rows}/{base_len}")
+        self.logger.debug(f"Dropped opcos: {dropped_opco_rows}/{base_len}")
+        self.logger.debug(f"Total dropped rows: {dropped_rows}/{base_len}")
+
+        if new_len == 0:
+            res["status"] = "error"
+            res["message"] = f"File is empty after validation ({dropped_rows}/{base_len} dropped rows), please correct the data"
+
+            return res
+
+        # not considered an error
+        if dropped_rows > 0:
+            rows_str: str = "rows" if dropped_rows > 1 else "row"
+            res["message"] += f", dropped {dropped_rows}/{base_len} {rows_str} from file due to missing values"
+        
+        return res
+
+    def _start_nameopco_col_to_string(self, parser: Parser):
+        '''Converts the columns 'name' and 'opco' of the Excel mappings. It
+        uses the values given by the config from the user.
+
+        This will modify the DataFrame given in Parser in place.
+        ''' 
+        # the user defined headers (values).
+        # the key is the internal name, the value is the user defined columns.
+        # however there are only two required keys: name and opco.
+        excel_columns: HeaderMap = self.excel.get_content()
+
+        # ensure only strings are being worked with here. 
+        parser.apply(excel_columns["name"], func=lambda x: str(x))
+        parser.apply(excel_columns["opco"], func=lambda x: str(x))
+
+    def _start_extract_user_data(self, parser: Parser) -> UserData:
+        '''Extracts the user data from the DataFrame.
+
+        It will return a UserData object containing the information for
+        the users for bulking/adding to Entra ID.
+        '''
+        excel_columns: HeaderMap = self.excel.get_content()
+        excel_names: list[str] = parser.get_rows(excel_columns["name"])
+        opcos: list[str] = parser.get_rows(excel_columns["opco"])
+
+        self.logger.debug(f"Name DF columns: {excel_names}")
+        self.logger.debug(f"Opco DF columns: {opcos}")
+
+        names: list[str] = [utils.format_name(name) for name in excel_names]
+        full_names: list[str] = [utils.format_name(name, keep_full=True) for name in excel_names]
+        dupe_names: list[str] = utils.check_duplicate_names(names)
+
+        # the mapping of the operating company to their domain name.
+        opco_mappings: dict[str, str] = self.opco.get_content()
+
+        formatters: Formatting = self.settings.get("format")
+        usernames: list[str] = utils.generate_usernames(
+            dupe_names, opcos, opco_mappings,
+            format_type=formatters["format_type"],
+            format_case=formatters["format_case"], 
+            format_style=formatters["format_style"],
+        )
+
+        passwords: list[str] = []
+        for _ in range(len(usernames)):
+            pass_res: Response = self.generate_password()
+            password: str = pass_res["content"]
+
+            passwords.append(password)
+
+        data: UserData = {
+            "usernames": usernames,
+            "full_names": full_names,
+            "passwords": passwords,
+        }
+
+        return data
+    
+    def _validate_df(self, df: pd.DataFrame, headers: HeaderMap, *, two_name_column_support: bool = False) -> Response:
+        '''Validate the DataFrame and its headers. It will return a Response indicating an
+        error/success and a message with the error if applicable.
+
+        Do not run directly, instead run self._run_validate_df() as it is a wrapper around this method.
+        
+        Parameters
+        ----------
+            df: DataFrame
+                The DataFrame.
+
+            headers: dict[str, str]
+                Dictionary that maps internal variable names to user-defined names. The keys
+                are the internal names, the values are user-defined names. Used to validate
+                column headers.
+            
+            two_name_column_support: bool, default `False`
+                A boolean used to handle the column for the client name being split
+                into *two columns* (`First name`/`Last name`) instead of a single `Full name` column.
+                By default it is `False`. If true, then it will create a new column `Full name` and remove
+                the two columns for normalization.
+        '''
+        headers_copy: HeaderMap = deepcopy(headers)
+
+        # must remove otherwise column check will fail
+        if not two_name_column_support:
+            del headers_copy["first_name"]
+            del headers_copy["last_name"]
+        else:
+            # this will be added back in the check_df_columns step
+            # after combining the first_name and last_name columns.
+            del headers_copy["name"]
+
+        # check_df_columns must be the last number in the dict
+        # any other functions can be in any order
+        func_dict: dict[int, dict[str, Any]] = {
+            0: {"func": self._check_duplicate_headers, "args": [headers_copy]},
+            1: {"func": self._check_duplicate_columns, "args": [df]},
+            2: {"func": self._check_df_columns, "args": [df, headers_copy]},
+        }
+
+        res: Response = utils.generate_response(message="")
+
+        for i in range(len(func_dict)):
+            func: Callable[[Any], Response] = func_dict[i]["func"]
+            args: tuple[Any] = func_dict[i]["args"]
+
+            if args is not None:
+                res = func(*args)
+            else:
+                res = func()
+
+            if res["status"] == "error":
+                return res
+
+        res["message"] = "Successful validation"
+
+        return res
+    
+    def _concat_full_name(self, first_series: pd.Series, last_series: pd.Series) -> pd.Series:
+        '''Concatenates two name Series into a full name Series. This is used for two column support.
+        
+        If there are empty values in either series or if a non-string is read, then the row will be empty. 
+        This is intended to be used to drop the row.
+
+        Parameters
+        ----------
+            first_series: pd.Series[str]
+                The Series representing the first name column.
+
+            last_series: pd.Series[str]
+                The Series representing the last name column.
+        '''
+        name_func = lambda x: "" if not isinstance(x, str) else x.strip()
+
+        first_series = first_series.fillna("").apply(name_func)
+        last_series = last_series.fillna("").apply(name_func)
+
+        first_list: list[str] = first_series.to_list()
+        last_list: list[str] = last_series.to_list()
+
+        self.logger.debug(f"Concatenating to full name, first name data: {first_list} | last name data: {last_list}")
+
+        full_names: list[str] = []
+
+        for i, f_name in enumerate(first_list):
+            l_name: str = last_list[i]
+
+            if f_name == "" or l_name == "":
+                full_names.append("")
+            else:
+                full_names.append(f_name + " " + l_name)
+        
+        full_series: pd.Series = pd.Series(full_names)
+
+        self.logger.debug(f"Concatenated names: {full_names}")
+
+        return full_series
