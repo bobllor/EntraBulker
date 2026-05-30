@@ -70,3 +70,8 @@ class APISettings(TypedDict):
 class Response(TypedDict):
     status: Literal["success", "error"]
     message: str
+
+class UserData(TypedDict):
+    usernames: list[str]
+    full_names: list[str]
+    passwords: list[str]
