@@ -1,21 +1,24 @@
 from core.json_reader import Reader
 from core.parser import Parser
 from core.azure_writer import AzureWriter
-from support.types import GenerateCSVProps, ManualCSVProps, APISettings, Response, HeaderMap
-from support.types import Password, Formatting, TemplateMap, Metadata, UserData
+from support.types import GenerateCSVProps, ManualCSVProps, APISettings, Response
+from support.types import Password, Formatting, TemplateMap, Metadata, UserData, HeaderMap
 from base64 import b64decode
 from io import BytesIO
 from logger import Log
 from pathlib import Path
-from typing import Any, Literal, TypedDict, Callable
+from typing import Any, Literal, Callable
 from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH, VERSION
 from copy import deepcopy
 from dataclasses import dataclass
+from core.graph import Graph
+from core.graph_types import CreateUserJson, UserType
 import support.utils as utils
 import pandas as pd
 import webview
 
-ReaderType = Literal["excel", "opco", "settings"]
+ReaderType = Literal["excel", "opco", "settings", "graph"]
+MAX_TEXT_SIZE: int = 1250
 
 @dataclass
 class AzureFileState:
@@ -40,6 +43,7 @@ class API:
             excel_reader: Reader, 
             settings_reader: Reader,
             opco_reader: Reader, 
+            graph_reader: Reader,
             logger: Log = None,
             project_root: Path = PROJECT_ROOT,
             window: webview.Window = None,
@@ -57,6 +61,9 @@ class API:
             opco_reader: Reader
                 The Reader used for handling operating company-domain name key-value mapping.
             
+            graph_reader: Reader
+                The Reader used for handling the IDs used for the Azure tenant.
+            
             logger: Log, default None
                 The logger, if None is given then it will be a default logger.
             
@@ -71,6 +78,7 @@ class API:
         self.excel: Reader = excel_reader
         self.settings: Reader = settings_reader
         self.opco: Reader = opco_reader
+        self.graph_reader: Reader = graph_reader
         self.logger: Log = logger or Log()
 
         # pywebview, not added in due to CI fails
@@ -80,14 +88,30 @@ class API:
             "settings": self.settings,
             "opco": self.opco,
             "excel": self.excel,
+            "graph": self.graph_reader,
         }
+
+        # has to be authenticated first before this can be used
+        # successful authentication will create a new Graph
+        self.graph: Graph = Graph("", "") 
 
         self._project_root: Path = project_root
 
         self.file_state: AzureFileState = AzureFileState()
 
     def generate_azure_csv(self, content: GenerateCSVProps | pd.DataFrame, upload_id: str = None) -> Response: 
-        '''Generates the Azure CSV file for bulk accounts.
+        '''Generates the Azure CSV file for bulk accounts. This supports Microsoft Graph API.
+
+        The flow of the function:
+            - Parse contents for DataFrame
+            - Validate DataFrame
+            - Parse the DataFrame into users
+            - Write the users into a CSV for bulking
+            - Write the template text files if enabled
+        
+        If the option to create the users via Microsoft Graph is enabled, then it will also attempt a POST after
+        the creation of the CSV files. 
+        This requires authentication beforehand.
         
         Parameters
         ----------
@@ -106,7 +130,7 @@ class API:
         df: pd.DataFrame = df_response["content"]
 
         if upload_id is None:
-            upload_id = utils.get_id(divisor=2)
+            upload_id = utils.get_id(divisor=4)
 
         parse_res: Response = self._start_parse_df(df)
         if parse_res["status"] == "error":
@@ -135,6 +159,12 @@ class API:
             / self.file_state.output_name, skip_version=self.file_state.skip_version_row)
         self.logger.info(f"Generated {self.file_state.output_name} at {self.get_reader_value('settings', 'output_dir')}")
 
+        enabled: bool = self.graph_reader.get("enable_graph")
+        authres: Response = self.graph.is_authenticated()
+        if authres["content"] and enabled:
+            self.logger.info(f"Starting Microsoft Graph process, use Graph option is {enabled} and is authenticated")
+            graphres: Response = self.add_users_graph_api(user_data)
+
         # only applicable if flatten_csv is true. operations where each file generates an output will
         # not be affected by this.
         self.file_state.skip_version_row = True
@@ -145,38 +175,52 @@ class API:
         self.logger.debug(f"Azure CSV generated: {res}")
 
         return res
+    
+    def add_users_graph_api(self, users: UserData, is_member: bool = False) -> Response:
+        '''Add the users using Graph API. This requires the delegated permissions and proper
+        authentication.
 
-    def _write_template(self, writer: AzureWriter):
-        '''Generates the template text files and folders. This requires the
-        templates option to be enabled, if it is not then it will do nothing.
+        Parameters
+        ----------
+            users: UserData
+                The object containing the list of user information.
+            
+            is_member: bool
+                Used to indicate the userType of the user, which is "Member" or "Guest".
+                By default it is False, creating the users in "Guest".
         '''
-        res: Response = utils.generate_response(message="")
-        templates: TemplateMap = self.settings.get("template")
-        if templates["enabled"]:
-            temp_res: Response = self._generate_template(templates["text"], writer, self.file_state.template_dir_name)
+        data: list[CreateUserJson] = []
 
-            # NOTE: the only error here is if the text is too long.
-            if temp_res["status"] == "error":
-                self.logger.warning(f"{res['message']}, text trimmed to 1250 characters from {len(templates['text'])}")
+        user_type: UserType = "Member" if is_member else "Guest"
 
-                # max char is 1250, and only triggers if the text is > 1250.
-                self.update_setting("text", templates["text"][:1250], "template")
-    
-    def generate_graph_azure(self, content: GenerateCSVProps | pd.DataFrame, upload_id: str = None) -> Response:
-        '''Parses the content of the file and generates the users via Graph REST API.'''
-        # NOTE: if errors occur the message will be different
-        res: Response = utils.generate_response(message="Added users")
-        df_res: Response = self._get_df(content)
-        if df_res["status"] == "error":
-            return df_res
-        df: pd.DataFrame = df_res["content"]
+        for i in range(len(users["usernames"])):
+            principal_name: str = users["usernames"][i]
+            full_name: str = users["full_names"][i]
+            password: str = users["passwords"][i]
 
-        valid_res: Response = self._start_validate_df(df)
-        if valid_res["status"] == "error":
-            return valid_res
-        
-        parser: Parser = self._start_parse_df(df)
-    
+            name_split: list[str] = full_name.split(" ")
+
+            user: CreateUserJson = {
+                "accountEnabled": True,
+                "displayName": full_name,
+                "givenName": name_split[0],
+                "surname": name_split[-1],
+                "userPrincipalName": principal_name,
+                "mailNickname": principal_name[0].split("@"),
+                "userType": user_type,
+                "passwordProfile": {
+                    "password": password,
+                    "forceChangePasswordNextSignIn": True,
+                }
+            }
+
+            data.append(user)
+
+        res: Response = self.graph.create_users(data)
+        self.logger.debug(f"Add users with Graph response: {res}")
+
+        return res
+
     def generate_manual_csv(self, content: list[ManualCSVProps]) -> dict[str, str]:
         '''Generates the Azure CSV file for bulk accounts through the manual input.
         
@@ -251,13 +295,52 @@ class API:
 
             # NOTE: the only error here is if the text is too long.
             if temp_res["status"] == "error":
-                self.logger.warning(f"{res['message']}, text trimmed to 1250 characters from {len(templates['text'])}")
+                self.logger.warning(f"{res['message']}, text trimmed to {MAX_TEXT_SIZE} characters from {len(templates['text'])}")
 
                 # max char is 1250, and only triggers if the text is > 1250.
-                self.update_setting("text", templates["text"][:1250], "template")
+                self.update_setting("text", templates["text"][:MAX_TEXT_SIZE], "template")
         
         self.logger.debug(f"Response: {res}")
 
+        return res
+    
+    def authenticate_graph(self) -> Response:
+        '''Authenticates to Microsoft Graph. This requires a client application ID and tenant ID.
+        If the authentication status is already true, then this will do nothing.
+        
+        If authentication is unsuccessful, an error Response is returned. Otherwise, a normal
+        Response will be returned.
+        '''
+        res: Response = utils.generate_response(message="Successfully authenticated")
+        client_id: str = self.graph_reader.get("client_id")
+        tenant_id: str = self.graph_reader.get("tenant_id")
+
+        if client_id == "":
+            self.logger.info(f"Missing client application ID, aborting authentication")
+            return utils.generate_response("error", message="Missing client application ID")
+        if tenant_id == "":
+            self.logger.info(f"Missing tenant ID, aborting authentication")
+            return utils.generate_response("error", message="Missing tenant ID")
+
+        auth_res: Response = self.graph.is_authenticated()
+        if not auth_res["content"]:
+            # recreates it, initially it has nil values.
+            # reauthenication will create a new token which creates a new Graph
+            self.graph = Graph(client_id, tenant_id, log=self.logger)
+            auth_res: Response = self.graph.authenticate()
+            
+            if "access_token" in auth_res:
+                del auth_res["access_token"]
+            if "refresh_token" in auth_res:
+                del auth_res["refresh_token"]
+            if "id_token" in auth_res:
+                del auth_res["id_token"]
+            
+            self.logger.debug(f"Authentication response: {auth_res}")
+        else:
+            self.logger.info(f"Already authenticated")
+            res["message"] = "Already authenticated"
+        
         return res
     
     def set_window(self, window: webview.Window) -> None:
@@ -326,7 +409,7 @@ class API:
         
         return res
     
-    def get_reader_value(self, reader: Literal["settings", "opco", "excel"], key: str) -> Any:
+    def get_reader_value(self, reader: ReaderType, key: str) -> Any:
         '''Gets the values from any Reader keys. If the key does not exist,
         then an empty string is returned.'''
         val: Any = self.readers[reader].get(key)
@@ -337,11 +420,11 @@ class API:
         
         return val
     
-    def get_reader_content(self, reader: Literal["settings", "opco", "excel"]) -> dict[str, Any]:
+    def get_reader_content(self, reader: ReaderType) -> dict[str, Any]:
         '''Gets the data of the Reader.'''
         return self.readers[reader].get_content()
 
-    def update_key(self, reader_type: Literal["settings", "opco", "excel"], key: str, value: Any) -> dict[str, Any]:
+    def update_key(self, reader_type: ReaderType, key: str, value: Any) -> dict[str, Any]:
         '''Updates a key from the given value.'''
         reader: Reader = self.readers[reader_type]
 
@@ -838,6 +921,25 @@ class API:
             self.logger.info(f"State already exists for {upload_id}")
         
         return file_state
+
+    def _write_template(self, writer: AzureWriter):
+        '''Generates the template text files and folders. It uses an AzureWriter
+        with data already set to write the files.
+
+        This requires the templates option to be enabled, if it is not then it will do nothing.
+        '''
+        res: Response = utils.generate_response(message="")
+        templates: TemplateMap = self.settings.get("template")
+        if templates["enabled"]:
+            temp_res: Response = self._generate_template(templates["text"], writer, self.file_state.template_dir_name)
+
+            # NOTE: the only error here is if the text is too long.
+            if temp_res["status"] == "error":
+                self.logger.warning(f"{res['message']}, text trimmed to {MAX_TEXT_SIZE} characters from {len(templates['text'])}")
+
+                # max char is 1250, and only triggers if the text is > 1250.
+                self.update_setting("text", templates["text"][:MAX_TEXT_SIZE], "template")
+    
     
     def _validate_df(self, df: pd.DataFrame, headers: HeaderMap, *, two_name_column_support: bool = False) -> Response:
         '''Validate the DataFrame and its headers. It will return a Response indicating an
