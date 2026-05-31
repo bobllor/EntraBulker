@@ -21,7 +21,7 @@ export type OptionBaseProps = {
     element?: JSX.Element,
 }
 
-export type ReaderType = "opco" | "settings" | "excel";
+export type ReaderType = "opco" | "settings" | "excel" | "graph";
 
 export type OpcoMap = {
     id: string,
