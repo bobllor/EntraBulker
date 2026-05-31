@@ -1,4 +1,5 @@
 from typing import TypedDict, Literal
+from core.graph_types import UserType
 
 class GenerateCSVProps(TypedDict):
     fileName: str
@@ -14,12 +15,6 @@ class AzureHeaders(TypedDict):
     username: str
     password: str
     block_sign_in: str
-    first_name: str
-    last_name: str
-
-class HeaderMap(TypedDict):
-    opco: str
-    name: str
     first_name: str
     last_name: str
 
@@ -75,3 +70,16 @@ class UserData(TypedDict):
     usernames: list[str]
     full_names: list[str]
     passwords: list[str]
+
+# by the way, fuck python and their imports. did i say this already?
+class GraphMap(TypedDict):
+    client_id: str
+    tenant_id: str
+    enable_graph: bool
+    user_type: UserType
+
+class HeaderMap(TypedDict):
+    opco: str
+    name: str
+    first_name: str
+    last_name: str
