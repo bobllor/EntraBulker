@@ -49,10 +49,13 @@ def api(tmp_path: Path):
 
     opcos.insert_many(opco_map)
 
-    api: API = API(excel_reader=excel, settings_reader=settings, opco_reader=opcos, project_root=tmp_path, graph_reader=graph)
-    api.set_output_dir(tmp_path)
+    with patch("backend.core.graph.requests.get") as mock:
+        # mocks the requests
+        mock.return_value.json.return_value = {}
+        api: API = API(excel_reader=excel, settings_reader=settings, opco_reader=opcos, project_root=tmp_path, graph_reader=graph)
+        api.set_output_dir(tmp_path)
 
-    yield api
+        yield api
 
 @pytest.fixture
 def updater_api(tmp_path: Path):
