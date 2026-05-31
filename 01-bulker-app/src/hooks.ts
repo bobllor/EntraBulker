@@ -111,3 +111,20 @@ export function useCheckUpdate(revealModal: (text: string) => Promise<boolean>, 
         }, 2000)
     }, [])
 }
+
+/**
+ * Runs initializing functions for Zustand stores. It delays the process before
+ * running the functions. This is used to wait for pywebview API to load before it 
+ * is loaded into the front end.
+ * 
+ * @param fs An array of asynchronous initializing functions
+ */
+export function useInitializeZustand(fs: Array<() => Promise<void>>){
+    useEffect(() => {
+        setTimeout(() => {
+            fs.forEach((fn) => {
+                fn();
+            })
+        }, 500)
+    }, [])
+}
