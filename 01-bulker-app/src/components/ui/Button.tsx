@@ -9,9 +9,11 @@ import { debouncer, throttler } from "../../utils";
 export default function Button(
     {text, bg = "bg-blue-500", bgHover = "bg-blue-400", 
     paddingX = 2, paddingY = 2, type = "submit", func = undefined,
-    closureOpt = undefined}: ButtonProps): JSX.Element{
-
+    closureOpt = undefined, width = 0, height = 0}: ButtonProps): JSX.Element{
     const closureRef = useRef(getClosure(closureOpt));
+
+    const widthCss = width != 0 ? `w-${width}` : "";
+    const heightCss = height != 0 ? `h-${height}` : "";
 
     return (
         <>
@@ -27,7 +29,7 @@ export default function Button(
             }}
             tabIndex={-1}
             className={`px-${paddingX} py-${paddingY} rounded-xl ${bg} text-white hover:${bgHover}
-            border-1 default-shadow border-gray-400/60`}
+            border-1 default-shadow border-gray-400/60 ${widthCss} ${heightCss} flex justify-center items-center`}
             type={type}>
                 {text}
             </button>
@@ -36,11 +38,25 @@ export default function Button(
 }
 
 type ButtonProps = {
-    text: string,
+    /**
+     * The value displayed inside the button. It can be a text string or an
+     * JSX element.
+     */
+    text: string | JSX.Element,
     bg?: string,
     bgHover?: string,
     paddingX?: number,
     paddingY?: number,
+    /**
+     * The width of the button in pixels. If 0 or not given the button will match
+     * the size of the contents automatically.
+     */
+    width?: number,
+    /**
+     * The height of the button in pixels. If 0 or not given the button will match
+     * the size of the contents automatically.
+     */
+    height?: number,
     func?: () => any | undefined,
     type?: "submit" | "reset" | "button" | undefined,
     closureOpt?: ClosureProps,
