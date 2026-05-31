@@ -1,5 +1,5 @@
 from pathlib import Path
-from backend.api.api import API
+from backend.api.api import API, AzureFileState, MAX_TEXT_SIZE
 from tests.fixtures import api, df, mock
 from typing import Any
 from backend.core.parser import Parser
@@ -341,15 +341,17 @@ def test_manual_generate_csv_dupe_names(tmp_path: Path, api: API, df: pd.DataFra
 def test_generate_csv_invalid_text(api: API, df: pd.DataFrame):
     # max chars is 1250 by default
     string_chars: str = string.ascii_letters
-    chars: list[str] = [string_chars[random.randint(0, len(string_chars) - 1)] for _ in range(1251)]
+    chars: list[str] = [string_chars[random.randint(0, len(string_chars) - 1)] for _ in range(1500)]
     text: str = "".join(chars)
 
     api.update_setting("text", text, "template")
     api.update_setting("enabled", True, "template")
 
     res: Response = api.generate_azure_csv(df) 
+    template_str: str = api.settings.get_search("text", parent_key="template")
 
-    assert res["status"] == "error"
+    assert len(template_str) == MAX_TEXT_SIZE
+    assert template_str == text[:MAX_TEXT_SIZE]
 
 def test_generate_csv_multiple(tmp_path: Path, api: API, df: pd.DataFrame):
     parser: Parser = Parser(df)
@@ -627,7 +629,7 @@ def test_check_version(mock: Mock, api: API):
     mock.return_value = {
         "status": "success",
         "message": "Successfully checked version",
-        "content": "v1.1.5",
+        "content": "v101.10.53",
         "exception": None,
     }
 
@@ -675,3 +677,9 @@ def test_exception_check_version(mock: Mock, api: API):
     res: Response = api.check_version(url)
 
     assert res["status"] == "error"
+
+def test_file_state(api: API):
+    upload_id: str = "12345"
+    state: AzureFileState = api._new_azure_file_state(upload_id)
+
+    assert state.upload_id == upload_id
