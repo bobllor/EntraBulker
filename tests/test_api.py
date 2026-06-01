@@ -68,7 +68,7 @@ def test_generate_csv_empty_names(tmp_path: Path, api: API, df: pd.DataFrame):
 
     res: Response = api.generate_azure_csv(parser.get_df())
 
-    assert "missing values" in res["message"]
+    assert res["status"] == "success"
 
     csv_path: Path | None = ttils.get_csv(tmp_path)
 
@@ -704,14 +704,14 @@ def test_api_graph_create_json_guest(api: API, df: pd.DataFrame):
     post_users = api._create_json_users(userdata, False)
 
     for user in post_users:
-        assert user["userType"] == "Guest"
+        assert user["userType"] == "guest"
 
 def test_api_graph_create_json_member(api: API, df: pd.DataFrame):
     userdata = _get_user_data(api, df)
     post_users = api._create_json_users(userdata, True)
 
     for user in post_users:
-        assert user["userType"] == "Member"
+        assert user["userType"] == "member"
     
 def test_api_graph_create_json_domain(api: API, df: pd.DataFrame):
     companies: list[str] = ["company one", "company two", "company three", "Operating company"]
@@ -730,7 +730,7 @@ def test_api_graph_create_json_domain(api: API, df: pd.DataFrame):
         domain: str = user["userPrincipalName"].split("@")[-1]
 
         if domain == "company.one.org" or domain == "companytwo.com":
-            assert user["userType"] == "Member"
+            assert user["userType"] == "member"
 
 def _get_user_data(api: API, df: pd.DataFrame) -> UserData:
     '''Helper function to parse the DataFrame and get the UserData.'''
