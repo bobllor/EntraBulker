@@ -1,5 +1,5 @@
 from typing import TypedDict, Literal
-from core.graph_types import UserType
+from core.types.graph import UserType
 
 class GenerateCSVProps(TypedDict):
     fileName: str
@@ -63,7 +63,7 @@ class APISettings(TypedDict):
 
 # NOTE: can contain other keys if used.
 class Response(TypedDict):
-    status: Literal["success", "error"]
+    status: Literal["success", "error", "warning"]
     message: str
 
 class UserData(TypedDict):
