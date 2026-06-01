@@ -83,6 +83,6 @@ DEFAULT_GRAPH_MAP: GraphMap = {
     "client_id": "",
     "tenant_id": "",
     "enable_graph": False,
-    "user_type": "Guest",
+    "user_type": "guest",
     "member_type_domain_csv": "",
 }
