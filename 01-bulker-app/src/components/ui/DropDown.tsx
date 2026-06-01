@@ -1,43 +1,54 @@
-import React, { JSX } from "react";
-import { FormatCase, FormatStyle, FormatType } from "../../pywebviewTypes";
+import { JSX } from "react";
 
-export default function DropDown({obj, objId, defaultValue, func}: DropDownProps): JSX.Element{
+/**
+ * Creates a new DropDown menu for use.
+ * @returns 
+ */
+export default function DropDown({defaultValue, dropOptions, updateReaderFunc, readerKey}: DropDownProps): JSX.Element{
     return (
-        <>
-            <select
-            className="outline-1 min-w-[30%] max-w-[30%] rounded-sm p-1"
-            tabIndex={-1}
-            defaultValue={defaultValue}
-            onChange={(e) => handleOnChangeSelect(e, objId, func)}>
-                {obj.map((ele) => (
-                    <option 
-                    key={ele.value}
-                    value={ele.value}>{ele.text}</option>
-                ))}
-            </select>
-        </>
+        <select
+        className="outline-1 min-w-[30%] max-w-[30%] rounded-sm p-1"
+        onChange={(e) => updateReaderFunc(readerKey, e.currentTarget.value)}
+        tabIndex={-1}
+        defaultValue={defaultValue}>
+            {dropOptions.map((opt) => (
+                <option
+                key={opt.value}
+                value={opt.value}>
+                    {opt.text}
+                </option>
+            ))}
+        </select>
     )
 }
 
-async function handleOnChangeSelect(
-    e: React.ChangeEvent<HTMLSelectElement>, 
-    key: string,
-    func?: DropDownProps["func"],){
-    const selectedValue: string = e.currentTarget.value;
-
-    if(func){
-        func(key, selectedValue);
-    }
-}
-
 type DropDownProps = {
-    obj: Array<DropDownObject>,
-    objId: string,
-    defaultValue: DropDownObject["value"],
-    func?: (key: string, value: any) => void | undefined,
+    /**
+     * The default value displayed on the menu. This must be equal to a defined
+     * value in dropOptions.
+     */
+    defaultValue: string
+    /**
+     * An array of drop down entries. Each entry consists of the text to display on
+     * the menu, and the value used to the backend call.
+     */
+    dropOptions: Array<DropDownOption>
+    /**
+     * The key of the Reader that will be updated. This is used with updateReadFunc.
+     */
+    readerKey: string
+    /**
+     * An update function that updates the value of the reader. It is expected that this
+     * will also update the value in the context.
+     * 
+     * @param key The target key to update
+     * @param value The value of the key to update to- the drop down option value
+     * @returns 
+     */
+    updateReaderFunc: (key: string, value: string) => void
 }
 
-export type DropDownObject = {
-    value: FormatCase | FormatStyle | FormatType,
-    text: string,
+export type DropDownOption = {
+    text: string
+    value: any
 }
