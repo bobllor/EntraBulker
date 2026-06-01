@@ -127,7 +127,14 @@ class API:
         df_response: Response = self._get_df(content)
         if df_response["status"] == "error":
             return df_response
+        self.logger.info(f"Response: {df_response}")
+
         df: pd.DataFrame = df_response["content"]
+        
+        valid_res: Response = self._start_validate_df(df)
+        if valid_res["status"] == "error":
+            return valid_res
+        self.logger.info(f"Response: {valid_res}")
 
         if upload_id is None:
             upload_id = utils.get_id(divisor=4)
@@ -136,11 +143,8 @@ class API:
         if parse_res["status"] == "error":
             self.logger.critical(f"Failed to parse DataFrame: {parse_res}")
             return parse_res 
+        self.logger.info(f"Response: {parse_res}")
 
-        # why i did it this way i dont know. 
-        # any changes now will break a lot of the tests and how
-        # it is designed in the frontend. me: 5-30-26
-        res["message"] += parse_res["message"]
         parser: Parser = parse_res["content"]
 
         self._start_nameopco_col_to_string(parser)
@@ -163,7 +167,18 @@ class API:
         authres: Response = self.graph.is_authenticated()
         if authres["content"] and enabled:
             self.logger.info(f"Starting Microsoft Graph process, use Graph option is {enabled} and is authenticated")
-            graphres: Response = self.add_users_graph_api(user_data)
+
+            # value will be member or guest, but in the event its a bad value it will
+            # default to guest for least privileges concerns
+            is_member: bool = self.graph_reader.get("user_type") == "member"
+            # TODO: do something with res, this requires the different responses with the POST request though
+            graphres: Response = self.add_users_graph_api(user_data, is_member)
+
+            if graphres["status"] == "error":
+                res["status"] = "error"
+                res["message"] = "CSV generated, failure to add users during Graph requests occurred"
+
+            self.logger.info(f"Response: {graphres}")
 
         # only applicable if flatten_csv is true. operations where each file generates an output will
         # not be affected by this.
@@ -191,7 +206,7 @@ class API:
         '''
         data: list[CreateUserJson] = self._create_json_users(users, is_member)
         res: Response = self.graph.create_users(data)
-        self.logger.debug(f"Add users with Graph response: {res}")
+        self.logger.debug(f"Graph add users response: {res}")
 
         return res
     
@@ -212,7 +227,7 @@ class API:
         member_type_domains: set[str] = set([e.lower().removeprefix("@") for e in csv_domains.split(",")])
 
         for i in range(len(users["usernames"])):
-            user_type: UserType = "Member" if is_member else "Guest"
+            user_type: UserType = "member" if is_member else "guest"
 
             principal_name: str = users["usernames"][i]
             full_name: str = users["full_names"][i]
@@ -222,8 +237,8 @@ class API:
             mail_nickname: str = split_principal[0]
             domain: str = split_principal[-1].lower()
 
-            if user_type == "Guest" and domain in member_type_domains:
-                user_type = "Member"
+            if user_type == "guest" and domain in member_type_domains:
+                user_type = "member"
                 self.logger.info(f"Principal name {principal_name} found in members only domains list, converted to {user_type}")
 
             name_split: list[str] = full_name.split(" ")
