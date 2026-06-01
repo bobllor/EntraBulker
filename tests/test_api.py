@@ -517,11 +517,11 @@ def test_get_value(api: API):
 
     if fail_val != "": raise AssertionError(f"Got value when expecting an empty string")
 
-def test_update_key(api: API):
+def test_update_reader(api: API):
     prev_val: str = api.get_reader_value("excel", "name")
     
     var: str = "CHANGED VALUE"
-    res: dict[str, Any] = api.update_key("excel", "name", var)
+    res: dict[str, Any] = api.update_reader("excel", "name", var)
 
     if res["status"] == "error":
         raise AssertionError(f"Failed to update key: {res}")
@@ -534,7 +534,7 @@ def test_update_default_key(api: API):
     prev_val: str = api.get_reader_value("opco", "default")
 
     var: str = "NEW DEFAULT"
-    res: dict[str, Any] = api.update_key("opco", "default", var)
+    res: dict[str, Any] = api.update_reader("opco", "default", var)
 
     new_val: str = api.get_reader_value("opco", "default")
 
