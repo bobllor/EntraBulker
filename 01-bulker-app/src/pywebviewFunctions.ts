@@ -36,13 +36,26 @@ export async function getMetadata(): Promise<Metadata>{
 
 /**
  * Recursively updates a key with a value in a Reader
- * @param reader The Reader type to target
  * @param key The key which value is being updated
  * @param value Any value for the key
  * @param parent Ensures the update occurs in the parent key, only required if multiple keys exist in different nest levels
  */
 export async function updateSetting(key: string, value: any, parent?: string): Promise<Response>{
     const res: Response = await window.pywebview.api.update_setting(key, value, parent);
+
+    return res;
+}
+
+/**
+ * Updates a Reader recursively with a key and value. This does not support
+ * updating a key where multiple keys exists at different levels.
+ * 
+ * @param reader The Reader to target the update in
+ * @param key The key of the Reader
+ * @param value The value of the key of the Reader
+ */
+export async function updateReader(reader: ReaderType, key: string, value: any): Promise<Response>{
+    const res: Response = await window.pywebview.api.update_reader(reader, key, value)
 
     return res;
 }
