@@ -96,55 +96,36 @@ class Graph:
             "content-type": "application/json"
         }
 
-        error_count: int = 0
+        created_users: list[str] = []
+        failed_users: list[str] = []
+
+        post_user_info = {
+            "total users": len(users),
+            "created users": {"users": created_users},
+            "failed users": {"users": failed_users},
+        }
         for user_json in users:
             post_res: requests.Response = requests.post(GRAPH_CREATE_USER_URL, json=user_json, headers=headers)
             data: dict[str, Any] = post_res.json()
 
-            if not post_res.ok:
-                # TODO: parse error
-                error: RequestErrorResponse = self.get_error(data)
-                self.log.warning(f"Failed to create user {user_json['givenName']}: {error}")
-                error_count += 1
-
             self.log.debug(f"POST response: {data}")
-        
-        if error_count > 0:
+
+            if not post_res.ok:
+                error: RequestErrorResponse = self.get_error(data)
+                self.log.warning(f"Failed to create user {user_json['userPrincipalName']}: {error.message} | Code: {error.code}")
+                failed_users.append(user_json["userPrincipalName"])
+            else:
+                self.log.info(f"Created user {user_json['userPrincipalName']}")
+                created_users.append(user_json['userPrincipalName'])
+
+        if len(failed_users) > 0:
             end_res["status"] = "error"
-            end_res["message"] = f"Failed to add {error_count}/{len(users)} user(s) over Graph API"
+            end_res["message"] = f"Failed to add {len(failed_users)}/{len(users)} user(s) with Graph API"
         
-        return end_res
-
-    def create_user(self) -> Response:
-        '''Sends a POST request and creates the user.'''
-        end_res: Response = utils.generate_response(message=f"Created user")
-        headers: JsonHeaders = {
-            "authorization": self.bearer,
-            "content-type": "application/json"
-        }
-
-        json_data: CreateUserJson = {
-            "accountEnabled": True,
-            "displayName": "",
-            "mailNickname": "",
-            "userPrincipalName": "",
-            "passwordProfile": {
-                "forceChangePasswordNextSignIn": True,
-                "password": "",
-            },
-            "userType": "",
-        }
-
-        post_res: requests.Response = requests.post(GRAPH_CREATE_USER_URL, json=json_data, headers=headers)
-
-        self.log.debug(f"Post response code: {post_res.status_code}")
-
-        if not post_res.ok:
-            # TODO: parse error
-            self.log.warning(f"Failed to create user")
-            err_res: Response = utils.generate_response("error", message=f"Failed to create user", content=False)
-
-            return err_res
+        post_user_info["created users"]["Count"] = len(created_users)
+        post_user_info["failed users"]["Count"] = len(failed_users)
+        
+        self.log.debug(f"POST users created: {post_user_info}")
         
         return end_res
     
