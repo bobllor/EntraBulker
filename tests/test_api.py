@@ -4,7 +4,7 @@ from tests.fixtures import api, df, mock
 from typing import Any
 from backend.core.parser import Parser
 from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, AZURE_HEADERS, VERSION
-from backend.support.types import ManualCSVProps, APISettings, Formatting, Response
+from backend.support.types import ManualCSVProps, APISettings, Formatting, Response, UserData
 from io import BytesIO
 from unittest.mock import patch, Mock
 import numpy as np
@@ -683,3 +683,58 @@ def test_file_state(api: API):
     state: AzureFileState = api._new_azure_file_state(upload_id)
 
     assert state.upload_id == upload_id
+
+def test_api_add_users_graph(api: API, df: pd.DataFrame):
+    parse_res = api._start_parse_df(df)
+    assert parse_res["status"]
+
+    parser = parse_res["content"]
+    userdata = api._start_extract_user_data(parser)
+
+    with patch("backend.core.graph.requests.post") as mock:
+        mock.return_value.json.return_value = {}
+        mock.return_value.status_code = 200
+
+        graph_res: Response = api.add_users_graph_api(userdata, True)
+
+        assert graph_res["status"] == "success"
+
+def test_api_graph_create_json_guest(api: API, df: pd.DataFrame):
+    userdata = _get_user_data(api, df)
+    post_users = api._create_json_users(userdata, False)
+
+    for user in post_users:
+        assert user["userType"] == "Guest"
+
+def test_api_graph_create_json_member(api: API, df: pd.DataFrame):
+    userdata = _get_user_data(api, df)
+    post_users = api._create_json_users(userdata, True)
+
+    for user in post_users:
+        assert user["userType"] == "Member"
+    
+def test_api_graph_create_json_domain(api: API, df: pd.DataFrame):
+    companies: list[str] = ["company one", "company two", "company three", "Operating company"]
+    
+    s: pd.Series = df["operating company"].apply(lambda _: companies[random.randint(0, 3)])
+    df["operating company"] = s
+
+    userdata = _get_user_data(api, df)
+    # lets hope i dont change this in the future
+    key: str = "member_type_domain_csv"
+
+    api.graph_reader.update_search(key, "company.one.org,@companytwo.com")
+    json_users = api._create_json_users(userdata, is_member=False)
+
+    for user in json_users:
+        domain: str = user["userPrincipalName"].split("@")[-1]
+
+        if domain == "company.one.org" or domain == "companytwo.com":
+            assert user["userType"] == "Member"
+
+def _get_user_data(api: API, df: pd.DataFrame) -> UserData:
+    '''Helper function to parse the DataFrame and get the UserData.'''
+    parse_res = api._start_parse_df(df)
+    parser = parse_res["content"]
+
+    return api._start_extract_user_data(parser)
