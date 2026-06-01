@@ -125,6 +125,6 @@ export function useInitializeZustand(fs: Array<() => Promise<void>>){
             fs.forEach((fn) => {
                 fn();
             })
-        }, 500)
+        }, 300)
     }, [])
 }
