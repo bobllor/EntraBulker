@@ -48,12 +48,12 @@ type ButtonProps = {
     paddingX?: number,
     paddingY?: number,
     /**
-     * The width of the button in pixels. If 0 or not given the button will match
+     * The width of the button in rem. If 0 or not given the button will match
      * the size of the contents automatically.
      */
     width?: number,
     /**
-     * The height of the button in pixels. If 0 or not given the button will match
+     * The height of the button in rem. If 0 or not given the button will match
      * the size of the contents automatically.
      */
     height?: number,
