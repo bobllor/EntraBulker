@@ -99,13 +99,15 @@ class Graph:
         error_count: int = 0
         for user_json in users:
             post_res: requests.Response = requests.post(GRAPH_CREATE_USER_URL, json=user_json, headers=headers)
-            self.log.debug(f"Post response code: {post_res.status_code}")
+            data: dict[str, Any] = post_res.json()
 
             if not post_res.ok:
                 # TODO: parse error
-                error: RequestErrorResponse = self.get_error(post_res.json())
+                error: RequestErrorResponse = self.get_error(data)
                 self.log.warning(f"Failed to create user {user_json['givenName']}: {error}")
                 error_count += 1
+
+            self.log.debug(f"POST response: {data}")
         
         if error_count > 0:
             end_res["status"] = "error"
