@@ -11,21 +11,23 @@ type GraphSettingStore = {
      */
     initialize: () => Promise<void>
     /**
-     * Uses the current status of the enable graph status and inverses it
-     * to update the option.
+     * Updates the Graph values based on the key and the given value.
+     * This will update the context and the backend server.
      * 
-     * @param status The current status of the enable graph status 
+     * @param key The key to update
+     * @param value The value used for the key
      * @returns 
      */
-    updateEnableGraphStatus: (status: boolean) => Promise<void>
+    setGraphValues: (key: string, value: any) => Promise<void>
 }
 
-type GraphUserType = "Member" | "Guest";
+type GraphUserType = "member" | "guest";
 
 type GraphSettingValues = {
     client_id: string
     tenant_id: string
     enable_graph: boolean
+    member_type_domain_csv: string
     user_type:  GraphUserType
 }
 
@@ -34,16 +36,17 @@ export const useGraphSettingStore = create<GraphSettingStore>(set => ({
         client_id: "",
         tenant_id: "",
         enable_graph: false,
-        user_type: "Guest",
+        member_type_domain_csv: "",
+        user_type: "guest",
     },
     initialize: async () => {
         const graphSettings = await getReaderContent("graph") as GraphSettingValues;
 
         set(prev => ({...prev, values: graphSettings}));
     },
-    updateEnableGraphStatus: async (status: boolean) => {
-        await updateReader("graph", "enable_graph", !status);
+    setGraphValues: async (key: string, value: any) => {
+        await updateReader("graph", key, value);
 
-        set(prev => ({...prev, values: {...prev.values, enable_graph: !status}}));
-    } 
+        set(prev => ({...prev, values: {...prev.values, [key]: value}}));
+    },
 }));
