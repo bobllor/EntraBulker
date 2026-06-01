@@ -5,6 +5,7 @@ from backend.api.api import API
 from backend.api.updater_api import UpdaterAPI
 from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, DEFAULT_OPCO_MAP, FILE_NAMES, DEFAULT_GRAPH_MAP
 from backend.core.updater import Updater
+from backend.core.graph import Graph
 from unittest.mock import patch, Mock
 import pandas as pd
 import pytest
@@ -87,3 +88,9 @@ def updater(tmp_path: Path):
     )
 
     yield upd
+
+@pytest.fixture
+def graph():
+    gr: Graph = Graph("", "")
+
+    yield gr

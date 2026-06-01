@@ -1,10 +1,23 @@
-from tests.fixtures import api, JSON, df
-from backend.api.api import API
+from tests.fixtures import graph
+from backend.core.graph import Graph
 from backend.support.types import Response
-from pathlib import Path
+from unittest.mock import patch
+from requests import exceptions
 import tests.utils as ttils
-import pandas as pd
 
-def test_generate_graph_azure(tmp_path: Path, api: API, df: pd.DataFrame):
-    # WIP
-    assert True
+def test_graph_exception(graph: Graph):
+    with patch("backend.core.graph.requests.get") as mock:
+        exception_values: list[exceptions.RequestException] = [
+            exceptions.Timeout("Request timed out"),
+            exceptions.ConnectionError("Request failed to connect"),
+            exceptions.HTTPError("HTTP error"),
+            ValueError("Value error")
+        ]
+
+        graph.token = "fdsaf"
+
+        for exc in exception_values:
+            mock.side_effect = exc
+            res: Response = graph.is_authenticated()
+
+            assert res["status"] == "error"

@@ -685,11 +685,11 @@ def test_file_state(api: API):
     assert state.upload_id == upload_id
 
 def test_api_add_users_graph(api: API, df: pd.DataFrame):
-    parse_res = api._start_parse_df(df)
+    parse_res = api._parse_df(df)
     assert parse_res["status"]
 
     parser = parse_res["content"]
-    userdata = api._start_extract_user_data(parser)
+    userdata = api._extract_user_data(parser)
 
     with patch("backend.core.graph.requests.post") as mock:
         mock.return_value.json.return_value = {}
@@ -734,7 +734,7 @@ def test_api_graph_create_json_domain(api: API, df: pd.DataFrame):
 
 def _get_user_data(api: API, df: pd.DataFrame) -> UserData:
     '''Helper function to parse the DataFrame and get the UserData.'''
-    parse_res = api._start_parse_df(df)
+    parse_res = api._parse_df(df)
     parser = parse_res["content"]
 
-    return api._start_extract_user_data(parser)
+    return api._extract_user_data(parser)
