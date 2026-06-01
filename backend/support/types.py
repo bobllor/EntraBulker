@@ -75,8 +75,26 @@ class UserData(TypedDict):
 class GraphMap(TypedDict):
     client_id: str
     tenant_id: str
+
+    # Enables Graph requests during the Azure CSV generation. By default
+    # this is false. It also requires authentication, which will always be
+    # if this option is true.
     enable_graph: bool
+
+    # Creates the users as `Member` or as `Guest`. By default, all users are
+    # created as Member in Entra ID.
     user_type: UserType
+
+    # A CSV-style string used to list domains to ignore the user type set
+    # in user_type. The users found with the domain will be created with the opposite
+    # user type. In other words, `Member` -> `Guest` and `Guest` -> `Member`.
+    #
+    # For example, if the user type is `Guest` and the CSV value is
+    # `@example.com,another.example.com`, then domains ending in these two values
+    # will not be converted to `Guest`` and remain as `Member`.
+    # Vice versa, if the user type is `Member` then they will instead be converted
+    # into `Guest`.
+    domain_ignore_user_type_csv: str
 
 class HeaderMap(TypedDict):
     opco: str
