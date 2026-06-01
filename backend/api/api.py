@@ -424,8 +424,11 @@ class API:
         '''Gets the data of the Reader.'''
         return self.readers[reader].get_content()
 
-    def update_key(self, reader_type: ReaderType, key: str, value: Any) -> dict[str, Any]:
-        '''Updates a key from the given value.'''
+    def update_reader(self, 
+            reader_type: ReaderType, 
+            key: str, 
+            value: Any) -> dict[str, Any]:
+        '''Updates a Reader and its key with a given value.'''
         reader: Reader = self.readers[reader_type]
 
         self.logger.info(f"Starting key update with key {key} and value {value}")
