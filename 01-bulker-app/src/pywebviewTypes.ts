@@ -32,7 +32,7 @@ export type Formatting = {
 }
 
 export type Response = {
-    status: "success" | "error",
+    status: "success" | "error" | "warning",
     message: string,
     [key: string]: any,
 }
