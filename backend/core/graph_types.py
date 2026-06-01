@@ -5,7 +5,7 @@ class PasswordProfileJson(TypedDict):
     forceChangePasswordNextSignIn: bool
     password: str
 
-type UserType = Literal["Member", "Guest"]
+type UserType = Literal["member", "guest"]
 
 class CreateUserJson(TypedDict):
     # The status of the account. Can be true or false.
