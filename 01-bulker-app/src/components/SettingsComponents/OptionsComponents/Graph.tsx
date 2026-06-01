@@ -5,9 +5,12 @@ import { OptionProps } from "../types";
 import { Response } from "../../../pywebviewTypes";
 import { toastResponse } from "../../../toastUtils";
 import { useAuthStore } from "./store/useAuthStore";
+import { useGraphSettingStore } from "../store/useGraphSettingsStore";
 import { throttler } from "../../../utils";
 import Button from "../../ui/Button";
 import { FaCheckCircle, FaMinusCircle } from "react-icons/fa";
+import SliderButton from "../../ui/SliderButton";
+import { ToolTip } from "../../ui/ToolTip";
 
 const throttleAuthenticateOnClick = throttler(() => authenticateOnClick(), 1500);
 
@@ -42,18 +45,6 @@ function AuthenticateButton(): JSX.Element{
     )
 }
 
-async function updateGraphId(e: React.FormEvent<HTMLFormElement>, graphKeyValue: string, inputValue: string){
-    e.preventDefault();
-    const READER_TYPE = "graph";
-    
-    // yes i know this is not good. not going to add a logging system...
-    // not right now at least. Me - 5/31/2026
-    console.log(`${graphKeyValue} value: ${inputValue}`);
-
-    const res = await window.pywebview.api.update_key(READER_TYPE, graphKeyValue, inputValue);
-    console.log(res);
-}
-
 function AuthenicationIcon({iconElement, tooltip}: {iconElement: JSX.Element, tooltip: string}): JSX.Element{
     return (
         <span 
@@ -64,8 +55,59 @@ function AuthenicationIcon({iconElement, tooltip}: {iconElement: JSX.Element, to
     )
 }
 
+// TODO:
+//  1. move this into a generic UI
+//  2. add the function to update the key + Reader
+function DropDown({defaultValue, dropOptions}: DropDownProps): JSX.Element{
+    return (
+        <select
+        tabIndex={-1}
+        defaultValue={defaultValue}>
+            {dropOptions.map((opt) => (
+                <option
+                key={opt.value}
+                value={opt.value}>
+                    {opt.text}
+                </option>
+            ))}
+        </select>
+    )
+}
+
+type DropDownProps = {
+    /**
+     * The default value displayed on the menu. This must be equal to a defined
+     * value in dropOptions.
+     */
+    defaultValue: string
+    /**
+     * An array of drop down entries. Each entry consists of the text to display on
+     * the menu, and the value used to the backend call.
+     */
+    dropOptions: Array<DropDownOption>
+}
+
+type DropDownOption = {
+    text: string
+    value: any
+}
+
+const userTypeDropOptions: Array<DropDownOption> = [
+    {
+        text: "Guest",
+        value: "Guest",
+    },
+    {
+        text: "Member",
+        value: "Member",
+    },
+];
+
 export default function Graph(): JSX.Element{
     const authStatus = useAuthStore((st) => st.auth);
+    const enableGraphStatus = useGraphSettingStore(st => st.values.enable_graph);
+    const updateEnableGraphStatus = useGraphSettingStore(st => st.updateEnableGraphStatus);
+    const userType = useGraphSettingStore(st => st.values.user_type);
 
     const options: Array<OptionProps> = [
         {
@@ -75,6 +117,16 @@ export default function Graph(): JSX.Element{
         {
             label: "Tenant ID",
             element: <TextComponent graphKeyValue="tenant_id" />,
+        },
+        {
+            label: "Enable Graph",
+            element: <SliderButton func={(status) => updateEnableGraphStatus(status)} status={enableGraphStatus}/>,
+        },
+        {
+            label: "User Type",
+            element: <DropDown defaultValue={userType} dropOptions={userTypeDropOptions} />,
+            optElement: <ToolTip text={`Applies to all users whose domain is not listed in "Ignore User Type"`} />,
+            optElementDirection: "row",
         },
         {
             label: "Sign-in Account",
@@ -116,4 +168,22 @@ async function authenticateOnClick(){
     }
 
     setIsAuthenticating(false);
+}
+
+/**
+ * Used to update the IDs of the Graph data: client ID and tenant ID.
+ * @param e The form event
+ * @param graphKeyValue The target key being changed
+ * @param inputValue The new value the key is
+ */
+async function updateGraphId(e: React.FormEvent<HTMLFormElement>, graphKeyValue: string, inputValue: string){
+    e.preventDefault();
+    const READER_TYPE = "graph";
+    
+    // yes i know this is not good. not going to add a logging system...
+    // not right now at least. Me - 5/31/2026
+    console.log(`${graphKeyValue} value: ${inputValue}`);
+
+    const res = await window.pywebview.api.update_reader(READER_TYPE, graphKeyValue, inputValue);
+    console.log(res);
 }
