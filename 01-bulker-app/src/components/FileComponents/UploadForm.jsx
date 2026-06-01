@@ -5,12 +5,14 @@ import React, { useRef } from "react";
 import FileEntry from "./FileEntry";
 import { useSettingsContext } from "../../context/SettingsContext";
 import { throttler } from "../../utils";
+import { useFileSubmissionStore } from "./store/useFileSubmissionStore";
 
 const widthStyle = "w-160";
 
 export default function UploadForm({inputFileRef, FileUpload, showDrop}){
     const { uploadedFiles, setUploadedFiles } = useFileContext();
     const { apiSettings, setUpdateSettings } = useSettingsContext();
+    const isProcessing = useFileSubmissionStore(st => st.processing);
     
     const uploadThrottle = useRef(throttler((e, uploadedFiles, setUploadFiles, flatten_csv, setUpdateSettings) => {
         uploadFile(e, uploadedFiles, setUploadFiles, flatten_csv, setUpdateSettings).then((status) => {
@@ -44,7 +46,7 @@ export default function UploadForm({inputFileRef, FileUpload, showDrop}){
                     uploadThrottle.current(e, uploadedFiles, setUploadedFiles, apiSettings.flatten_csv, setUpdateSettings);
                 }}>
                     <div>
-                        <Button text={"Submit"} paddingX={10} paddingY={3} />
+                        <Button text={!isProcessing ? "Submit" : "⏳ Processing..."} paddingX={10} paddingY={3} width={60} />
                     </div>
                 </form>
             </div>
