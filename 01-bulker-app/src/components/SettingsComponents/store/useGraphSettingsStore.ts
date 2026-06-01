@@ -1,6 +1,7 @@
 import {create} from "zustand";
 import "../../../pywebview";
-import { getReaderContent } from "../../../pywebviewFunctions";
+import { getReaderContent, updateReader } from "../../../pywebviewFunctions";
+import { toastResponse } from "../../../toastUtils";
 
 type GraphSettingStore = {
     values: GraphSettingValues
@@ -9,6 +10,14 @@ type GraphSettingStore = {
      * @returns 
      */
     initialize: () => Promise<void>
+    /**
+     * Uses the current status of the enable graph status and inverses it
+     * to update the option.
+     * 
+     * @param status The current status of the enable graph status 
+     * @returns 
+     */
+    updateEnableGraphStatus: (status: boolean) => Promise<void>
 }
 
 type GraphUserType = "Member" | "Guest";
@@ -31,5 +40,10 @@ export const useGraphSettingStore = create<GraphSettingStore>(set => ({
         const graphSettings = await getReaderContent("graph") as GraphSettingValues;
 
         set(prev => ({...prev, values: graphSettings}));
-    }
+    },
+    updateEnableGraphStatus: async (status: boolean) => {
+        await updateReader("graph", "enable_graph", !status);
+
+        set(prev => ({...prev, values: {...prev.values, enable_graph: !status}}));
+    } 
 }));
