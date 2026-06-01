@@ -11,23 +11,11 @@ import Button from "../../ui/Button";
 import { FaCheckCircle, FaMinusCircle } from "react-icons/fa";
 import SliderButton from "../../ui/SliderButton";
 import { ToolTip } from "../../ui/ToolTip";
+import DropDown from "../../ui/DropDown";
+import { DropDownOption } from "../../ui/DropDown";
+import InputField from "../../ui/InputField";
 
 const throttleAuthenticateOnClick = throttler(() => authenticateOnClick(), 1500);
-
-function TextComponent({graphKeyValue}: {graphKeyValue: string}): JSX.Element{
-    const [inputValue, setInputValue] = useState("");
-    const inputRef = useRef(null);
-
-    return (
-        <form
-        onSubmit={(e) => updateGraphId(e, graphKeyValue, inputValue)}>
-            <input
-            className="input-style rounded-xl py-1 px-2"
-            onChange={(e) => setInputValue(e.currentTarget.value)}
-            ref={inputRef}/>
-        </form>
-    )
-}
 
 const AUTH_BUTTON_WIDTH: number = 35;
 function AuthenticateButton(): JSX.Element{
@@ -55,77 +43,50 @@ function AuthenicationIcon({iconElement, tooltip}: {iconElement: JSX.Element, to
     )
 }
 
-// TODO:
-//  1. move this into a generic UI
-//  2. add the function to update the key + Reader
-function DropDown({defaultValue, dropOptions}: DropDownProps): JSX.Element{
-    return (
-        <select
-        tabIndex={-1}
-        defaultValue={defaultValue}>
-            {dropOptions.map((opt) => (
-                <option
-                key={opt.value}
-                value={opt.value}>
-                    {opt.text}
-                </option>
-            ))}
-        </select>
-    )
-}
-
-type DropDownProps = {
-    /**
-     * The default value displayed on the menu. This must be equal to a defined
-     * value in dropOptions.
-     */
-    defaultValue: string
-    /**
-     * An array of drop down entries. Each entry consists of the text to display on
-     * the menu, and the value used to the backend call.
-     */
-    dropOptions: Array<DropDownOption>
-}
-
-type DropDownOption = {
-    text: string
-    value: any
-}
-
 const userTypeDropOptions: Array<DropDownOption> = [
     {
         text: "Guest",
-        value: "Guest",
+        value: "guest",
     },
     {
         text: "Member",
-        value: "Member",
+        value: "member",
     },
 ];
 
 export default function Graph(): JSX.Element{
     const authStatus = useAuthStore((st) => st.auth);
     const enableGraphStatus = useGraphSettingStore(st => st.values.enable_graph);
-    const updateEnableGraphStatus = useGraphSettingStore(st => st.updateEnableGraphStatus);
+    const setGraphValues = useGraphSettingStore(st => st.setGraphValues);
     const userType = useGraphSettingStore(st => st.values.user_type);
 
     const options: Array<OptionProps> = [
         {
+            label: "Enable Graph",
+            element: <SliderButton func={(status) => setGraphValues("enable_graph", !status)} status={enableGraphStatus}/>,
+        },
+        {
             label: "Client Application ID",
-            element: <TextComponent graphKeyValue="client_id" />,
+            element: <InputField preventDefault readerKey="client_id" 
+                updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
         },
         {
             label: "Tenant ID",
-            element: <TextComponent graphKeyValue="tenant_id" />,
+            element: <InputField preventDefault readerKey="tenant_id" 
+                updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
         },
         {
-            label: "Enable Graph",
-            element: <SliderButton func={(status) => updateEnableGraphStatus(status)} status={enableGraphStatus}/>,
+            label: "Member Type Domain CSV",
+            element: <InputField preventDefault readerKey="member_type_domain_csv"
+                updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
+            optElement: <ToolTip text="User domains that will always be Member type regardless of the User Type option" />,
+            optElementDirection: "row",
         },
         {
             label: "User Type",
-            element: <DropDown defaultValue={userType} dropOptions={userTypeDropOptions} />,
-            optElement: <ToolTip text={`Applies to all users whose domain is not listed in "Ignore User Type"`} />,
+            element: <DropDown defaultValue={userType} dropOptions={userTypeDropOptions} 
+                updateReaderFunc={(key, value) => setGraphValues(key, value)} readerKey="user_type" />,
+            optElement: <ToolTip text={`Applies to all created users whose domain is not listed in "Member Type Domain CSV"`} />,
             optElementDirection: "row",
         },
         {
