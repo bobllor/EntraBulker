@@ -12,7 +12,7 @@ from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH,
 from copy import deepcopy
 from dataclasses import dataclass
 from core.graph import Graph
-from core.graph_types import CreateUserJson, UserType
+from core.types.graph import CreateUserJson, UserType
 import support.utils as utils
 import pandas as pd
 import webview
@@ -131,7 +131,7 @@ class API:
 
         df: pd.DataFrame = df_response["content"]
         
-        valid_res: Response = self._start_validate_df(df)
+        valid_res: Response = self._run_validate_df(df)
         if valid_res["status"] == "error":
             return valid_res
         self.logger.info(f"Response: {valid_res}")
@@ -139,7 +139,7 @@ class API:
         if upload_id is None:
             upload_id = utils.get_id(divisor=4)
 
-        parse_res: Response = self._start_parse_df(df)
+        parse_res: Response = self._parse_df(df)
         if parse_res["status"] == "error":
             self.logger.critical(f"Failed to parse DataFrame: {parse_res}")
             return parse_res 
@@ -147,8 +147,8 @@ class API:
 
         parser: Parser = parse_res["content"]
 
-        self._start_nameopco_col_to_string(parser)
-        user_data: UserData = self._start_extract_user_data(parser)
+        self._nameopco_col_to_string(parser)
+        user_data: UserData = self._extract_user_data(parser)
 
         writer: AzureWriter = self._get_azure_writer(
             full_names=user_data["full_names"], 
@@ -163,22 +163,11 @@ class API:
             / self.file_state.output_name, skip_version=self.file_state.skip_version_row)
         self.logger.info(f"Generated {self.file_state.output_name} at {self.get_reader_value('settings', 'output_dir')}")
 
-        enabled: bool = self.graph_reader.get("enable_graph")
-        authres: Response = self.graph.is_authenticated()
-        if authres["content"] and enabled:
-            self.logger.info(f"Starting Microsoft Graph process, use Graph option is {enabled} and is authenticated")
-
-            # value will be member or guest, but in the event its a bad value it will
-            # default to guest for least privileges concerns
-            is_member: bool = self.graph_reader.get("user_type") == "member"
-            # TODO: do something with res, this requires the different responses with the POST request though
-            graphres: Response = self.add_users_graph_api(user_data, is_member)
-
-            if graphres["status"] == "error":
-                res["status"] = "error"
-                res["message"] = "CSV generated, failure to add users during Graph requests occurred"
-
-            self.logger.info(f"Response: {graphres}")
+        graphres: Response = self._handle_add_graph_users(user_data)
+        if graphres["status"] != "success":
+            res["status"] = graphres["status"]
+            res["message"] = f"Generated CSV, {graphres['message'].lower()}"
+        self.logger.debug(f"Response: {graphres}")
 
         # only applicable if flatten_csv is true. operations where each file generates an output will
         # not be affected by this.
@@ -190,79 +179,18 @@ class API:
         self.logger.debug(f"Azure CSV generated: {res}")
 
         return res
-    
-    def add_users_graph_api(self, users: UserData, is_member: bool = False) -> Response:
-        '''Add the users using Graph API. This requires the delegated permissions and proper
-        authentication.
-
-        Parameters
-        ----------
-            users: UserData
-                The object containing the list of user information.
-            
-            is_member: bool
-                Used to indicate the userType of the user, which is "Member" or "Guest".
-                By default it is False, creating the users in "Guest".
-        '''
-        data: list[CreateUserJson] = self._create_json_users(users, is_member)
-        res: Response = self.graph.create_users(data)
-        self.logger.debug(f"Graph add users response: {res}")
-
-        return res
-    
-    def _create_json_users(self, users: UserData, is_member: bool = False) -> list[CreateUserJson]:
-        '''Uses the UserData and creates a list of CreateUserJson values.
-        
-        It is responsible for creating the dictionary used as the JSON response to the
-        POST request.
-
-        The inversion of user types is also parsed in the method.
-        '''
-        data: list[CreateUserJson] = []
-
-        key: str = "member_type_domain_csv"
-        csv_domains: str = self.graph_reader.get(key) or ""
-
-        # removing @ and lowering for normalization
-        member_type_domains: set[str] = set([e.lower().removeprefix("@") for e in csv_domains.split(",")])
-
-        for i in range(len(users["usernames"])):
-            user_type: UserType = "member" if is_member else "guest"
-
-            principal_name: str = users["usernames"][i]
-            full_name: str = users["full_names"][i]
-            password: str = users["passwords"][i]
-            
-            split_principal: list[str] = principal_name.split("@")
-            mail_nickname: str = split_principal[0]
-            domain: str = split_principal[-1].lower()
-
-            if user_type == "guest" and domain in member_type_domains:
-                user_type = "member"
-                self.logger.info(f"Principal name {principal_name} found in members only domains list, converted to {user_type}")
-
-            name_split: list[str] = full_name.split(" ")
-
-            user: CreateUserJson = {
-                "accountEnabled": True,
-                "displayName": full_name,
-                "givenName": name_split[0],
-                "surname": name_split[-1],
-                "userPrincipalName": principal_name,
-                "mailNickname": mail_nickname,
-                "userType": user_type,
-                "passwordProfile": {
-                    "password": password,
-                    "forceChangePasswordNextSignIn": True,
-                }
-            }
-
-            data.append(user)
-
-        return data
 
     def generate_manual_csv(self, content: list[ManualCSVProps]) -> dict[str, str]:
         '''Generates the Azure CSV file for bulk accounts through the manual input.
+
+        The workflow is similar to generate_azure_csv, creating a DataFrame with the
+        given input and creating the users via parsing the created DataFrame.
+            - Instead of parsing the base64 string directly, the DataFrame is created
+            with the content list instead.
+
+        If an error occurs while the DataFrame is being created and validated, this results
+        in an internal error.
+            - These errors is only implementation errors and are logged.
         
         Parameters
         ----------
@@ -270,49 +198,45 @@ class API:
                 A list of dictionaries to convert into a DataFrame for a CSV.
                 Each dictionary represents a row to be added.
         '''
-        res: Response = utils.generate_response(message="")
+        res: Response = utils.generate_response(message="Generated manual CSV")
+        internal_err: Response = utils.generate_response("error", message="An unknown error has occurred, it has been logged")
 
         self.logger.debug(f"Manual generation data: {content}")
-        names: list[str] = []
-        opcos: list[str] = []
-        full_names: list[str] = []
+        headers: HeaderMap = self.get_reader_content("excel")
 
-        opco_mappings: dict[str, str] = self.opco.get_content()
+        try:
+            df: pd.DataFrame = pd.DataFrame(content)
+            df[headers["opco"]] = df["opco"]
+            df[headers["name"]] = df["name"]
+            df = df.drop(columns=["name", "opco"])
+        except Exception:
+            self.logger.exception("Failed to create DataFrame for manual CSV generation")
 
-        # contains name, opco, and id. id is not relevant to this however.
-        # i could also possibly add in the block sign in values in the content...
-        for obj in content:
-            name: str = utils.format_name(obj["name"])
-            full_name: str = utils.format_name(obj["name"], keep_full=True)
-            opco: str = obj["opco"].lower()
+            return internal_err
 
-            names.append(name)
-            full_names.append(full_name)
-            opcos.append(opco)
+        df_res: Response = self._parse_df(df)
+        if df_res["status"] == "error":
+            self.logger.error(f"Failed to create Parser for manual generation: {df_res}")
 
-        self.logger.debug(f"Opcos: {opcos}") 
-        dupe_names: list[str] = utils.check_duplicate_names(names)
+            return internal_err
+        self.logger.debug(f"Response: {df_res}")
 
-        formatters: Formatting = self.settings.get("format")
-        usernames: list[str] = utils.generate_usernames(
-            dupe_names, 
-            opcos, 
-            opco_mappings,
-            format_type=formatters["format_type"],
-            format_case=formatters["format_case"],
-            format_style=formatters["format_style"],
-        )
-        passwords: list[str] = []
-        for _ in range(len(names)):
-            password_res: Response = self.generate_password()
+        validate_res: Response = self._run_validate_df(df)
+        if validate_res["status"] == "error":
+            self.logger.error(f"Failed to validate DataFrame: {validate_res}")
 
-            passwords.append(password_res["content"])
+            return internal_err
+        self.logger.debug(f"Response: {validate_res}")
+
+        parser: Parser = df_res["content"]
+
+        user_data: UserData = self._extract_user_data(parser)
 
         writer: AzureWriter = self._get_azure_writer(
-            full_names=full_names,
-            usernames=usernames,
-            names=names,
-            passwords=passwords
+            full_names=user_data["full_names"],
+            usernames=user_data["usernames"],
+            names=user_data["full_names"],
+            passwords=user_data["passwords"],
         )
 
         curr_date: str = utils.get_date()
@@ -321,24 +245,15 @@ class API:
         csv_name: str = f"{curr_date}-az-bulk-{uid}.csv"
         writer.write(Path(self.get_reader_value("settings", "output_dir")) / csv_name)
 
+        graphres: Response = self._handle_add_graph_users(user_data)
+        if graphres["status"] != "success":
+            res["status"] = graphres["status"]
+            res["message"] = f"Generated manual CSV, {graphres['message'].lower()}"
+        self.logger.debug(f"Response: {graphres}")
+
         self.logger.info(f"Manual generated {csv_name} at {self.get_reader_value('settings', 'output_dir')}")
 
-        if res["message"] == "":
-            res["message"] = "Generated manual CSV"
-
-        templates: TemplateMap = self.settings.get("template")
-        if templates["enabled"]:
-            temp_res: Response = self._generate_template(templates["text"], writer, f"{curr_date}-{uid}")
-
-            res["status"] = temp_res["status"]
-            res["message"] += temp_res["message"]
-
-            # NOTE: the only error here is if the text is too long.
-            if temp_res["status"] == "error":
-                self.logger.warning(f"{res['message']}, text trimmed to {MAX_TEXT_SIZE} characters from {len(templates['text'])}")
-
-                # max char is 1250, and only triggers if the text is > 1250.
-                self.update_setting("text", templates["text"][:MAX_TEXT_SIZE], "template")
+        self._write_template(writer)
         
         self.logger.debug(f"Response: {res}")
 
@@ -363,6 +278,10 @@ class API:
             return utils.generate_response("error", message="Missing tenant ID")
 
         auth_res: Response = self.graph.is_authenticated()
+        if auth_res["status"] == "error":
+            return auth_res
+        self.logger.debug(f"Response: {auth_res}")
+
         if not auth_res["content"]:
             # recreates it, initially it has nil values.
             # reauthenication will create a new token which creates a new Graph
@@ -599,72 +518,76 @@ class API:
         res["content"] = password
 
         return res
-
-    def _check_duplicate_headers(self, headers: HeaderMap) -> Response:
-        '''Checks the given HeaderMap for duplicate values. The HeaderMap will be reversed to
-        value-key in order to validate and get the correct data from the DataFrame.
-        
-        If duplicate values are found, then an error Response will be returned.
-        '''
-        res: Response = utils.generate_response(message="Successful Headers validation")
-        seen: set[str] = set()
-
-        for val in headers.values():
-            seen.add(val)
-
-        if len(seen) != len(headers):
-            value_str: str = "value" if len(seen) == 1 else "values"
-            res["message"] = f'Duplicate {value_str} "{", ".join([val for val in seen])}" found' \
-                ', cannot have duplicate values: header values must be updated'
-            res["status"] = "error"
-        
-        return res
     
-    def _check_duplicate_columns(self, df: pd.DataFrame) -> Response:
-        '''Checks the DataFrame of the file for duplicate column names. This ensures that there will not be multiple
-        same valued columns in a given file.
+    def add_users_graph_api(self, users: UserData, is_member: bool = False) -> Response:
+        '''Add the users using Graph API. This requires the delegated permissions and proper
+        authentication.
 
-        It returns an Response with an error if found.
+        Parameters
+        ----------
+            users: UserData
+                The object containing the list of user information.
+            
+            is_member: bool
+                Used to indicate the userType of the user, which is "Member" or "Guest".
+                By default it is False, creating the users in "Guest".
         '''
-        seen_values: set[str] = set()
-        duplicates: list[str] = []
+        data: list[CreateUserJson] = self._create_json_users(users, is_member)
+        res: Response = self.graph.create_users(data)
+        self.logger.debug(f"Graph add users response: {res}")
 
-        for val in df.columns:
-            if val in seen_values:
-                duplicates.append(val)
+        return res
 
-            seen_values.add(val)
+    def _create_json_users(self, users: UserData, is_member: bool = False) -> list[CreateUserJson]:
+        '''Uses the UserData and creates a list of CreateUserJson values.
         
-        if len(duplicates) != 0:
-            col_str: str = "columns found in the file" if len(duplicates) != 1 else "column found in the file"
-            return utils.generate_response("error", message=f"Duplicate {col_str}: {', '.join(duplicates)}")
-        
-        return utils.generate_response(message="No duplicates found in the excel")
+        It is responsible for creating the dictionary used as the JSON response to the
+        POST request.
 
-    def _check_df_columns(self, df: pd.DataFrame, headers: dict[str, str]) -> Response:
-        '''Checks the DataFrame columns to the reversed column map.'''
-        # reverse to check the user defined names
-        rev_column_map: dict = {v: k for k, v in headers.items()}
+        The inversion of user types is also parsed in the method.
+        '''
+        data: list[CreateUserJson] = []
 
-        found: set[str]= set()
+        key: str = "member_type_domain_csv"
+        csv_domains: str = self.graph_reader.get(key) or ""
 
-        for col in df.columns:
-            low_col: str = col.lower()
+        # removing @ and lowering for normalization
+        member_type_domains: set[str] = set([e.lower().removeprefix("@") for e in csv_domains.split(",")])
 
-            if len(found) == len(rev_column_map):
-                break
+        for i in range(len(users["usernames"])):
+            user_type: UserType = "member" if is_member else "guest"
 
-            if low_col in rev_column_map:
-                found.add(low_col)
+            principal_name: str = users["usernames"][i]
+            full_name: str = users["full_names"][i]
+            password: str = users["passwords"][i]
+            
+            split_principal: list[str] = principal_name.split("@")
+            mail_nickname: str = split_principal[0]
+            domain: str = split_principal[-1].lower()
 
-        if len(found) != len(headers):
-            missing_columns: list[str] = [key for key in rev_column_map if key not in found]
+            if user_type == "guest" and domain in member_type_domains:
+                user_type = "member"
+                self.logger.info(f"Principal name {principal_name} found in members only domains list, converted to {user_type}")
 
-            column_str: str = "column header" if len(missing_columns) == 1 else "column headers"
+            name_split: list[str] = full_name.split(" ")
 
-            return utils.generate_response(status='error', message=f'File is missing {column_str}: {", ".join(missing_columns)}')
+            user: CreateUserJson = {
+                "accountEnabled": True,
+                "displayName": full_name,
+                "givenName": name_split[0],
+                "surname": name_split[-1],
+                "userPrincipalName": principal_name,
+                "mailNickname": mail_nickname,
+                "userType": user_type,
+                "passwordProfile": {
+                    "password": password,
+                    "forceChangePasswordNextSignIn": True,
+                }
+            }
 
-        return utils.generate_response(status='success', message=f"Found columns {','.join(found)}")
+            data.append(user)
+
+        return data
     
     def get_metadata(self) -> Metadata:
         '''Gets the metadata in a dictionary response.'''
@@ -745,6 +668,36 @@ class API:
         
         # this will never be reached but leaving it here for best practices.
         return res
+        
+    def _handle_add_graph_users(self, user_data: UserData) -> Response:
+        '''Handles the Graph API process for adding users. A Response is returned.
+        Authentication is checked in this method. 
+
+        If the user is not authenticated or the "enable_graph" option is false,
+        then this will do nothing.
+        '''
+        res: Response = utils.generate_response(message="Graph request successful")
+        enabled: bool = self.graph_reader.get("enable_graph")
+        if not enabled:
+            return utils.generate_response(message="Graph is not enabled in the settings")
+
+        authres: Response = self.graph.is_authenticated()
+        if authres["content"]:
+            self.logger.info(f"Starting Microsoft Graph process, use Graph option is {enabled} and is authenticated")
+
+            # value will be member or guest, but in the event its a bad value it will
+            # default to guest for least privileges concerns
+            is_member: bool = self.graph_reader.get("user_type") == "member"
+            graphres: Response = self.add_users_graph_api(user_data, is_member)
+
+            if graphres["status"] == "warning":
+                res["status"] = graphres["status"]
+                res["message"] = "Encountered errors while adding users to the tenant"
+            elif graphres["status"] == "error":
+                res["status"] = graphres["status"]
+                res["message"] = "Failed to add users to the tenant"
+        
+        return res
     
     def _get_df(self, content: GenerateCSVProps | pd.DataFrame) -> Response:
         '''Parses the content and returns a Response containing a DataFrame.
@@ -799,7 +752,7 @@ class API:
 
         return res
     
-    def _start_validate_df(self, df: pd.DataFrame) -> Response:
+    def _run_validate_df(self, df: pd.DataFrame) -> Response:
         '''Starts the validation of the DataFrame. It is a wrapper that calls self._validate_df.
         
         It checks the DataFrame and the headers data defined in the Excel mapping configuration file:
@@ -825,7 +778,7 @@ class API:
 
         return valid_res
 
-    def _start_parse_df(self, df: pd.DataFrame) -> Response:
+    def _parse_df(self, df: pd.DataFrame) -> Response:
         '''Parses the DataFrame and corrects bad data. It will return the Parser used
         to parse the DataFrame in the 'content' of the Response.
         
@@ -864,6 +817,13 @@ class API:
 
         new_len: int = parser.length
 
+        debug_data = {
+            "Total rows": {base_len},
+            "Dropped names": {dropped_name_rows},
+            "Dropped rows": {dropped_rows},
+            "Total rows dropped": {dropped_rows},
+        }
+
         self.logger.debug(
             f"Dropped names: {dropped_name_rows}/{base_len}" +
             f" | Dropped opcos: {dropped_opco_rows}/{base_len}" +
@@ -883,7 +843,7 @@ class API:
         
         return res
 
-    def _start_nameopco_col_to_string(self, parser: Parser):
+    def _nameopco_col_to_string(self, parser: Parser):
         '''Converts the columns 'name' and 'opco' of the Excel mappings. It
         uses the values given by the config from the user.
 
@@ -898,7 +858,7 @@ class API:
         parser.apply(excel_columns["name"], func=lambda x: str(x))
         parser.apply(excel_columns["opco"], func=lambda x: str(x))
 
-    def _start_extract_user_data(self, parser: Parser) -> UserData:
+    def _extract_user_data(self, parser: Parser) -> UserData:
         '''Extracts the user data from the DataFrame.
 
         It will return a UserData object containing the information for
@@ -1085,3 +1045,69 @@ class API:
         self.logger.debug(f"Concatenated names: {full_names}")
 
         return full_series
+
+    def _check_duplicate_headers(self, headers: HeaderMap) -> Response:
+        '''Checks the given HeaderMap for duplicate values. The HeaderMap will be reversed to
+        value-key in order to validate and get the correct data from the DataFrame.
+        
+        If duplicate values are found, then an error Response will be returned.
+        '''
+        res: Response = utils.generate_response(message="Successful Headers validation")
+        seen: set[str] = set()
+
+        for val in headers.values():
+            seen.add(val)
+
+        if len(seen) != len(headers):
+            value_str: str = "value" if len(seen) == 1 else "values"
+            res["message"] = f'Duplicate {value_str} "{", ".join([val for val in seen])}" found' \
+                ', cannot have duplicate values: header values must be updated'
+            res["status"] = "error"
+        
+        return res
+    
+    def _check_duplicate_columns(self, df: pd.DataFrame) -> Response:
+        '''Checks the DataFrame of the file for duplicate column names. This ensures that there will not be multiple
+        same valued columns in a given file.
+
+        It returns an Response with an error if found.
+        '''
+        seen_values: set[str] = set()
+        duplicates: list[str] = []
+
+        for val in df.columns:
+            if val in seen_values:
+                duplicates.append(val)
+
+            seen_values.add(val)
+        
+        if len(duplicates) != 0:
+            col_str: str = "columns found in the file" if len(duplicates) != 1 else "column found in the file"
+            return utils.generate_response("error", message=f"Duplicate {col_str}: {', '.join(duplicates)}")
+        
+        return utils.generate_response(message="No duplicates found in the excel")
+
+    def _check_df_columns(self, df: pd.DataFrame, headers: dict[str, str]) -> Response:
+        '''Checks the DataFrame columns to the reversed column map.'''
+        # reverse to check the user defined names
+        rev_column_map: dict = {v: k for k, v in headers.items()}
+
+        found: set[str]= set()
+
+        for col in df.columns:
+            low_col: str = col.lower()
+
+            if len(found) == len(rev_column_map):
+                break
+
+            if low_col in rev_column_map:
+                found.add(low_col)
+
+        if len(found) != len(headers):
+            missing_columns: list[str] = [key for key in rev_column_map if key not in found]
+
+            column_str: str = "column header" if len(missing_columns) == 1 else "column headers"
+
+            return utils.generate_response(status='error', message=f'File is missing {column_str}: {", ".join(missing_columns)}')
+
+        return utils.generate_response(status='success', message=f"Found columns {','.join(found)}")
