@@ -189,14 +189,42 @@ class API:
                 Used to indicate the userType of the user, which is "Member" or "Guest".
                 By default it is False, creating the users in "Guest".
         '''
+        data: list[CreateUserJson] = self._create_json_users(users, is_member)
+        res: Response = self.graph.create_users(data)
+        self.logger.debug(f"Add users with Graph response: {res}")
+
+        return res
+    
+    def _create_json_users(self, users: UserData, is_member: bool = False) -> list[CreateUserJson]:
+        '''Uses the UserData and creates a list of CreateUserJson values.
+        
+        It is responsible for creating the dictionary used as the JSON response to the
+        POST request.
+
+        The inversion of user types is also parsed in the method.
+        '''
         data: list[CreateUserJson] = []
 
-        user_type: UserType = "Member" if is_member else "Guest"
+        key: str = "member_type_domain_csv"
+        csv_domains: str = self.graph_reader.get(key) or ""
+
+        # removing @ and lowering for normalization
+        member_type_domains: set[str] = set([e.lower().removeprefix("@") for e in csv_domains.split(",")])
 
         for i in range(len(users["usernames"])):
+            user_type: UserType = "Member" if is_member else "Guest"
+
             principal_name: str = users["usernames"][i]
             full_name: str = users["full_names"][i]
             password: str = users["passwords"][i]
+            
+            split_principal: list[str] = principal_name.split("@")
+            mail_nickname: str = split_principal[0]
+            domain: str = split_principal[-1].lower()
+
+            if user_type == "Guest" and domain in member_type_domains:
+                user_type = "Member"
+                self.logger.info(f"Principal name {principal_name} found in members only domains list, converted to {user_type}")
 
             name_split: list[str] = full_name.split(" ")
 
@@ -206,7 +234,7 @@ class API:
                 "givenName": name_split[0],
                 "surname": name_split[-1],
                 "userPrincipalName": principal_name,
-                "mailNickname": principal_name[0].split("@"),
+                "mailNickname": mail_nickname,
                 "userType": user_type,
                 "passwordProfile": {
                     "password": password,
@@ -216,10 +244,7 @@ class API:
 
             data.append(user)
 
-        res: Response = self.graph.create_users(data)
-        self.logger.debug(f"Add users with Graph response: {res}")
-
-        return res
+        return data
 
     def generate_manual_csv(self, content: list[ManualCSVProps]) -> dict[str, str]:
         '''Generates the Azure CSV file for bulk accounts through the manual input.
@@ -824,9 +849,11 @@ class API:
 
         new_len: int = parser.length
 
-        self.logger.debug(f"Dropped names: {dropped_name_rows}/{base_len}")
-        self.logger.debug(f"Dropped opcos: {dropped_opco_rows}/{base_len}")
-        self.logger.debug(f"Total dropped rows: {dropped_rows}/{base_len}")
+        self.logger.debug(
+            f"Dropped names: {dropped_name_rows}/{base_len}" +
+            f" | Dropped opcos: {dropped_opco_rows}/{base_len}" +
+            f" | Total dropped rows: {dropped_rows}/{base_len}"
+        )
 
         if new_len == 0:
             res["status"] = "error"
@@ -866,8 +893,9 @@ class API:
         excel_names: list[str] = parser.get_rows(excel_columns["name"])
         opcos: list[str] = parser.get_rows(excel_columns["opco"])
 
-        self.logger.debug(f"Name DF columns: {excel_names}")
-        self.logger.debug(f"Opco DF columns: {opcos}")
+        # probably not logging this, will leave it here
+        #self.logger.debug(f"Name DF columns: {excel_names}")
+        #self.logger.debug(f"Opco DF columns: {opcos}")
 
         names: list[str] = [utils.format_name(name) for name in excel_names]
         full_names: list[str] = [utils.format_name(name, keep_full=True) for name in excel_names]
