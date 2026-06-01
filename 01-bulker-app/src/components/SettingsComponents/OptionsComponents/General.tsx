@@ -6,8 +6,8 @@ import Button from "../../ui/Button";
 import "../../../pywebview";
 import { useSettingsContext } from "../../../context/SettingsContext";
 import { setSetting, setOutputDir, setTextGenerationState, updateFormattingKey } from "../functions";
-import DropDown, { DropDownObject } from "../../ui/DropDown";
 import { ToolTip } from "../../ui/ToolTip";
+import { FormatCase, FormatStyle, FormatType } from "../../../pywebviewTypes";
 
 const title: string = "General";
 const tooltipText: string = "General settings for the program";
@@ -64,14 +64,14 @@ export default function General(): JSX.Element{
         },
         {
             label: "Format Type", 
-            element: <DropDown obj={formatTypeArray} 
+            element: <DropDownFormatting obj={formatTypeArray} 
                 objId="format_type" defaultValue={apiSettings.format.format_type} 
                 func={(key: string, value: any) => {updateFormattingKey(key, value, setApiSettings)}} />,
             optElement: <ToolTip text="Formats the username to the given type, e.g. First.Last or FirstLast" />,
             optElementDirection: "row",
         },
         {
-            label: "Format Style", element: <DropDown obj={formatStyleArray} 
+            label: "Format Style", element: <DropDownFormatting obj={formatStyleArray} 
                 objId="format_style" defaultValue={apiSettings.format.format_style} 
                 func={(key: string, value: any) => {updateFormattingKey(key, value, setApiSettings)}} />,
             optElement: <ToolTip text="Chooses the formatting style of how the username is generated, e.g. F.Last or First.Last" />,
@@ -79,7 +79,7 @@ export default function General(): JSX.Element{
         },
         {
             label: "Format Case", 
-            element: <DropDown obj={formatCaseArray} 
+            element: <DropDownFormatting obj={formatCaseArray} 
                 objId="format_case" defaultValue={apiSettings.format.format_case} 
                 func={(key: string, value: any) => {updateFormattingKey(key, value, setApiSettings)}} />,
             optElement: <ToolTip text="Affects the casing of the username" />,
@@ -107,4 +107,45 @@ function OutputFolder({outputDir}: {outputDir: string}): JSX.Element{
             </span>        
         </>
     )
+}
+
+function DropDownFormatting({obj, objId, defaultValue, func}: DropDownProps): JSX.Element{
+    return (
+        <>
+            <select
+            className="outline-1 min-w-[30%] max-w-[30%] rounded-sm p-1"
+            tabIndex={-1}
+            defaultValue={defaultValue}
+            onChange={(e) => handleOnChangeSelect(e, objId, func)}>
+                {obj.map((ele) => (
+                    <option 
+                    key={ele.value}
+                    value={ele.value}>{ele.text}</option>
+                ))}
+            </select>
+        </>
+    )
+}
+
+async function handleOnChangeSelect(
+    e: React.ChangeEvent<HTMLSelectElement>, 
+    key: string,
+    func?: DropDownProps["func"],){
+    const selectedValue: string = e.currentTarget.value;
+
+    if(func){
+        func(key, selectedValue);
+    }
+}
+
+type DropDownProps = {
+    obj: Array<DropDownObject>,
+    objId: string,
+    defaultValue: DropDownObject["value"],
+    func?: (key: string, value: any) => void | undefined,
+}
+
+export type DropDownObject = {
+    value: FormatCase | FormatStyle | FormatType,
+    text: string,
 }
