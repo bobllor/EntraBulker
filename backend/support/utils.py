@@ -77,7 +77,7 @@ def check_duplicate_names(names: list[str]) -> list[str]:
     
     return new_names
 
-def generate_response(status: Literal['error', 'success'] = 'success', **kwargs) -> dict[str, Any]:
+def generate_response(status: Literal['error', 'success', 'warning'] = 'success', **kwargs) -> dict[str, Any]:
     '''Generate a response dictionary.
 
     Common keys: status, message, content
@@ -85,7 +85,7 @@ def generate_response(status: Literal['error', 'success'] = 'success', **kwargs)
     Parameters
     ----------
         status: str, default "success"
-            The status of the response. It can only be two string values, "success" or "error".
+            The status of the response. It can be "success", "error", or "warning".
 
         kwargs: dict[str, Any]
             Any keyword argument, this gets added into the response.
