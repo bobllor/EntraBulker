@@ -64,3 +64,17 @@ export function toastError(msg: string, duration: number = 3000){
         }
     )
 }
+
+export function toastWarning(msg: string, duration: number = 3000){
+    toast(
+        msg,
+        {
+            position: POSITION,
+            type: "warning",
+            closeOnClick: true, 
+            pauseOnHover: false,
+            pauseOnFocusLoss: false,
+            autoClose: duration,
+        }
+    )
+}
