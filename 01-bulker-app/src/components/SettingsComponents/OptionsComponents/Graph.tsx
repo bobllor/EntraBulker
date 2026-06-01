@@ -1,9 +1,9 @@
-import React, { JSX, useRef, useState } from "react";
+import React, { JSX } from "react";
 import "../../../pywebview";
 import OptionBase from "./OptionBase";
 import { OptionProps } from "../types";
 import { Response } from "../../../pywebviewTypes";
-import { toastResponse } from "../../../toastUtils";
+import { toastError, toastResponse } from "../../../toastUtils";
 import { useAuthStore } from "./store/useAuthStore";
 import { useGraphSettingStore } from "../store/useGraphSettingsStore";
 import { throttler } from "../../../utils";
@@ -14,6 +14,8 @@ import { ToolTip } from "../../ui/ToolTip";
 import DropDown from "../../ui/DropDown";
 import { DropDownOption } from "../../ui/DropDown";
 import InputField from "../../ui/InputField";
+import DataText from "../../ui/DataText";
+import { useShallow } from "zustand/react/shallow";
 
 const throttleAuthenticateOnClick = throttler(() => authenticateOnClick(), 1500);
 
@@ -25,9 +27,9 @@ function AuthenticateButton(): JSX.Element{
         <>
             {!isAuthenticating 
             ? 
-                <Button text="Sign-in" func={() => throttleAuthenticateOnClick()} type="button" width={AUTH_BUTTON_WIDTH} />
+                <Button text="Login" func={() => throttleAuthenticateOnClick()} type="button" width={AUTH_BUTTON_WIDTH} />
             : 
-                <Button text="Signing-in..." type="button" width={AUTH_BUTTON_WIDTH} />
+                <Button text="Logging in..." type="button" width={AUTH_BUTTON_WIDTH} />
             } 
         </>
     )
@@ -53,12 +55,16 @@ const userTypeDropOptions: Array<DropDownOption> = [
         value: "member",
     },
 ];
-
 export default function Graph(): JSX.Element{
     const authStatus = useAuthStore((st) => st.auth);
     const enableGraphStatus = useGraphSettingStore(st => st.values.enable_graph);
     const setGraphValues = useGraphSettingStore(st => st.setGraphValues);
     const userType = useGraphSettingStore(st => st.values.user_type);
+    const { clientId, tenantId, domainCsvString } = useGraphSettingStore(useShallow(st => ({
+        clientId: st.values.client_id,
+        tenantId: st.values.tenant_id,
+        domainCsvString: st.values.member_type_domain_csv,
+    })));
 
     const options: Array<OptionProps> = [
         {
@@ -69,18 +75,19 @@ export default function Graph(): JSX.Element{
             label: "Client Application ID",
             element: <InputField preventDefault readerKey="client_id" 
                 updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
+            optElement: <DataText value={clientId} enableCopy />,
         },
         {
             label: "Tenant ID",
             element: <InputField preventDefault readerKey="tenant_id" 
                 updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
+            optElement: <DataText value={tenantId} enableCopy />,
         },
         {
             label: "Member Type Domain CSV",
             element: <InputField preventDefault readerKey="member_type_domain_csv"
                 updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
-            optElement: <ToolTip text="User domains that will always be Member type regardless of the User Type option" />,
-            optElementDirection: "row",
+            optElement: <DataText value={domainCsvString} />
         },
         {
             label: "User Type",
@@ -90,7 +97,7 @@ export default function Graph(): JSX.Element{
             optElementDirection: "row",
         },
         {
-            label: "Sign-in Account",
+            label: "Login to Graph",
             element: <AuthenticateButton />,
             optElement: authStatus 
                 ? <AuthenicationIcon iconElement={<FaCheckCircle color="green" />} tooltip="Authenticated" /> 
@@ -113,38 +120,27 @@ async function authenticateOnClick(){
     const authStatus: boolean = useAuthStore.getState().auth;
     const setAuth = useAuthStore.getState().setAuthStatus;
     const setIsAuthenticating = useAuthStore.getState().setIsAuthenticating;
-    setIsAuthenticating(true);
 
-    const res: Response = await window.pywebview.api.authenticate_graph();
+    try{
+        setIsAuthenticating(true);
+        const res: Response = await window.pywebview.api.authenticate_graph();
 
-    toastResponse(res);
-    if(res.status == "error"){
-        if(authStatus){
-            setAuth(false);
+        toastResponse(res);
+        if(res.status == "error"){
+            if(authStatus){
+                setAuth(false);
+            }
+        }else{
+            if(!authStatus){
+                setAuth(true);
+            }
         }
     }
-
-    if(!authStatus){
-        setAuth(true);
+    catch(error){
+        console.log(error);
+        toastError("An unknown error occurred, it has been logged");
     }
-
-    setIsAuthenticating(false);
-}
-
-/**
- * Used to update the IDs of the Graph data: client ID and tenant ID.
- * @param e The form event
- * @param graphKeyValue The target key being changed
- * @param inputValue The new value the key is
- */
-async function updateGraphId(e: React.FormEvent<HTMLFormElement>, graphKeyValue: string, inputValue: string){
-    e.preventDefault();
-    const READER_TYPE = "graph";
-    
-    // yes i know this is not good. not going to add a logging system...
-    // not right now at least. Me - 5/31/2026
-    console.log(`${graphKeyValue} value: ${inputValue}`);
-
-    const res = await window.pywebview.api.update_reader(READER_TYPE, graphKeyValue, inputValue);
-    console.log(res);
+    finally{
+        setIsAuthenticating(false);
+    }
 }
