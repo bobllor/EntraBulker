@@ -1,7 +1,12 @@
 # EntraBulker
 
-*EntraBulker* is a customizable application that generates CSV files for bulking Entra ID identities 
-without the need for API access. It is a WebView application built with Python, TypeScript, and JavaScript.
+*EntraBulker* is a customizable application that streamlines large-scale user onboarding in Microsoft Entra ID by
+transforming CSV and Excel reports into bulk user creation data. 
+It can generate *ready to use CSV bulk files* or directly *create users in a tenant* via Graph API using 
+a registered application.
+
+It is a WebView local application built with Python, TypeScript, and JavaScript, to assist administrators in
+automating user creation with Entra ID.
 
 ## Example
 
@@ -30,6 +35,7 @@ The output file can now be uploaded to Azure Entra ID and bulk create all rows o
 ## Table of Contents
 
 - [Installation](#installation)
+- [Disclaimers](#disclaimers)
 - [Usage](#usage)
     - [Settings](#settings)
     - [Side Effects](#side-effects)
@@ -62,6 +68,10 @@ The ZIP file has a folder structure like so (which is the same as the binary ins
 The files can be extracted to a given location and the application can be launched via `EntraBulker.exe` located in the `apps` folder.
 It is *recommended* to make a shortcut of `EntraBulker.exe` in order to use it outside of the folder.
 
+## Disclaimers
+
+
+
 ## Usage
 
 **NOTE**: The application does not account for existing identities in Entra ID. The application is solely used to
@@ -86,6 +96,7 @@ The settings allow customization on how the application will function. There are
 3. [Organization](./docs/settings/organization.md): Key-value mapping to map a domain name to an organization key
 4. [Password](./docs/settings/password.md): Password related settings for random password generation
 5. [Text Template](./docs/settings/text_template.md): Settings for generating text templates for each entry in the file
+6. [Microsoft Graph](./docs/settings/microsoft_graph.md): Settings related to Microsoft Graph
 
 Question marks can be found in all the Setting pages, hovering over them will reveal a tooltip on what it does.
 
@@ -142,6 +153,67 @@ an automatic updating process occurs with the binary `EntraUpdater.exe`.
 Updating can be done through using the new binary installer or replacing the files with the new files from the ZIP file.
 - The default path of the application via installer is `$HOME\AppData\Programs\EntraBulker`.
 
+## Microsoft Graph
+
+The application supports Microsoft Graph API and user creation can be directly added into the tenant
+during a submission.
+
+To enable Graph support, the `Microsoft Graph` settings contains the option `Enable Graph`.
+This must be toggled to `ON` in order to enable the Graph workflow with the submission process.
+
+The application uses *delegated permissions* to perform the tasks required and is a *public client*.
+No secrets are stored on the application.
+
+### Registering an Application
+
+In order to use Graph, there must be a *registered application* in your Entra ID tenant. Microsoft provides official
+documentation on [how to register one](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
+
+The *redirect URI* needs to be setup in the `Authentication` tab of the application page.
+The new redirect URI should be made with the *Mobile and desktop applications* tab.
+
+<img src="./docs/assets/redirect-uri-how-to.png" alt="Add Redirect URI side menu" width="600">
+
+The value of the redirect URI is your choice. If you are unsure, the default `http://localhost:8400` can be used, but the
+port can be changed. This is locally created during the authentication process.
+
+<img src="./docs/assets/redirect-uri-example.png" alt="Example URI value" width="600" >
+
+### Setup
+
+After registering an application to your tenant, on the `Overview` tab of the application page will reveal
+two IDs that are required: the `Application (client) ID` and the `Directory (tenant) ID`.
+These two values are used to identify the application in the tenant and the tenant the users will authenticate
+against, respectively.
+
+<img src="./docs/assets/app-id-example.png" alt="Picture of the IDs found on the Overview tab" width="600" >
+
+Inside the settings of EntraBulker contains a tab called `Microsoft Graph`. These two values will be set
+in the options of Microsoft Graph: `Client Application ID` and `Tenant ID`.
+
+Once all the above is complete, the next step is to *authenticate* with an account in the tenant.
+
+When the `Login` button is clicked, it will attempt to authenticate by opening the system's default browser to
+*the tenant's identity platform*. Logging into an account in the tenant will authenticate and create the token
+for the session
+- The account *must be able to perform CRUD operations on the Entra ID directory*. If the permissions are not
+enabled, then there will be *unauthorized errors*.
+
+If the authentication was successful, the checkmark will turn green alongside a toast showing a successful authentication.
+Graph is now enabled and ready to be used with the application.
+
+### Usage
+
+With Graph, the users are directly created in the tenant. The workflow *process remains the exact same*, creating
+the CSV file and template if enabled.
+After the CSV file is generated to the output folder, Graph will run at this stage and add the users to the tenant.
+- This is to keep data to pass to the end user for onboarding.
+
+> DISCLAIMER
+>
+> Due to Graph API being *network requests*, it will take more time compared to the offline CSV version.
+> However, this allows more automation and customization with the user type for each created user.
+
 ## Development
 
 Development is supported on Linux and Windows. 
@@ -150,11 +222,13 @@ Windows is expected to ***use Git Bash***, with support scripts being written in
 *PowerShell* is used when compiling the binaries and installer.
 
 The following software are required:
-- `Node.js >= 22.11.0`
-- `npm >= 11.1.0`
-- `Python`
+- `Node.js` >= 22.11.0
+- `npm` >= 11.1.0
+- `Python` >= 3.12.6
 - `Git`
-- `InnoSetup >= 6.4.3`: Only if compiling the installer is required
+
+Optional software:
+- `InnoSetup` >= 6.4.3: Only if compiling the installer is required
 
 ### Initializing Project
 
