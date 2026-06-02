@@ -55,6 +55,9 @@ class Graph:
         # set inside authenticate
         self.app: PublicClientApplication = None
 
+        # private tracker for the authentication status
+        self._authenticated: bool = False
+
         # least privilege scope that allows writing to entra, do not change!
         self._scopes: list[str] = ["User.ReadWrite.All"]
 
@@ -71,6 +74,7 @@ class Graph:
         '''
         not_res: Response = utils.generate_response("success", message="Not authenticated", content=False)
         if self.token is None:
+            self._authenticated = False
             return not_res
 
         res: Response = utils.generate_response("success", message="Authenticated", content=True)
@@ -86,9 +90,12 @@ class Graph:
 
         if not getres.ok:
             err: RequestErrorResponse = self.get_error(json)
-            self.log.info(f"Authentication status: {err} | Code: {err.code} | Message: {err.message}")
+            self.log.info(f"Failed to request authentication | Code: {err.code} | Message: {err.message}")
+            self._authenticated = False
 
             return not_res
+
+        self._authenticated = True
 
         return res
 
@@ -97,24 +104,30 @@ class Graph:
         res: Response = utils.generate_response(message="Successfully authenticated")
         self.log.info("Starting authentication process for Graph API")
 
-        app: PublicClientApplication = PublicClientApplication(
-            self._client_id,
-            authority=self._auth_url,
-        )
+        try:
+            app: PublicClientApplication = PublicClientApplication(
+                self._client_id,
+                authority=self._auth_url,
+            )
+        except ValueError as e:
+            self.log.error(f"Invalid authority URL: {self._auth_url} | Tenant ID: {self._tenant_id} | {str(e)}")
+
+            return utils.generate_response("error", message="An unknown error occurred during authentication")
 
         self.app = app
 
-        if self.token is None:
+        if self.token is None or not self._authenticated:
             timeout_seconds: int = 180
+            token_key: str = "access_token"
+
             try:
                 auth_res: dict[str, Any] = app.acquire_token_interactive(self._scopes, timeout=timeout_seconds)
-                token_key: str = "access_token"
             except BrowserInteractionTimeoutError:
                 self.log.info(f"Authentication timeout reached: User did not complete the flow in time")
 
                 return utils.generate_response("error", message="Authentication timed out")
-            
-            if token_key in res:
+
+            if token_key in auth_res:
                 self.token = auth_res.get(token_key)
                 self.bearer = f"Bearer {self.token}"
             else:
