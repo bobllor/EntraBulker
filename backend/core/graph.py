@@ -117,7 +117,7 @@ class Graph:
         self.app = app
 
         if self.token is None or not self._authenticated:
-            timeout_seconds: int = 180
+            timeout_seconds: int = 120
             token_key: str = "access_token"
 
             try:
