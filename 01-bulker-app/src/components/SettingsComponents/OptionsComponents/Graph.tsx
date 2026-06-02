@@ -75,13 +75,13 @@ export default function Graph(): JSX.Element{
             label: "Client Application ID",
             element: <InputField preventDefault readerKey="client_id" 
                 updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
-            optElement: <DataText value={clientId} enableCopy />,
+            optElement: <DataText value={clientId} enableCopy={clientId != ""} />,
         },
         {
             label: "Tenant ID",
             element: <InputField preventDefault readerKey="tenant_id" 
                 updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
-            optElement: <DataText value={tenantId} enableCopy />,
+            optElement: <DataText value={tenantId} enableCopy={clientId != ""} />,
         },
         {
             label: "Member Type Domain CSV",
