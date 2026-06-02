@@ -16,7 +16,7 @@ export default function DataText({label = "", maxValueLength = 30, value, enable
             }
         }}
         className={`text-xs text-ellipsis overflow-hidden whitespace-nowrap w-68 h-4
-            flex items-center justify-center rounded-xl
+            flex items-center justify-start rounded-xl px-1
             ${enableCopy && "hover:bg-gray-500/25"}`}
         title={value.length > maxValueLength ? value : ""}>
             {label + value}
