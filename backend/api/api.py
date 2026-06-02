@@ -286,16 +286,19 @@ class API:
             # recreates it, initially it has nil values.
             # reauthenication will create a new token which creates a new Graph
             self.graph = Graph(client_id, tenant_id, log=self.logger)
-            auth_res: Response = self.graph.authenticate()
+            auth_res_two: Response = self.graph.authenticate()
             
-            if "access_token" in auth_res:
-                del auth_res["access_token"]
-            if "refresh_token" in auth_res:
-                del auth_res["refresh_token"]
-            if "id_token" in auth_res:
-                del auth_res["id_token"]
+            if auth_res_two["status"] == "error":
+                return auth_res_two
             
-            self.logger.debug(f"Authentication response: {auth_res}")
+            if "access_token" in auth_res_two:
+                del auth_res_two["access_token"]
+            if "refresh_token" in auth_res_two:
+                del auth_res_two["refresh_token"]
+            if "id_token" in auth_res_two:
+                del auth_res_two["id_token"]
+            
+            self.logger.debug(f"Authentication response: {auth_res_two}")
         else:
             self.logger.info(f"Already authenticated")
             res["message"] = "Already authenticated"
