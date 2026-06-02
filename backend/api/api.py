@@ -93,7 +93,7 @@ class API:
 
         # has to be authenticated first before this can be used
         # successful authentication will create a new Graph
-        self.graph: Graph = Graph("", "") 
+        self.graph: Graph = Graph("", "", project_root=project_root) 
 
         self._project_root: Path = project_root
 

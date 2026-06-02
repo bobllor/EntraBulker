@@ -4,6 +4,8 @@ from logger import Log
 from typing import Any, Callable
 from support.types import Response
 from core.types.graph import CreateUserJson, JsonHeaders, RequestErrorResponse
+from pathlib import Path
+from core.json_reader import Reader
 import requests
 import support.utils as utils
 
@@ -38,9 +40,31 @@ def requests_handler(f: Callable[[Any], Response]) -> Response:
     
     return wrapper
 
+CACHE_NAME: str = ".mscache"
+
 class Graph:
     '''Class used for Microsoft Graph based operations.'''
-    def __init__(self, client_id: str, tenant_id: str, *, log: Log = None):
+    def __init__(self, client_id: str= "", tenant_id: str = "", *, log: Log = None, project_root: Path = None):
+        '''
+        Parameters
+        ----------
+            client_id: str
+                The client application ID of the registered app in Entra ID.
+                By default it is an empty string.
+
+            tenant_id: str
+                The directory tenant ID of the Entra ID tenant being targeted.
+                By default it is an empty string.
+            
+            log: Log
+                The logging object. By default it is None and will initialize
+                an stdout based Log.
+            
+            project_root: Path
+                The project root path directory. It will be used to write and retrieve
+                the accounts cache. By default it is None. If it is None then the cache
+                will not be used.
+        '''
         self._client_id: str = client_id
         self._tenant_id: str = tenant_id
 
@@ -57,6 +81,14 @@ class Graph:
 
         # private tracker for the authentication status
         self._authenticated: bool = False
+
+        self.cache_reader: Reader = None
+        if project_root is not None:
+            self.cache_reader = Reader(
+                project_root / "config" / CACHE_NAME, 
+                logger=self.log,
+                project_root=project_root
+            )
 
         # least privilege scope that allows writing to entra, do not change!
         self._scopes: list[str] = ["User.ReadWrite.All"]
@@ -88,6 +120,9 @@ class Graph:
         getres: requests.Response = requests.get(GRAPH_ME_URL, headers=headers, timeout=timeout) 
         json: dict[str, Any] = getres.json()
 
+        if self.app:
+            print(self.app.get_accounts())
+
         if not getres.ok:
             err: RequestErrorResponse = self.get_error(json)
             self.log.info(f"Failed to request authentication | Code: {err.code} | Message: {err.message}")
@@ -98,6 +133,14 @@ class Graph:
         self._authenticated = True
 
         return res
+    
+    def get_cache_account(self) -> dict[str, Any] | None:
+        '''Retrieves the account from the cache to use for authentication process. 
+        
+        If multiple accounts are found in the cache, it will use the most recent account
+        in the cache.
+        If no accounts exist, then it will return None.
+        '''
 
     def authenticate(self) -> Response:
         '''Authenticates the client and retrieves the token for use in requests.'''
