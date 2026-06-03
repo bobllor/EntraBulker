@@ -281,17 +281,18 @@ class Graph:
             return token_cache
 
         return token_cache
-    
-    def logout(self) -> Response:
-        '''Logout from the account and clears the cache associated with the account.'''
-        if not self.app:
-            self.log.info("Logout called without authentication, application is uninitialized")
-            return utils.generate_response("error", message="Not authorized")
 
-        self.log.info("Starting logging out process of Graph")
-
+    def clear_cache(self) -> Response:
+        '''Clears the accounts and token cache from Graph. This does not logout the account,
+        that must be handled separately.
+        '''
+        self.log.info("Starting cache clearing process for Graph")
         account: dict[str, Any] = self.get_cache_account()
         account_cache: GraphAccountCacheReader = self.cache_reader.get_content()
+
+        if self.app:
+            if account is not None:
+                self.app.remove_account(account)
 
         new_account_cache: list[dict[str, Any]] = []
         for d in account_cache["account_cache"]:
@@ -306,10 +307,7 @@ class Graph:
         self.cache_reader.write(account_cache)
         self.token_cache_writer.save("")
 
-        if account is not None:
-            self.app.remove_account(account)
-
-        return utils.generate_response("success", message="Successfully logged out from Graph")
+        return utils.generate_response("success", message="Successfully signed out from Graph")
     
     @requests_handler 
     @authenticate_middleware

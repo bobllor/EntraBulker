@@ -298,21 +298,38 @@ class API:
             res["message"] = "Already authenticated"
         
         return res
+    def clear_graph_cache(self) -> Response:
+        '''Clears the cache stored in Graph, which includes the accounts and token cache.
+        This will also logout the user.
+        
+        WARNING: The user will need to go through the reauthentication process again
+        if this is called.
+        ''' 
+        # create the graph if it doesnt exist, this allows the cache to be cleared
+        # even without authenticating once
+        if not self.graph:
+            self.graph = Graph(project_root=self._project_root, log=self.logger)
+
+        self.graph.clear_cache()
+        self.graph = None
+
+        self.logger.info("Signed out of Graph")
     
+        return utils.generate_response("success", message="Successfully cleared cache")
+
     def logout_graph(self) -> Response:
-        '''Logout from Microsoft Graph. This will clear any Graph related information, including
-        the cached accounts, cached tokens, and related objects are reset to None.
+        '''Logout from Microsoft Graph. This does not clear the cache, it only
+        sets self.graph back to None.
+
+        To achieve a full cache clear and a "true logout", use clear_graph_cache().
         '''
         if not self.graph:
             return utils.generate_response("warning", message="Already logged out")
-        
-        logres: Response = self.graph.logout()
-        if logres["status"] == "success":
-            self.graph = None
 
-        self.logger.debug(f"Response: {logres}")
+        self.graph = None
+        self.logger.info("Signed out of Graph")
     
-        return logres
+        return utils.generate_response("success", message="Successfully signed out")
     
     def set_window(self, window: webview.Window) -> None:
         '''Sets the pywebview window.
