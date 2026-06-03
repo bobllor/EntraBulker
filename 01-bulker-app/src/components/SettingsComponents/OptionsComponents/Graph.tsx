@@ -8,7 +8,7 @@ import { useAuthStore } from "./store/useAuthStore";
 import { useGraphSettingStore } from "../store/useGraphSettingsStore";
 import { throttler } from "../../../utils";
 import Button from "../../ui/Button";
-import { FaCheckCircle, FaMinusCircle } from "react-icons/fa";
+import { FaCheck, FaCheckCircle, FaMinus, FaMinusCircle } from "react-icons/fa";
 import SliderButton from "../../ui/SliderButton";
 import { ToolTip } from "../../ui/ToolTip";
 import DropDown from "../../ui/DropDown";
@@ -20,16 +20,17 @@ import { useShallow } from "zustand/react/shallow";
 const throttleAuthenticateOnClick = throttler(() => authenticateOnClick(), 1500);
 
 const AUTH_BUTTON_WIDTH: number = 35;
-function AuthenticateButton(): JSX.Element{
+function AuthenticateButton({authStatus}: {authStatus: boolean}): JSX.Element{
     const isAuthenticating = useAuthStore((st) => st.isAuthenticating);
 
     return (
         <>
             {!isAuthenticating 
             ? 
-                <Button text="Login" func={() => throttleAuthenticateOnClick()} type="button" width={AUTH_BUTTON_WIDTH} />
+                <Button disabled={authStatus} text="Sign In" 
+                func={() => throttleAuthenticateOnClick()} type="button" width={AUTH_BUTTON_WIDTH} />
             : 
-                <Button text="Logging in..." type="button" width={AUTH_BUTTON_WIDTH} />
+                <Button text="Signing in..." type="button" width={AUTH_BUTTON_WIDTH} />
             } 
         </>
     )
@@ -37,13 +38,14 @@ function AuthenticateButton(): JSX.Element{
 
 const throttleLogoutOnClick = throttler(() => logoutOnClick(), 1500);
 
-function LogoutButton(): JSX.Element{
+function LogoutButton({authStatus}: {authStatus: boolean}): JSX.Element{
     return (
-        <Button text="Logout" type="button" width={AUTH_BUTTON_WIDTH} func={() => throttleLogoutOnClick() }/>
+        <Button disabled={!authStatus} title={!authStatus ? "Must be signed in" : ""}
+        text="Logout" type="button" width={AUTH_BUTTON_WIDTH} func={() => throttleLogoutOnClick() }/>
     )
 }
 
-function AuthenicationIcon({iconElement, tooltip}: {iconElement: JSX.Element, tooltip: string}): JSX.Element{
+function AuthenicationIcon({iconElement, tooltip = ""}: {iconElement: JSX.Element, tooltip?: string}): JSX.Element{
     return (
         <span 
         title={tooltip}
@@ -83,19 +85,19 @@ export default function Graph(): JSX.Element{
             label: "Client Application ID",
             element: <InputField preventDefault readerKey="client_id" 
                 updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
-            optElement: <DataText value={clientId} enableCopy={clientId != ""} />,
+            optElement: <DataText value={clientId} enableCopy={clientId != ""} justification="center" />,
         },
         {
             label: "Tenant ID",
             element: <InputField preventDefault readerKey="tenant_id" 
                 updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
-            optElement: <DataText value={tenantId} enableCopy={clientId != ""} />,
+            optElement: <DataText value={tenantId} enableCopy={clientId != ""} justification="center" />,
         },
         {
             label: "Member Type Domain CSV",
             element: <InputField preventDefault readerKey="member_type_domain_csv"
                 updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
-            optElement: <DataText value={domainCsvString} />
+            optElement: <DataText value={domainCsvString} justification="center" />
         },
         {
             label: "User Type",
@@ -105,17 +107,22 @@ export default function Graph(): JSX.Element{
             optElementDirection: "row",
         },
         {
-            label: "Login to Graph",
-            element: <AuthenticateButton />,
-            optElement: authStatus 
-                ? <AuthenicationIcon iconElement={<FaCheckCircle color="green" />} tooltip="Authenticated" /> 
-                : <AuthenicationIcon iconElement={<FaMinusCircle color="red" />} tooltip="Not authenticated" />,
-            optElementDirection: "row",
+            label: "Sign In",
+            element: <AuthenticateButton authStatus={authStatus} />,
+            optElement: <DataText value={authStatus ? "Authenticated" : "Not authenticated"} label="Status: "
+                optValueElement={
+                authStatus
+                ? <AuthenicationIcon iconElement={<FaCheckCircle color="green" />} />
+                : <AuthenicationIcon iconElement={<FaMinusCircle color="red" />} />
+            }/>,
+            optElementDirection: "col",
         },
         {
-            label: "Logout from Graph",
-            element: <LogoutButton />,
-        }
+            label: "Sign Out",
+            element: <LogoutButton authStatus={authStatus} />,
+            optElement: <ToolTip text="Sign out from Graph and clears the cache, reauthentication is required if used" />,
+            optElementDirection: "row",
+        },
     ];
 
     return (
