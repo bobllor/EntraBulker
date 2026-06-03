@@ -9,6 +9,8 @@ const ISSUES_LINK = "https://github.com/bobllor/EntraBulker/issues";
 const LICENSE_LINK = "https://github.com/bobllor/EntraBulker/blob/main/LICENSE";
 const DEVELOPER = "Tri Nguyen";
 
+const BUTTON_SIZE = 25;
+
 export default function About(): JSX.Element{
     const { version } = useMetaContext();
 
@@ -22,16 +24,16 @@ export default function About(): JSX.Element{
             element: <span>{version}</span>,
         },
         {
+            label: "License",
+            element: <Button text={"Open"} width={BUTTON_SIZE} func={() => window.open(LICENSE_LINK, "_blank")} />
+        },
+        {
             label: "Repository",
-            element: <Button text={"Open"} width={20} func={() => window.open(REPO_LINK, "_blank")}/>,
+            element: <Button text={"Open"} width={BUTTON_SIZE} func={() => window.open(REPO_LINK, "_blank")}/>,
         },
         {
             label: "Report an issue",
-            element: <Button text={"Open"} width={20} func={() => window.open(ISSUES_LINK, "_blank")} />
-        },
-        {
-            label: "License",
-            element: <Button text={"Open"} width={20} func={() => window.open(LICENSE_LINK, "_blank")} />
+            element: <Button text={"Open"} width={BUTTON_SIZE} func={() => window.open(ISSUES_LINK, "_blank")} />
         },
     ];
 
