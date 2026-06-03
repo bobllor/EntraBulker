@@ -8,21 +8,23 @@ import { toastSuccess } from "../../toastUtils";
 export default function DataText({label = "", maxValueLength = 30, value, 
     enableCopy = false, optValueElement, justification = "start"}: DataTextProps): JSX.Element{
     return (
-        <span
-        onClick={() => {
-            if(enableCopy){
-                navigator.clipboard.writeText(value).then(() => {
-                    toastSuccess("Copied to clipboard");
-                });
-            }
-        }}
-        className={`text-xs text-ellipsis overflow-hidden whitespace-nowrap w-fit max-w-68 h-4
-            flex items-center justify-${justification} rounded-xl px-1
-            ${enableCopy && "hover:bg-gray-500/25"}`}
-        title={value.length > maxValueLength ? value : ""}>
-            {label + value}
-            {optValueElement != undefined && optValueElement}
-        </span>
+        <div className="flex items-center w-60">
+            <span
+            onClick={() => {
+                if(enableCopy){
+                    navigator.clipboard.writeText(value).then(() => {
+                        toastSuccess("Copied to clipboard");
+                    });
+                }
+            }}
+            className={`text-xs text-ellipsis overflow-hidden whitespace-nowrap w-68 max-w-68 h-4
+                block items-center justify-${justification} rounded-xl px-1
+                ${enableCopy && "hover:bg-gray-500/25"}`}
+            title={value.length > maxValueLength ? value : ""}>
+                {label + value}
+                {optValueElement != undefined && optValueElement}
+            </span>
+        </div>
     )
 }
 
