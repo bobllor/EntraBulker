@@ -6,7 +6,8 @@ import { EditCellProps, FormStateProps, InputDataProps, ManualData, SelectStateP
 import ManualTable from "./ManualTable";
 import { generateId, throttler } from "../../utils";
 import Button from "../ui/Button";
-import { toastError, toastSuccess } from "../../toastUtils";
+import { toastError, toastResponse, toastSuccess } from "../../toastUtils";
+import { Response } from "../../pywebviewTypes";
 
 const submitFormThrottle = throttler((data: ManualData[], func: (...any: any) => any) => func(data));
 
@@ -15,6 +16,7 @@ export default function ManualForm({formState, selectState, editCellState}: Manu
     const divRef: React.RefObject<HTMLDivElement|null> = useRef(null);
 
     const [manualData, setManualData] = useManualData(formState);
+    const [isProcessing, setIsProcessing] = useState(false);
     
     // input validation to prevent duplicates
     const [inputData, setInputData] = useState<InputDataProps>(
@@ -79,16 +81,21 @@ export default function ManualForm({formState, selectState, editCellState}: Manu
             toastError("No entries found");
             return;
         }
+        
+        try{
+            setIsProcessing(true);
 
-        let res: {status: string, message: string} = await window.pywebview.api.generate_manual_csv(manualData);
-
-        if(res.status == 'success'){
-            toastSuccess(res.message);
+            let res: Response = await window.pywebview.api.generate_manual_csv(manualData);
             
-            // allows navigation without modal popup
-            formState.func(false);
-        }else{
-            toastError(res.message);
+            toastResponse(res);
+            if(res.status == 'success'){
+                // allows navigation without modal popup
+                formState.func(false);
+            }
+        }catch(e){
+            console.error("Unexpected error occurred:", e);
+        }finally{
+            setIsProcessing(false);
         }
     }
 
@@ -128,8 +135,10 @@ export default function ManualForm({formState, selectState, editCellState}: Manu
                 }
             </div>
             <div>
-                <Button type="submit" paddingX={10} paddingY={3} 
-                func={() => submitFormThrottle(manualData, submitManualEntry)} text="Submit"/>
+                <Button type="submit" paddingX={10} paddingY={3}
+                width={60} 
+                func={() => submitFormThrottle(manualData, submitManualEntry)} 
+                text={!isProcessing ? "Submit" : "⏳ Processing..."}/>
             </div>
         </>
     )
