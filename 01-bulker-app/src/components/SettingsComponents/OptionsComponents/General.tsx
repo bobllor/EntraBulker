@@ -8,6 +8,7 @@ import { useSettingsContext } from "../../../context/SettingsContext";
 import { setSetting, setOutputDir, setTextGenerationState, updateFormattingKey } from "../functions";
 import { ToolTip } from "../../ui/ToolTip";
 import { FormatCase, FormatStyle, FormatType } from "../../../pywebviewTypes";
+import DataText from "../../ui/DataText";
 
 const title: string = "General";
 const tooltipText: string = "General settings for the program";
@@ -34,7 +35,7 @@ export default function General(): JSX.Element{
             label: "Output Folder", 
             element: <Button text="Select Folder" paddingX={2} paddingY={2} 
                 func={() => setOutputDir(setApiSettings)} type="button" />, 
-            optElement: <OutputFolder outputDir={apiSettings.output_dir} />,
+            optElement: <DataText label="Folder: " value={apiSettings.output_dir} />,
         },
         {
             label: "Flatten CSV", 
@@ -90,21 +91,6 @@ export default function General(): JSX.Element{
     return (
         <>
             <OptionBase options={options} title={title} tooltipText={tooltipText} />
-        </>
-    )
-}
-
-function OutputFolder({outputDir}: {outputDir: string}): JSX.Element{
-    const maxLength: number = 20;
-    const label: string = "Value: ";
-
-    return (
-        <>
-            <span
-            className="text-ellipsis"
-            title={outputDir.length >= maxLength ? outputDir : ""}>
-                {label + outputDir}
-            </span>        
         </>
     )
 }
