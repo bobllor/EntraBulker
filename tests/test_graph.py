@@ -85,7 +85,7 @@ def test_graph_exceptions(graph: Graph):
 
                 assert res["status"] == "error"
 
-def test_graph_logout(graph: Graph):
+def test_graph_clear_cache(graph: Graph):
     recent_user: str = "test@domain.com"
     accounts: list[dict[str, Any]] = [{"username": recent_user}]
 
@@ -107,7 +107,7 @@ def test_graph_logout(graph: Graph):
             mock.return_value.acquire_token_silent.return_value = None
             mock.return_value.acquire_token_interactive.return_value = {"access_token": "12345"}
 
-            res: Response = graph.logout()
+            res: Response = graph.clear_cache()
 
             new_token_cache: str = graph.token_cache_writer.load()
             new_cache_reader: dict[str, Any] = graph.cache_reader.get_content()
