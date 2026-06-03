@@ -3,7 +3,7 @@ import BackgroundBlur from "../components/ui/BackgroundBlur";
 import Navigation from "../components/SettingsComponents/Navigation";
 import Options from "../components/SettingsComponents/Options";
 import { SettingsButton } from "../components/SettingsComponents/types";
-import { FaBuilding, FaClipboardList, FaHome, FaKey, FaList, FaMicrosoft } from "react-icons/fa";
+import { FaBuilding, FaClipboardList, FaHome, FaInfo, FaKey, FaList, FaMicrosoft } from "react-icons/fa";
 
 const iconSize: number = 20;
 const buttons: Array<SettingsButton> = [
@@ -13,6 +13,7 @@ const buttons: Array<SettingsButton> = [
     {label: "Password", url: "password", icon: <FaKey size={iconSize} />},
     {label: "Text Template", url: "template", icon: <FaClipboardList size={iconSize} />},
     {label: "Microsoft Graph", url: "graph", icon: <FaMicrosoft size={iconSize} />},
+    {label: "About", url: "about", icon: <FaInfo size={iconSize} />},
 ]
 
 export default function Settings({setShowSetting}: 

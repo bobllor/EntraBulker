@@ -17,6 +17,7 @@ import { useCheckUpdate, useDisableContext, useDisableShortcuts, useInitializeZu
 import { useMetaContext } from "./context/MetaContext";
 import { FaHome, FaHammer, FaCog } from "react-icons/fa";
 import { useGraphSettingStore } from "./components/SettingsComponents/store/useGraphSettingsStore";
+import About from "./components/SettingsComponents/OptionsComponents/About";
 
 const fullPageStyle = 'h-screen w-screen flex flex-col justify-center items-center overflow-hidden relative p-3'
 const navigationButtons = [
@@ -77,6 +78,7 @@ export default function App() {
               <Route path="template" element={<TextForm />} />
               <Route path="password" element={<Password />} />
               <Route path="graph" element={<Graph />} />
+              <Route path="about" element={<About />} />
             </Route>
           </Routes>
         }
