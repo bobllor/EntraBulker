@@ -5,12 +5,12 @@ transforming CSV and Excel reports into bulk user creation data.
 It can generate *ready to use CSV bulk files* or directly *create users in a tenant* via Graph API using 
 a registered application.
 
-It is a WebView local application built with Python, TypeScript, and JavaScript, to assist administrators in
+It is a WebView desktop application built with Python, TypeScript, and JavaScript, to assist administrators in
 automating user creation with Entra ID.
 
 ## Example
 
-An example input file:
+Below is an example of what an expected report file would look like:
 
 | Full name | Organization |
 | --- | --- |
@@ -35,13 +35,17 @@ The output file can now be uploaded to Azure Entra ID and bulk create all rows o
 ## Table of Contents
 
 - [Installation](#installation)
-- [Disclaimers](#disclaimers)
 - [Usage](#usage)
     - [Settings](#settings)
     - [Side Effects](#side-effects)
     - [File Uploading](#file-uploading)
     - [Manual Entries](#manual-entries)
     - [Updating](#updating)
+- [Microsoft Graph](#microsoft-graph)
+    - [Registering an Application](#registering-an-application)
+    - [Setup](#setup)
+    - [Usage](#usage-1)
+    - [Caching](#caching)
 - [Development](#development)
     - [Initializing Project](#initializing-project)
     - [Running the Application](#running-the-application)
@@ -67,10 +71,6 @@ The ZIP file has a folder structure like so (which is the same as the binary ins
 
 The files can be extracted to a given location and the application can be launched via `EntraBulker.exe` located in the `apps` folder.
 It is *recommended* to make a shortcut of `EntraBulker.exe` in order to use it outside of the folder.
-
-## Disclaimers
-
-
 
 ## Usage
 
@@ -155,64 +155,68 @@ Updating can be done through using the new binary installer or replacing the fil
 
 ## Microsoft Graph
 
-The application supports Microsoft Graph API and user creation can be directly added into the tenant
-during a submission.
+The application supports Microsoft Graph API to create users directly into the tenant during a submission.
+It is a *public client* which uses *delegated permissions* to perform the tasks.
 
-To enable Graph support, the `Microsoft Graph` settings contains the option `Enable Graph`.
-This must be toggled to `ON` in order to enable the Graph workflow with the submission process.
-
-The application uses *delegated permissions* to perform the tasks required and is a *public client*.
-No secrets are stored on the application.
+To enable Graph support and start the workflow:
+- An application must be registered and configured in the tenant
+- The option `Enable Graph` in the `Microsoft Graph` settings must be enabled
+- There are valid IDs for *application (client) ID and directory (tenant) ID*
+- You have a valid access token for Graph, obtained via authentication by signing in
 
 ### Registering an Application
 
-In order to use Graph, there must be a *registered application* in your Entra ID tenant. Microsoft provides official
+In order to use Graph, a *registered application* is required in your Entra ID tenant. Microsoft provides official
 documentation on [how to register one](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
 
-The *redirect URI* needs to be setup in the `Authentication` tab of the application page.
-The new redirect URI should be made with the *Mobile and desktop applications* tab.
-
-<img src="./docs/assets/redirect-uri-how-to.png" alt="Add Redirect URI side menu" width="600">
-
-The value of the redirect URI is your choice. If you are unsure, the default `http://localhost:8400` can be used, but the
-port can be changed. This is locally created during the authentication process.
-
-<img src="./docs/assets/redirect-uri-example.png" alt="Example URI value" width="600" >
+1. Register an application on Entra ID
+2. Configure a *Mobile and desktop applications* redirect URI
+    - The value of the redirect URI is dependent on your requirements, if you are unsure
+    `http://localhost:8400`, or a port of your choosing, is recommended
+3. Record the *client ID and tenant ID* 
+4. Enable delegated permissions in the application for `User.ReadWrite.All`
 
 ### Setup
 
-After registering an application to your tenant, on the `Overview` tab of the application page will reveal
-two IDs that are required: the `Application (client) ID` and the `Directory (tenant) ID`.
-These two values are used to identify the application in the tenant and the tenant the users will authenticate
-against, respectively.
+Once an application is registered, the application will need to be setup with the values
+in order to obtain an access token. This is done through the `Microsoft Graph` *settings page*
+of the application.
 
-<img src="./docs/assets/app-id-example.png" alt="Picture of the IDs found on the Overview tab" width="600" >
+1. Using the *client ID and tenant ID*, input the values in their respective fields
+2. Sign in to authenticate
 
-Inside the settings of EntraBulker contains a tab called `Microsoft Graph`. These two values will be set
-in the options of Microsoft Graph: `Client Application ID` and `Tenant ID`.
-
-Once all the above is complete, the next step is to *authenticate* with an account in the tenant.
-
-When the `Login` button is clicked, it will attempt to authenticate by opening the system's default browser to
-*the tenant's identity platform*. Logging into an account in the tenant will authenticate and create the token
-for the session
-- The account *must be able to perform CRUD operations on the Entra ID directory*. If the permissions are not
-enabled, then there will be *unauthorized errors*.
-
-If the authentication was successful, the checkmark will turn green alongside a toast showing a successful authentication.
-Graph is now enabled and ready to be used with the application.
+Once authenticated, the program is ready to use Graph to create the users.
 
 ### Usage
 
 With Graph, the users are directly created in the tenant. The workflow *process remains the exact same*, creating
 the CSV file and template if enabled.
 After the CSV file is generated to the output folder, Graph will run at this stage and add the users to the tenant.
-- This is to keep data to pass to the end user for onboarding.
+- The output files are generated for onboarding the end user and as a fallback for offline workflows.
 
 > DISCLAIMER
 >
-> Due to Graph API being *network requests*, it will take more time compared to the offline CSV version.
-> However, this allows more automation and customization with the user type for each created user.
+> Graph API require network requests and will be slower than the offline CSV processing.
+
+All errors will be logged, including the reason why the Graph POST failed and for which users.
+
+### Caching
+
+When you authenticate for the first time, your *access token is cached* to an *encrypted file*
+on the disk. This is to reauthenticate with the access token without having to go through 
+the full authentication process again.
+- If your device *does not support encryption*, then it will fall back to *plain text*
+
+If the cached access token is not available, then the system's *default browser* is opened to a page of
+your tenant's authority URI. The account used to login *must be in the same tenant* as where the
+application is registered. 
+- There is a *2 minute timeout* on the authentication process, if this timeout is reached it will
+abort the authentication
+
+Multiple accounts *are not supported*. If a different account is required, then you must
+*clear the cache*.
+This will remove the cached access token and the cached accounts, allowing you to authenticate
+with a different account.
 
 ## Development
 
