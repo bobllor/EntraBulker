@@ -16,7 +16,7 @@ def test_authenticate_normal(graph: Graph):
         mock.return_value.acquire_token_interactive.return_value = {"access_token": token}
         res: Response = graph.authenticate()
 
-        assert res["status"] == "success" and res["content"] == token
+        assert res["status"] == "success" and graph.access_token == token
 
 def test_authenticate_app_creation_fail(graph: Graph):
     res: Response = graph.authenticate()
@@ -32,7 +32,7 @@ def test_fail_authenticate(graph: Graph):
         mock.return_value.acquire_token_interactive.return_value = {
             "error": "ERR_TOKEN_RETRIEVAL",
             "error_description": "An error occurred while retrieving token",
-            "id": "abcd-12345"
+            "correlation_id": "abcd-12345"
         }
         res: Response = graph.authenticate()
 
