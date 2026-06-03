@@ -15,8 +15,9 @@ export default function OptionBase({options = [], tooltipText, title, element}: 
                 {options.length > 0 && !element ? options.map((opt, i) => (
                     <div 
                     key={i}
-                    className={getClassName(opt.justify)}>
-                        <div className={`flex ${opt.optElementDirection == "row" ? "flex-row items-center" : "flex-col"} justify-center text-nowrap`}>
+                    className={`${getClassName(opt.justify)} ${i == options.length - 1 && "mb-25"}`}>
+                        <div className={`flex ${opt.optElementDirection == "row" ? "flex-row items-center" : "flex-col"} 
+                            justify-center text-nowrap`}>
                             {opt.label}
                             {opt.optElement && opt.optElement}
                         </div>
