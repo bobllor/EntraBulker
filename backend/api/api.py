@@ -93,7 +93,7 @@ class API:
 
         # has to be authenticated first before this can be used
         # successful authentication will create a new Graph
-        self.graph: Graph = Graph("", "", project_root=project_root) 
+        self.graph: Graph = None 
 
         self._project_root: Path = project_root
 
@@ -262,6 +262,9 @@ class API:
     def authenticate_graph(self) -> Response:
         '''Authenticates to Microsoft Graph. This requires a client application ID and tenant ID.
         If the authentication status is already true, then this will do nothing.
+
+        If already authenticated, then this will return a warning. The previous login must be
+        cleared before reauthentication is possible.
         
         If authentication is unsuccessful, an error Response is returned. Otherwise, a normal
         Response will be returned.
@@ -277,33 +280,39 @@ class API:
             self.logger.info(f"Missing tenant ID, aborting authentication")
             return utils.generate_response("error", message="Missing tenant ID")
 
-        auth_res: Response = self.graph.is_authenticated()
-        if auth_res["status"] == "error":
-            return auth_res
-        self.logger.debug(f"Response: {auth_res}")
-
-        if not auth_res["content"]:
+        # if self.graph exists, then we are already authenticated. 
+        if not self.graph:
             # recreates it, initially it has nil values.
             # reauthenication will create a new token which creates a new Graph
-            self.graph = Graph(client_id, tenant_id, log=self.logger)
+            self.graph = Graph(client_id, tenant_id, log=self.logger, project_root=self._project_root)
+            # contains the token, do not log
             auth_res_two: Response = self.graph.authenticate()
             
             if auth_res_two["status"] == "error":
+                # reset graph to None in order to authenticate again
+                self.graph = None
                 return auth_res_two
-            
-            if "access_token" in auth_res_two:
-                del auth_res_two["access_token"]
-            if "refresh_token" in auth_res_two:
-                del auth_res_two["refresh_token"]
-            if "id_token" in auth_res_two:
-                del auth_res_two["id_token"]
-            
-            self.logger.debug(f"Authentication response: {auth_res_two}")
         else:
             self.logger.info(f"Already authenticated")
+            res["status"] = "warning"
             res["message"] = "Already authenticated"
         
         return res
+    
+    def logout_graph(self) -> Response:
+        '''Logout from Microsoft Graph. This will clear any Graph related information, including
+        the cached accounts, cached tokens, and related objects are reset to None.
+        '''
+        if not self.graph:
+            return utils.generate_response("warning", message="Already logged out")
+        
+        logres: Response = self.graph.logout()
+        if logres["status"] == "success":
+            self.graph = None
+
+        self.logger.debug(f"Response: {logres}")
+    
+        return logres
     
     def set_window(self, window: webview.Window) -> None:
         '''Sets the pywebview window.
@@ -523,8 +532,7 @@ class API:
         return res
     
     def add_users_graph_api(self, users: UserData, is_member: bool = False) -> Response:
-        '''Add the users using Graph API. This requires the delegated permissions and proper
-        authentication.
+        '''Add the users using Graph API. Authentication occurs during the method call.
 
         Parameters
         ----------
@@ -535,6 +543,12 @@ class API:
                 Used to indicate the userType of the user, which is "Member" or "Guest".
                 By default it is False, creating the users in "Guest".
         '''
+        # self.graph is initially None, this must be checked. if it is None then
+        # we are not authenticated
+        # this is set in authenticate_graph()
+        if not self.graph:
+            return utils.generate_response("warning", message="Not authenticated")
+
         data: list[CreateUserJson] = self._create_json_users(users, is_member)
         res: Response = self.graph.create_users(data)
         self.logger.debug(f"Graph add users response: {res}")
@@ -684,21 +698,19 @@ class API:
         if not enabled:
             return utils.generate_response(message="Graph is not enabled in the settings")
 
-        authres: Response = self.graph.is_authenticated()
-        if authres["content"]:
-            self.logger.info(f"Starting Microsoft Graph process, use Graph option is {enabled} and is authenticated")
+        self.logger.info(f"Starting the user creation with Graph")
 
-            # value will be member or guest, but in the event its a bad value it will
-            # default to guest for least privileges concerns
-            is_member: bool = self.graph_reader.get("user_type") == "member"
-            graphres: Response = self.add_users_graph_api(user_data, is_member)
+        # value will be member or guest, but in the event its a bad value it will
+        # default to guest for least privileges concerns
+        is_member: bool = self.graph_reader.get("user_type") == "member"
+        graphres: Response = self.add_users_graph_api(user_data, is_member)
 
-            if graphres["status"] == "warning":
-                res["status"] = graphres["status"]
-                res["message"] = "Encountered errors while adding users to the tenant"
-            elif graphres["status"] == "error":
-                res["status"] = graphres["status"]
-                res["message"] = "Failed to add users to the tenant"
+        if graphres["status"] == "warning":
+            res["status"] = graphres["status"]
+            res["message"] = "Encountered errors while adding users to the tenant"
+        elif graphres["status"] == "error":
+            res["status"] = graphres["status"]
+            res["message"] = "Failed to add users to the tenant"
         
         return res
     
