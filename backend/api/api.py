@@ -825,12 +825,14 @@ class API:
         #parser.apply(default_excel_columns["name"], func=utils.format_name)
 
         # converting all values to a string to ensure no errors occur.
+        parser.fillna(excel_columns["opco"], "")
         parser.apply(excel_columns["opco"], func=lambda x: x.lower())
         
         dropped_name_rows: int = parser.drop_empty_rows(excel_columns["name"])
-        dropped_opco_rows: int = parser.drop_empty_rows(excel_columns["opco"])
+        # no dropped opco rows, if opco is empty then it will default to the default key
+        #dropped_opco_rows: int = parser.drop_empty_rows(excel_columns["opco"])
 
-        dropped_rows: int = dropped_name_rows + dropped_opco_rows
+        dropped_rows: int = dropped_name_rows #+ dropped_opco_rows
 
         new_len: int = parser.length
 
@@ -841,15 +843,11 @@ class API:
             "Total rows dropped": {dropped_rows},
         }
 
-        self.logger.debug(
-            f"Dropped names: {dropped_name_rows}/{base_len}" +
-            f" | Dropped opcos: {dropped_opco_rows}/{base_len}" +
-            f" | Total dropped rows: {dropped_rows}/{base_len}"
-        )
+        self.logger.debug(debug_data)
 
         if new_len == 0:
             res["status"] = "error"
-            res["message"] = f"File is empty after validation ({dropped_rows}/{base_len} dropped rows), please correct the data"
+            res["message"] = f"File is empty after validation ({dropped_rows}/{base_len} dropped rows), data correction required"
 
             return res
 
