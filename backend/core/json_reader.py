@@ -164,7 +164,7 @@ class Reader:
         )
     
     def update(self, key: str, value: Any) -> dict[str, Any]:
-        '''Updates a key with the value.
+        '''Updates a key with the value and write to the Reader.
         
         A dictionary response is generated and returned, indicating the status and message.
 
