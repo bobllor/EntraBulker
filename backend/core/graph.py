@@ -1,11 +1,14 @@
-from msal import PublicClientApplication
+from msal import PublicClientApplication, SerializableTokenCache
 from msal.oauth2cli.oauth2 import BrowserInteractionTimeoutError
 from logger import Log
-from typing import Any, Callable
+from typing import Any, Callable, TypeVar, ParamSpec
 from support.types import Response
-from core.types.graph import CreateUserJson, JsonHeaders, RequestErrorResponse
+from core.types.graph import CreateUserJson, JsonHeaders, RequestErrorResponse, GraphAccountCacheReader
+from core.graph_tils.writer import TokenCacheWriter
 from pathlib import Path
 from core.json_reader import Reader
+from functools import wraps
+import json
 import requests
 import support.utils as utils
 
@@ -14,8 +17,10 @@ GRAPH_CREATE_USER_URL: str = f"{GRAPH_BASE_URL}/users"
 GRAPH_ME_URL: str = f"{GRAPH_BASE_URL}/me"
 
 REQ_TIMEOUT: int = 20
+P = ParamSpec("P")
+T = TypeVar("T")
 
-def requests_handler(f: Callable[[Any], Response]) -> Response:
+def requests_handler(f: Callable[P, T]) -> Callable[P, T]:
     '''Decorator used to wrap requests methods in a try-except and logs with
     errors if one occurs.
 
@@ -23,6 +28,7 @@ def requests_handler(f: Callable[[Any], Response]) -> Response:
 
     Any error exceptions will return the error `status`, the error `message`, and a None `content`.
     '''
+    @wraps(f)
     def wrapper(self, *args, **kwargs):
         try:
             res: Response = f(self, *args, **kwargs)
@@ -40,11 +46,15 @@ def requests_handler(f: Callable[[Any], Response]) -> Response:
     
     return wrapper
 
-CACHE_NAME: str = ".mscache"
+CACHE_NAME: str = ".msaccount-cache.json"
+DEFAULT_CACHE_MAP: GraphAccountCacheReader = {
+    "account_cache": [],
+    "recent_username": "",
+}
 
 class Graph:
     '''Class used for Microsoft Graph based operations.'''
-    def __init__(self, client_id: str= "", tenant_id: str = "", *, log: Log = None, project_root: Path = None):
+    def __init__(self, client_id: str= "", tenant_id: str = "", *, project_root: Path, log: Log = None):
         '''
         Parameters
         ----------
@@ -56,14 +66,13 @@ class Graph:
                 The directory tenant ID of the Entra ID tenant being targeted.
                 By default it is an empty string.
             
+            project_root: Path
+                The project root path directory. It will be used to write and retrieve
+                the accounts cache and the token cache.
+
             log: Log
                 The logging object. By default it is None and will initialize
                 an stdout based Log.
-            
-            project_root: Path
-                The project root path directory. It will be used to write and retrieve
-                the accounts cache. By default it is None. If it is None then the cache
-                will not be used.
         '''
         self._client_id: str = client_id
         self._tenant_id: str = tenant_id
@@ -72,128 +81,217 @@ class Graph:
 
         self._auth_url: str = f"https://login.microsoftonline.com/{self._tenant_id}"
 
-        self.token: str = None
-        # set in authenticate on succcessful token retrieval
-        self.bearer: str = ""
-
         # set inside authenticate
         self.app: PublicClientApplication = None
+        
+        config_path: Path = project_root / "config"
 
-        # private tracker for the authentication status
-        self._authenticated: bool = False
+        # the json reader, not related to the token cache writer
+        self.cache_reader = Reader(
+            config_path / CACHE_NAME, 
+            logger=self.log,
+            project_root=project_root,
+            defaults=DEFAULT_CACHE_MAP,
+        )
 
-        self.cache_reader: Reader = None
-        if project_root is not None:
-            self.cache_reader = Reader(
-                project_root / "config" / CACHE_NAME, 
-                logger=self.log,
-                project_root=project_root
-            )
+        # token cache writer and reader. by default it will be encrypted, but plain text is a
+        # fall back. 
+        self.token_cache_writer: TokenCacheWriter = TokenCacheWriter(config_path, log=self.log)
+
+        # set inside the first call of authenticate
+        self.token_cache: SerializableTokenCache = self.get_token_cache()
 
         # least privilege scope that allows writing to entra, do not change!
         self._scopes: list[str] = ["User.ReadWrite.All"]
 
-    @requests_handler 
-    def is_authenticated(self) -> Response:
-        '''Checks if the client is authenticated. It will return a Response with the
-        status of the authentication in content.
-
-        If the token is None, then it will return not authenticated. A request is sent
-        to check if a token exists.
-
-        The Response status will always be success, unless an exception occurs during
-        the request itself in which case it will be an error.
-        '''
-        not_res: Response = utils.generate_response("success", message="Not authenticated", content=False)
-        if self.token is None:
-            self._authenticated = False
-            return not_res
-
-        res: Response = utils.generate_response("success", message="Authenticated", content=True)
-
-        headers: JsonHeaders = {
-            "authorization": self.bearer,
-        }
-
-        # due to it being a GET the timeout can afford to be less
-        timeout: str = REQ_TIMEOUT // 2
-        getres: requests.Response = requests.get(GRAPH_ME_URL, headers=headers, timeout=timeout) 
-        json: dict[str, Any] = getres.json()
-
-        if self.app:
-            print(self.app.get_accounts())
-
-        if not getres.ok:
-            err: RequestErrorResponse = self.get_error(json)
-            self.log.info(f"Failed to request authentication | Code: {err.code} | Message: {err.message}")
-            self._authenticated = False
-
-            return not_res
-
-        self._authenticated = True
-
-        return res
-    
-    def get_cache_account(self) -> dict[str, Any] | None:
-        '''Retrieves the account from the cache to use for authentication process. 
-        
-        If multiple accounts are found in the cache, it will use the most recent account
-        in the cache.
-        If no accounts exist, then it will return None.
-        '''
-
     def authenticate(self) -> Response:
-        '''Authenticates the client and retrieves the token for use in requests.'''
-        res: Response = utils.generate_response(message="Successfully authenticated")
+        '''
+        Authenticates the client and retrieves the token for use in requests. This is not
+        required to be called, the call automatically occurs with every request.
+
+        The account cache will be used first, before doing an interactive browser authentication.
+        Upon successful authentication, the cache will be written to with the logged in user
+        and the cache of the account.
+        
+        It will return the token in the `content` of the Response if it exists. Otherwise,
+        content will be `None`.
+        '''
+        res: Response = utils.generate_response(message="Successfully authenticated", content=None)
         self.log.info("Starting authentication process for Graph API")
 
+        token_key: str = "access_token"
+        cache: GraphAccountCacheReader = self.cache_reader.get_content()
+        auth_url: str = f"https://login.microsoftonline.com/{self._tenant_id}"
+
         try:
-            app: PublicClientApplication = PublicClientApplication(
-                self._client_id,
-                authority=self._auth_url,
-            )
-        except ValueError as e:
-            self.log.error(f"Invalid authority URL: {self._auth_url} | Tenant ID: {self._tenant_id} | {str(e)}")
-
-            return utils.generate_response("error", message="An unknown error occurred during authentication")
-
-        self.app = app
-
-        if self.token is None or not self._authenticated:
-            timeout_seconds: int = 120
-            token_key: str = "access_token"
-
-            try:
-                auth_res: dict[str, Any] = app.acquire_token_interactive(self._scopes, timeout=timeout_seconds)
-            except BrowserInteractionTimeoutError:
-                self.log.info(f"Authentication timeout reached: User did not complete the flow in time")
-
-                return utils.generate_response("error", message="Authentication timed out")
-
-            if token_key in auth_res:
-                self.token = auth_res.get(token_key)
-                self.bearer = f"Bearer {self.token}"
-            else:
-                errorStr: str = f"error={auth_res.get('error')};desc={auth_res.get('error_description')};id={auth_res.get('correlation_id')}"
-                self.log.error(
-                    f"Failed to authenticate Graph API | {errorStr}"
+            app: PublicClientApplication = self.app
+            if not self.app:
+                app = PublicClientApplication(
+                    self._client_id,
+                    authority=auth_url,
+                    token_cache=self.token_cache,
                 )
-                res = utils.generate_response("error", message="Failed to authenticate")
 
-                return res
-            
-            self.log.info("Successfully authenticated")
-            self.log.debug(f"Access token length: {len(self.token)}")
-        else:
-            self.log.info("Already authenticated")
-            res["message"] = "Already authenticated"
+            result: dict[str, Any] | None = self._authenticate_with_account(app)
+            if result is not None:
+                self.log.info("Existing cached token found, extracting token")
+                res["content"] = result.get(token_key)
+            else:
+                self.log.info("No cached token found")
+                timeout_seconds: int = 120
 
-        return res
+                try:
+                    result = app.acquire_token_interactive(self._scopes, timeout=timeout_seconds)
+                except BrowserInteractionTimeoutError:
+                    self.log.info(f"Authentication timeout reached: User did not complete the flow in time")
 
+                    return utils.generate_response("error", message="Authentication timed out")
+
+                if token_key in result:
+                    self.log.info("Successfully authenticated, extracting token")
+                    res["content"] = result.get(token_key)
+
+                    accounts: list[dict[str, Any]] = app.get_accounts()
+                    if len(cache["account_cache"]) != len(accounts) and len(accounts) > 0:
+                        self.cache_reader.update("account_cache", accounts)
+                        self.cache_reader.update("recent_username", accounts[-1].get("username"))
+                else:
+                    errorStr: str = f"error={result.get('error')};desc={result.get('error_description')};id={result.get('correlation_id')}"
+                    self.log.error(
+                        f"Failed to authenticate Graph API | {errorStr}"
+                    )
+                    res = utils.generate_response("error", message="Failed to authenticate")
+
+                    return res
+                
+                self.log.debug(f"Access token length: {len(res['content'])}")
+
+            self.app = app
+            # needs to be rewritten every authentication
+            self.save_token_cache(self.token_cache.serialize())
+
+            return res
+
+        except ValueError as e:
+            self.log.error(f"Authority URL: {auth_url} | Tenant ID: {self._tenant_id} | {str(e)}")
+
+            return utils.generate_response("error", message="Authentication failed due to invalid tenant")
+
+        except Exception as e:
+            self.log.error(f"An unknown exception occurred ({type(e)}): {str(e)}")
+
+            return utils.generate_response("error", message="An unknown error occurred while authenticating")
+    
+    def _authenticate_with_account(self, app: PublicClientApplication) -> dict[str, Any] | None:
+        '''Authenticates with the most recent account in the cache and return the result.
+        
+        If there is no result, then it will return `None`.
+        '''
+        account: dict[str, Any] = self.get_cache_account()
+        self.log.debug(f"Most recent cached account: {account}")
+        result: dict[str, Any] | None = app.acquire_token_silent(self._scopes, account)
+
+        return result
+    
+    def get_cache_account(self) -> dict[str, Any] | None:
+        '''Retrieves the account from the cache to use for the authentication process. 
+        
+        If *multiple accounts* are found in the cache, it will use the **most recently
+        logged in account**. 
+        If the most recent account cannot be found in the cache, then it 
+        will **use the latest entry in the cache**.
+        If *no accounts exist* in the cache, then it will return `None`.
+
+        This requires self.cache_reader to exist, if it is not initialized then it will 
+        return `None`.
+        '''
+        if not self.cache_reader:
+            self.log.warning("Cache Reader was not initialized")
+            return None
+
+        reader: GraphAccountCacheReader = self.cache_reader.get_content()
+        cache: list[dict[str,Any]] = reader.get("account_cache")
+        if len(cache) == 0:
+            self.log.info("No accounts found in cache")
+            return None
+        
+        recent_user: str = reader.get("recent_username")
+        for acc in cache:
+            if acc.get("username") == recent_user:
+                return acc
+
+        # use the latest entry in the cache if the user is not found
+        most_recent_account: dict[str, Any] = cache[-1]
+        self.cache_reader.update("recent_username", most_recent_account.get("username", ""))
+
+        return most_recent_account
+    
+    def save_token_cache(self, content: dict[str, Any] | str):
+        '''Writes the content to the persistent cache for the token. Content can be
+        a dictionary or string.
+        '''
+        data: str = json.dumps(content) if isinstance(content, dict) else content
+        self.token_cache_writer.save(data)
+
+        self.log.info("Saved data to token cache")
+    
+    def get_token_cache(self) -> SerializableTokenCache:
+        '''Retrieves the token cache from the persistent cache file.
+        
+        If the token cache does not exist or if an error occurs
+        while deserializing, it will return a default token cache. 
+        '''
+        token_cache: SerializableTokenCache = SerializableTokenCache()
+
+        if not self.token_cache_writer.exists():
+            return token_cache
+
+        cache_str: str = self.token_cache_writer.load()
+
+        try:
+            token_cache.deserialize(cache_str)
+            self.log.info("Deserialized token cache")
+        except Exception:
+            self.log.exception("Failed to load cache data")
+            self.log.info("Using an empty token cache due to an error while loading")
+
+            return token_cache
+
+        return token_cache
+    
+    def logout(self) -> Response:
+        '''Logout from the account and clears the cache associated with the account.'''
+        if not self.app:
+            self.log.info("Logout called without authentication, application is uninitialized")
+            return utils.generate_response("error", message="Not authorized")
+
+        self.log.info("Starting logging out process of Graph")
+
+        account: dict[str, Any] = self.get_cache_account()
+        account_cache: GraphAccountCacheReader = self.cache_reader.get_content()
+
+        new_account_cache: list[dict[str, Any]] = []
+        for d in account_cache["account_cache"]:
+            if account_cache["recent_username"] != d.get("username"):
+                new_account_cache.append(d)
+
+        self.log.debug(f"New account cache: {new_account_cache}")
+
+        account_cache["account_cache"] = new_account_cache
+        account_cache["recent_username"] = ""
+
+        self.cache_reader.write(account_cache)
+        self.token_cache_writer.save("")
+
+        if account is not None:
+            self.app.remove_account(account)
+
+        return utils.generate_response("success", message="Successfully logged out from Graph")
+    
     @requests_handler 
     def create_users(self, users: list[CreateUserJson]) -> Response:
-        '''Sends a POST request and creates the users. Errors that occur will not interrupt other users
-        given in the list but will be logged.
+        '''Authenticates and then sends a POST request and creates the users. 
+        Errors that occur will not interrupt other users given in the list but will be logged.
 
         Any error that will occur automatically will mark the Response as an error. 
         
@@ -201,8 +299,15 @@ class Graph:
         If there are a handful of failed POST requests, then it will return a *warning*. 
         '''
         end_res: Response = utils.generate_response(message=f"Created users")
+        token_res: Response = self.authenticate()
+        if token_res["status"] == "error" or token_res["content"] == None:
+            self.log.error(f"Failed to authenticate: {token_res}")
+            return token_res
+
+        token: str = token_res["content"]
+
         headers: JsonHeaders = {
-            "authorization": self.bearer,
+            "authorization": f"Bearer {token}",
             "content-type": "application/json"
         }
 
