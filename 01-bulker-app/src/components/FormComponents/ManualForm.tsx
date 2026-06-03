@@ -1,11 +1,12 @@
 import { useState, useRef, JSX } from "react";
-import { addEntry, submitManualEntry, validateInput } from "./manualUtils/functions";
+import { validateInput } from "./manualUtils/functions";
 import { formInputs } from "./manualUtils/vars";
 import { useManualData } from "./manualUtils/hooks";
 import { EditCellProps, FormStateProps, InputDataProps, ManualData, SelectStateProps } from "./manualUtils/types";
 import ManualTable from "./ManualTable";
-import { throttler } from "../../utils";
+import { generateId, throttler } from "../../utils";
 import Button from "../ui/Button";
+import { toastError, toastSuccess } from "../../toastUtils";
 
 const submitFormThrottle = throttler((data: ManualData[], func: (...any: any) => any) => func(data));
 
@@ -19,6 +20,77 @@ export default function ManualForm({formState, selectState, editCellState}: Manu
     const [inputData, setInputData] = useState<InputDataProps>(
         {nameValue: '', opcoValue: ''}
     );
+
+    const addEntry = async (): Promise<void> => {
+        if(!divRef.current) return;
+
+        const objTemp: ManualData = {};
+
+        const objProps: Array<string> = ['name', 'opco'];
+
+        // used to prevent the name and opco fields from being the same value.
+        let nameInput: null|HTMLInputElement = null;
+        let nameInputValue: null|string = null;
+        
+        // not sure if there is a better way to do this, i tried thinking about using refs in ManualForm but
+        // it wouldn't work really well because of the loop to create the elements
+        const inputElements: NodeListOf<HTMLInputElement> = divRef.current!.querySelectorAll('input');
+        let index: number = 0;
+
+        for(const input of inputElements){
+            const value: string = input.value.trim();
+
+            if(value == '' && input.id.includes('name')){
+                toastError('Empty entry in the name field is not allowed');
+                return;
+            }else if(nameInputValue == value){
+                toastError('Cannot have duplicate values in the fields');
+                return;
+            }
+
+            if(!nameInput && !nameInputValue){
+                nameInput = input;
+                nameInputValue = input.value;
+            }
+
+            if(formInputs[index].name == input.id){
+                objTemp[objProps[index] as keyof ManualData] = input.value;
+            }
+
+            index += 1;
+        }
+
+        // only resets the values if successful
+        for(const input of inputElements){
+            input.value = '';
+        }
+
+        nameInput?.focus();
+        
+        const id: string = generateId();
+        objTemp['id'] = id;
+
+        console.info("Added new entry:", objTemp)
+        setManualData(prev => [...prev, objTemp]);
+    }
+
+    const submitManualEntry = async(): Promise<void> => {
+        if(manualData.length == 0){
+            toastError("No entries found");
+            return;
+        }
+
+        let res: {status: string, message: string} = await window.pywebview.api.generate_manual_csv(manualData);
+
+        if(res.status == 'success'){
+            toastSuccess(res.message);
+            
+            // allows navigation without modal popup
+            formState.func(false);
+        }else{
+            toastError(res.message);
+        }
+    }
 
     return (
         <>
@@ -36,13 +108,13 @@ export default function ManualForm({formState, selectState, editCellState}: Manu
                         spellCheck={false}
                         className={`outline-blue-300 px-3 py-1 rounded-xl input-style`}
                         onChange={(e) => validateInput(e, setInputData)}
-                        onKeyDown={(e) => e.key == 'Enter' && addEntry(divRef, setManualData)}
+                        onKeyDown={(e) => e.key == 'Enter' && addEntry()}
                         type="text" />
                     </div>
                 ))}
                 <button
                 className={`px-5 py-3 rounded-xl bg-blue-500 text-white hover:bg-blue-400`}
-                onClick={() => addEntry(divRef, setManualData)}>Add Entry</button>
+                onClick={() => addEntry()}>Add Entry</button>
             </div>
             <div
             className="relative overflow-y-scroll min-w-200 max-w-200 min-h-90 max-h-90 overflow-x-hidden">
