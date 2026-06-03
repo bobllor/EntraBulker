@@ -37,6 +37,7 @@ function AuthenticateButton({authStatus}: {authStatus: boolean}): JSX.Element{
 }
 
 const throttleLogoutOnClick = throttler(() => logoutOnClick(), 1500);
+const throttleClearCacheOnClick = throttler(() => clearGraphCacheOnClick(), 1500);
 
 function LogoutButton({authStatus}: {authStatus: boolean}): JSX.Element{
     return (
@@ -120,9 +121,13 @@ export default function Graph(): JSX.Element{
         {
             label: "Sign Out",
             element: <LogoutButton authStatus={authStatus} />,
-            optElement: <ToolTip text="Sign out from Graph and clears the cache, reauthentication is required if used" />,
-            optElementDirection: "row",
         },
+        {
+            label: "Clear cache",
+            element: <Button text={"Clear Cache"} func={() => throttleClearCacheOnClick()} width={AUTH_BUTTON_WIDTH} />,
+            optElement: <ToolTip text="Clears the stored Microsoft Graph cache and logs out, if used reauthentication is required" />,
+            optElementDirection: "row",
+        }
     ];
 
     return (
@@ -130,6 +135,25 @@ export default function Graph(): JSX.Element{
             <OptionBase options={options} title="Microsoft Graph" tooltipText="Microsoft Graph settings"/>
         </>
     )
+}
+
+/**
+ * Clears the stored cache for Graph. This will also logout the user.
+ */
+async function clearGraphCacheOnClick(){
+    const setAuth = useAuthStore.getState().setAuthStatus;
+
+    try{
+        const res: Response = await window.pywebview.api.clear_graph_cache();
+
+        if(res.status != "error"){
+            setAuth(false); 
+        }
+
+        toastResponse(res);
+    }catch(e){
+        console.error("An unknown error occurred", e);
+    }
 }
 
 /**
@@ -169,7 +193,6 @@ async function authenticateOnClick(){
  * Logout from Graph.
  */
 async function logoutOnClick(){
-    const authStatus: boolean = useAuthStore.getState().auth;
     const setAuth = useAuthStore.getState().setAuthStatus;
 
     try{
