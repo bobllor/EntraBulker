@@ -285,8 +285,8 @@ class API:
             # recreates it, initially it has nil values.
             # reauthenication will create a new token which creates a new Graph
             self.graph = Graph(client_id, tenant_id, log=self.logger, project_root=self._project_root)
-            # contains the token, do not log
             auth_res_two: Response = self.graph.authenticate()
+            self.logger.debug(f"Auth response: {auth_res_two}")
             
             if auth_res_two["status"] == "error":
                 # reset graph to None in order to authenticate again
@@ -697,6 +697,8 @@ class API:
         enabled: bool = self.graph_reader.get("enable_graph")
         if not enabled:
             return utils.generate_response(message="Graph is not enabled in the settings")
+        if self.graph is None:
+            return utils.generate_response(message="Not authenticated for Graph")
 
         self.logger.info(f"Starting the user creation with Graph")
 
