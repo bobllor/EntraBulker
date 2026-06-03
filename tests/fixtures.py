@@ -90,7 +90,7 @@ def updater(tmp_path: Path):
     yield upd
 
 @pytest.fixture
-def graph():
-    gr: Graph = Graph("", "")
+def graph(tmp_path: Path):
+    gr: Graph = Graph("", "", project_root=tmp_path)
 
     yield gr

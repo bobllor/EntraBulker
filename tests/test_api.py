@@ -1,10 +1,11 @@
 from pathlib import Path
 from backend.api.api import API, AzureFileState, MAX_TEXT_SIZE
-from tests.fixtures import api, df, mock
+from tests.fixtures import api, df, mock, graph
 from typing import Any
 from backend.core.parser import Parser
 from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, AZURE_HEADERS, VERSION
 from backend.support.types import ManualCSVProps, APISettings, Formatting, Response, UserData
+from backend.core.graph import Graph
 from io import BytesIO
 from unittest.mock import patch, Mock
 import numpy as np
@@ -684,20 +685,23 @@ def test_file_state(api: API):
 
     assert state.upload_id == upload_id
 
-def test_api_add_users_graph(api: API, df: pd.DataFrame):
+def test_api_add_users_graph(api: API, df: pd.DataFrame, graph: Graph):
     parse_res = api._parse_df(df)
     assert parse_res["status"]
 
     parser = parse_res["content"]
     userdata = api._extract_user_data(parser)
 
-    with patch("backend.core.graph.requests.post") as mock:
-        mock.return_value.json.return_value = {}
-        mock.return_value.status_code = 200
+    api.graph = graph
 
-        graph_res: Response = api.add_users_graph_api(userdata, True)
+    with patch("backend.core.graph.PublicClientApplication") as _:
+        with patch("backend.core.graph.requests.post") as mock:
+            mock.return_value.json.return_value = {}
+            mock.return_value.status_code = 200
 
-        assert graph_res["status"] == "success"
+            graph_res: Response = api.add_users_graph_api(userdata, True)
+
+            assert graph_res["status"] == "success"
 
 def test_api_graph_create_json_guest(api: API, df: pd.DataFrame):
     userdata = _get_user_data(api, df)
