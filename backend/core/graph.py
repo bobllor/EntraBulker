@@ -46,6 +46,26 @@ def requests_handler(f: Callable[P, T]) -> Callable[P, T]:
     
     return wrapper
 
+def authenticate_middleware(f: Callable[P, Response]) -> Callable[P, Response]:
+    '''Middleware used to handle authentication for protected methods.
+    
+    The wrapped function must be from a class with the following:
+        - authenticate() -> Response
+    
+    If the function does not have the above then unexpected errors will occur.
+    '''
+    @wraps(f)
+    def wrapper(self, *args, **kwargs):
+        auth_res: Response = self.authenticate()
+        if auth_res["status"] == "error":
+            return auth_res
+
+        res: Response = f(self, *args, **kwargs)
+
+        return res
+    
+    return wrapper
+
 CACHE_NAME: str = ".msaccount-cache.json"
 DEFAULT_CACHE_MAP: GraphAccountCacheReader = {
     "account_cache": [],
@@ -98,6 +118,9 @@ class Graph:
         # fall back. 
         self.token_cache_writer: TokenCacheWriter = TokenCacheWriter(config_path, log=self.log)
 
+        # set in authenticate
+        self.access_token: str = ""
+
         # set inside the first call of authenticate
         self.token_cache: SerializableTokenCache = self.get_token_cache()
 
@@ -106,17 +129,17 @@ class Graph:
 
     def authenticate(self) -> Response:
         '''
-        Authenticates the client and retrieves the token for use in requests. This is not
-        required to be called, the call automatically occurs with every request.
+        Authenticates the client and retrieves the token for use in requests. This is only
+        required to be called once to log in for authentication.
+        Afterwards, it will be used as middleware for protected methods.
 
-        The account cache will be used first, before doing an interactive browser authentication.
+        The account cache will be used first, which if it fails will attempt an interactive browser.
         Upon successful authentication, the cache will be written to with the logged in user
         and the cache of the account.
-        
-        It will return the token in the `content` of the Response if it exists. Otherwise,
-        content will be `None`.
+
+        The token will be updated upon a successful authentication. 
         '''
-        res: Response = utils.generate_response(message="Successfully authenticated", content=None)
+        res: Response = utils.generate_response(message="Successfully authenticated")
         self.log.info("Starting authentication process for Graph API")
 
         token_key: str = "access_token"
@@ -135,7 +158,7 @@ class Graph:
             result: dict[str, Any] | None = self._authenticate_with_account(app)
             if result is not None:
                 self.log.info("Existing cached token found, extracting token")
-                res["content"] = result.get(token_key)
+                self.access_token = result.get(token_key, "")
             else:
                 self.log.info("No cached token found")
                 timeout_seconds: int = 120
@@ -149,7 +172,7 @@ class Graph:
 
                 if token_key in result:
                     self.log.info("Successfully authenticated, extracting token")
-                    res["content"] = result.get(token_key)
+                    self.access_token = result.get(token_key, "")
 
                     accounts: list[dict[str, Any]] = app.get_accounts()
                     if len(cache["account_cache"]) != len(accounts) and len(accounts) > 0:
@@ -164,7 +187,7 @@ class Graph:
 
                     return res
                 
-                self.log.debug(f"Access token length: {len(res['content'])}")
+                self.log.debug(f"Access token length: {len(self.access_token)}")
 
             self.app = app
             # needs to be rewritten every authentication
@@ -289,25 +312,19 @@ class Graph:
         return utils.generate_response("success", message="Successfully logged out from Graph")
     
     @requests_handler 
+    @authenticate_middleware
     def create_users(self, users: list[CreateUserJson]) -> Response:
-        '''Authenticates and then sends a POST request and creates the users. 
-        Errors that occur will not interrupt other users given in the list but will be logged.
+        '''Sends a POST request and creates users in the tenant. 
 
-        Any error that will occur automatically will mark the Response as an error. 
+        Errors that occur will not interrupt other users given in the list but will be logged.
         
-        If all users  given failed to POST for whatever reason, then it will return an *error*. 
+        If all users given failed to POST for whatever reason, then it will return an *error*. 
         If there are a handful of failed POST requests, then it will return a *warning*. 
         '''
         end_res: Response = utils.generate_response(message=f"Created users")
-        token_res: Response = self.authenticate()
-        if token_res["status"] == "error" or token_res["content"] == None:
-            self.log.error(f"Failed to authenticate: {token_res}")
-            return token_res
-
-        token: str = token_res["content"]
 
         headers: JsonHeaders = {
-            "authorization": f"Bearer {token}",
+            "authorization": f"Bearer {self.access_token}",
             "content-type": "application/json"
         }
 
