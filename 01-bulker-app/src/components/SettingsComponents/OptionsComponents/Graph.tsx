@@ -35,6 +35,14 @@ function AuthenticateButton(): JSX.Element{
     )
 }
 
+const throttleLogoutOnClick = throttler(() => logoutOnClick(), 1500);
+
+function LogoutButton(): JSX.Element{
+    return (
+        <Button text="Logout" type="button" width={AUTH_BUTTON_WIDTH} func={() => throttleLogoutOnClick() }/>
+    )
+}
+
 function AuthenicationIcon({iconElement, tooltip}: {iconElement: JSX.Element, tooltip: string}): JSX.Element{
     return (
         <span 
@@ -104,6 +112,10 @@ export default function Graph(): JSX.Element{
                 : <AuthenicationIcon iconElement={<FaMinusCircle color="red" />} tooltip="Not authenticated" />,
             optElementDirection: "row",
         },
+        {
+            label: "Logout from Graph",
+            element: <LogoutButton />,
+        }
     ];
 
     return (
@@ -123,6 +135,7 @@ async function authenticateOnClick(){
 
     try{
         setIsAuthenticating(true);
+        // a warning indicates an already existing authentication
         const res: Response = await window.pywebview.api.authenticate_graph();
 
         toastResponse(res);
@@ -142,5 +155,25 @@ async function authenticateOnClick(){
     }
     finally{
         setIsAuthenticating(false);
+    }
+}
+
+/**
+ * Logout from Graph.
+ */
+async function logoutOnClick(){
+    const authStatus: boolean = useAuthStore.getState().auth;
+    const setAuth = useAuthStore.getState().setAuthStatus;
+
+    try{
+        const res: Response = await window.pywebview.api.logout_graph();
+
+        if(res.status != "error"){
+            setAuth(false); 
+        }
+
+        toastResponse(res);
+    }catch(e){
+        console.log("An unknown error has occurred", e);
     }
 }
