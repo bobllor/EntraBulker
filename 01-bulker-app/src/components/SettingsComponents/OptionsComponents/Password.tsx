@@ -79,11 +79,11 @@ function GeneratePassword(): JSX.Element{
     const [password, setPassword] = useState<string>("");
 
     return (
-        <div className="flex items-center justify-between w-full">
+        <div className="flex items-center justify-end">
             <div className={`transition-all`}>
-                <div className="bg-white p-2 input-style rounded-2xl w-95 flex items-center
+                <div className="bg-white p-2 input-style rounded-2xl min-w-82 max-w-82 flex items-center
                 justify-between">
-                    <span>
+                    <span className="w-full justify-start flex items-center px-1">
                         {password}
                     </span>
                     <div className="flex items-center">
