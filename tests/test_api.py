@@ -694,7 +694,9 @@ def test_api_add_users_graph(api: API, df: pd.DataFrame, graph: Graph):
 
     api.graph = graph
 
-    with patch("backend.core.graph.PublicClientApplication") as _:
+    with patch("backend.core.graph.PublicClientApplication") as mockapp:
+        mockapp.return_value.acquire_token_silent.return_value = {"access_token": "12345"}
+
         with patch("backend.core.graph.requests.post") as mock:
             mock.return_value.json.return_value = {}
             mock.return_value.status_code = 200
@@ -735,6 +737,16 @@ def test_api_graph_create_json_domain(api: API, df: pd.DataFrame):
 
         if domain == "company.one.org" or domain == "companytwo.com":
             assert user["userType"] == "member"
+
+def test_api_graph_auth_on_boot(api: API, graph: Graph):
+    api.graph = graph
+
+    with patch("backend.core.graph.PublicClientApplication") as mockapp:
+        mockapp.return_value.acquire_token_silent.return_value = {"access_token": "12345"}
+
+        res: Response = api.authenticate_graph_on_boot()
+
+        assert res["status"] == "success"
 
 def _get_user_data(api: API, df: pd.DataFrame) -> UserData:
     '''Helper function to parse the DataFrame and get the UserData.'''

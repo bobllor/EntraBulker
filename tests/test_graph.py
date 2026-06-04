@@ -117,6 +117,34 @@ def test_graph_clear_cache(graph: Graph):
             
             assert base_token_cache != new_token_cache and new_cache_reader != base_cache_reader
 
+def test_authenticate_cache_graph(graph: Graph):
+    graph._client_id = "12345" 
+    graph._tenant_id = "12345"
+
+    with patch("backend.core.graph.SerializableTokenCache.serialize") as serialmock:
+        serialmock.return_value = "{'test': 'value'}"
+
+        with patch("backend.core.graph.PublicClientApplication") as mock:
+            mock.return_value.acquire_token_silent.return_value = {"access_token": "12345"}
+
+            res: Response = graph.authenticate_with_cache()
+
+            assert res["status"] == "success"
+
+def test_authenticate_no_cache_graph(graph: Graph):
+    graph._client_id = "12345" 
+    graph._tenant_id = "12345"
+
+    with patch("backend.core.graph.SerializableTokenCache.serialize") as serialmock:
+        serialmock.return_value = "{'test': 'value'}"
+
+        with patch("backend.core.graph.PublicClientApplication") as mock:
+            mock.return_value.acquire_token_silent.return_value = None
+
+            res: Response = graph.authenticate_with_cache()
+
+            assert res["status"] == "error"
+
 def test_graph_write_read_token_cache(graph: Graph):
     obj: dict[str, str] = {"test": "value", "another": "test"}
     graph.save_token_cache(obj)
