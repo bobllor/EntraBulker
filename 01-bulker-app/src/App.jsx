@@ -13,7 +13,7 @@ import OpcoMapping from "./components/SettingsComponents/OptionsComponents/OpcoM
 import TextForm from "./components/SettingsComponents/OptionsComponents/TextForm";
 import Password from "./components/SettingsComponents/OptionsComponents/Password";
 import Graph from "./components/SettingsComponents/OptionsComponents/Graph";
-import { useCheckUpdate, useDisableContext, useDisableShortcuts, useInitializeZustand } from "./hooks";
+import { useAuthenticateOnBoot, useCheckUpdate, useDisableContext, useDisableShortcuts, useInitializeZustand } from "./hooks";
 import { useMetaContext } from "./context/MetaContext";
 import { FaHome, FaHammer, FaCog } from "react-icons/fa";
 import { useGraphSettingStore } from "./components/SettingsComponents/store/useGraphSettingsStore";
@@ -51,11 +51,7 @@ export default function App() {
     initializeGraphSettings,
   ]);
 
-  useEffect(() => {
-    setTimeout(() => {
-      initializeGraphSettings();
-    }, 500);
-  }, []);
+  useAuthenticateOnBoot();
 
   useDisableShortcuts();
   useDisableContext();

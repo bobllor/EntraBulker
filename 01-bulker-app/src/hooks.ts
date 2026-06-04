@@ -2,6 +2,9 @@ import React, { useEffect } from "react";
 import { NavigateFunction, useLocation, useNavigate } from "react-router";
 import { checkVersion, runUpdater } from "./pywebviewFunctions";
 import { Response } from "./pywebviewTypes";
+import { useGraphSettingStore } from "./components/SettingsComponents/store/useGraphSettingsStore";
+import { toastSuccess } from "./toastUtils";
+import { useAuthStore } from "./components/SettingsComponents/OptionsComponents/store/useAuthStore";
 
 /**
  * Dismisses a component by using an HTML element for listening and
@@ -126,5 +129,32 @@ export function useInitializeZustand(fs: Array<() => Promise<void>>){
                 fn();
             })
         }, 300)
+    }, [])
+}
+
+/**
+ * Hook used to attempt to authenticate on boot.
+ */
+export function useAuthenticateOnBoot(){
+    useEffect(() => {
+        const runAuth = async () => {
+            const reauthBoot = useGraphSettingStore.getState().values.reauthenticate_on_boot;
+            const setIsAuth = useAuthStore.getState().setAuthStatus
+
+            if(reauthBoot){
+                const res: Response = await window.pywebview.api.authenticate_graph_on_boot();    
+
+                console.log(res);
+
+                if(res.status == "success"){
+                    toastSuccess(res.message);
+                    setIsAuth(true);
+                }
+            }
+        }
+        
+        setTimeout(async () => {
+            await runAuth();
+        }, 500)
     }, [])
 }
