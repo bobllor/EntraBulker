@@ -86,6 +86,10 @@ class GraphMap(TypedDict):
     # Entra ID.
     user_type: UserType
 
+    # If true, always attempt to authenticate on boot. This only applies to the
+    # token cache and will not attempt an interactive browser token attempt.
+    reauthenticate_on_boot: bool
+
     # A CSV-style string containing domains that will always be of the type `Member`.
     # This only applies if the `user_type` is set to `Guest`.
     #

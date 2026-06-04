@@ -85,4 +85,5 @@ DEFAULT_GRAPH_MAP: GraphMap = {
     "enable_graph": False,
     "user_type": "guest",
     "member_type_domain_csv": "",
+    "reauthenticate_on_boot": True,
 }
