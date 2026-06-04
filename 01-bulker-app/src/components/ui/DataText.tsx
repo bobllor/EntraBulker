@@ -17,13 +17,13 @@ export default function DataText({label = "", maxValueLength = 30, value,
                     });
                 }
             }}
-            className={`text-xs text-ellipsis overflow-hidden whitespace-nowrap w-68 max-w-68 h-4
+            className={`text-xs text-ellipsis overflow-hidden whitespace-nowrap w-fit max-w-68 h-4
                 block items-center justify-${justification} rounded-xl px-1
                 ${enableCopy && "hover:bg-gray-500/25"}`}
             title={value.length > maxValueLength ? value : ""}>
                 {label + value}
-                {optValueElement != undefined && optValueElement}
             </span>
+            {optValueElement != undefined && optValueElement}
         </div>
     )
 }
