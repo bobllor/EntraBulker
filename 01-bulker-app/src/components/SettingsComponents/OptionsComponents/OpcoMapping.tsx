@@ -92,7 +92,7 @@ export default function OpcoMapping(): JSX.Element{
                                     type="text"
                                     onChange={e => {
                                         const input: HTMLInputElement = e.currentTarget;
-                                        const value: string = input.value.toLowerCase();
+                                        const value: string = input.value.toLowerCase().replaceAll("@", "");
 
                                         setInputData(prev => {
                                             if(input.getAttribute("name")!.includes("key")){
