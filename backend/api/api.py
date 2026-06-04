@@ -127,23 +127,19 @@ class API:
         df_response: Response = self._get_df(content)
         if df_response["status"] == "error":
             return df_response
-        self.logger.info(f"Response: {df_response}")
 
         df: pd.DataFrame = df_response["content"]
         
         valid_res: Response = self._run_validate_df(df)
         if valid_res["status"] == "error":
             return valid_res
-        self.logger.info(f"Response: {valid_res}")
 
         if upload_id is None:
             upload_id = utils.get_id(divisor=4)
 
         parse_res: Response = self._parse_df(df)
         if parse_res["status"] == "error":
-            self.logger.critical(f"Failed to parse DataFrame: {parse_res}")
             return parse_res 
-        self.logger.info(f"Response: {parse_res}")
 
         parser: Parser = parse_res["content"]
 
@@ -174,9 +170,6 @@ class API:
         self.file_state.skip_version_row = True
         
         self._write_template(writer)
-
-        # NOTE: any failures will require an update to the context in the frontend. 
-        self.logger.debug(f"Azure CSV generated: {res}")
 
         return res
 
@@ -219,14 +212,10 @@ class API:
             self.logger.error(f"Failed to create Parser for manual generation: {df_res}")
 
             return internal_err
-        self.logger.debug(f"Response: {df_res}")
 
         validate_res: Response = self._run_validate_df(df)
         if validate_res["status"] == "error":
-            self.logger.error(f"Failed to validate DataFrame: {validate_res}")
-
             return internal_err
-        self.logger.debug(f"Response: {validate_res}")
 
         parser: Parser = df_res["content"]
 
@@ -254,9 +243,27 @@ class API:
         self.logger.info(f"Manual generated {csv_name} at {self.get_reader_value('settings', 'output_dir')}")
 
         self._write_template(writer)
-        
-        self.logger.debug(f"Response: {res}")
 
+        return res
+    
+    def authenticate_graph_on_boot(self) -> Response:
+        '''Authenticates to Microsoft Graph by only using the Graph cache.
+
+        This is only intended to be ran for automatic logins on boot. To do the proper auth workflow,
+        use authenticate_graph().
+        '''
+        res: Response = utils.generate_response(message="Successfully authenticated")
+        if not self.graph:
+            self.graph = self._new_graph()
+
+            cacheres: Response = self.graph.authenticate_with_cache()
+            if cacheres["status"] == "success":
+                return cacheres
+            else:
+                self.graph = None
+
+                return cacheres
+        
         return res
     
     def authenticate_graph(self) -> Response:
@@ -298,6 +305,7 @@ class API:
             res["message"] = "Already authenticated"
         
         return res
+
     def clear_graph_cache(self) -> Response:
         '''Clears the cache stored in Graph, which includes the accounts and token cache.
         This will also logout the user.
@@ -568,7 +576,6 @@ class API:
 
         data: list[CreateUserJson] = self._create_json_users(users, is_member)
         res: Response = self.graph.create_users(data)
-        self.logger.debug(f"Graph add users response: {res}")
 
         return res
 
@@ -710,26 +717,28 @@ class API:
         If the user is not authenticated or the "enable_graph" option is false,
         then this will do nothing.
         '''
+        self.logger.info(f"Starting user creation with Graph")
         res: Response = utils.generate_response(message="Graph request successful")
         enabled: bool = self.graph_reader.get("enable_graph")
+        # consider these a success, non-success will get appended to the message of the
+        # final response to the client
         if not enabled:
             return utils.generate_response(message="Graph is not enabled in the settings")
         if self.graph is None:
             return utils.generate_response(message="Not authenticated for Graph")
-
-        self.logger.info(f"Starting the user creation with Graph")
 
         # value will be member or guest, but in the event its a bad value it will
         # default to guest for least privileges concerns
         is_member: bool = self.graph_reader.get("user_type") == "member"
         graphres: Response = self.add_users_graph_api(user_data, is_member)
 
-        if graphres["status"] == "warning":
+        if graphres["status"] != "warning":
             res["status"] = graphres["status"]
-            res["message"] = "Encountered errors while adding users to the tenant"
-        elif graphres["status"] == "error":
-            res["status"] = graphres["status"]
-            res["message"] = "Failed to add users to the tenant"
+            msg: str = "had errors during processing"
+            if len(self.graph.user_creation_error_codes) > 0:
+                msg += f": {', '.join(self.graph.user_creation_error_codes)}"
+            
+            res["message"] = msg
         
         return res
     
@@ -741,6 +750,7 @@ class API:
 
         If an error occurs, then it will return an error Response.
         '''
+        self.logger.info("Creating DataFrame")
         df: pd.DataFrame = None
         res: Response = utils.generate_response(content=None)
         file_name: str = ""
@@ -769,8 +779,7 @@ class API:
                 else:
                     df = pd.read_csv(in_mem_bytes)
             except Exception as e:
-                self.logger.critical(f"Failed to parse file: {file_name} | {meta_info}")
-                self.logger.critical(f"Exception: {e}")
+                self.logger.critical(f"Failed to parse file: {file_name} | {meta_info} | {e}")
 
                 return utils.generate_response("error", message=f"An unknown error occurred while parsing {file_name}")
 
@@ -797,6 +806,7 @@ class API:
         No modifications are done on the DataFrame. It will return a Response indicating if the
         DataFrame is valid.
         '''
+        self.logger.info("Validating DataFrame")
         excel_columns: HeaderMap = self.excel.get_content()
         settings: APISettings = self.settings.get_content()
 
@@ -818,6 +828,7 @@ class API:
         
         Any errors that occur will also be returned as an error Response.
         '''
+        self.logger.info("Parsing DataFrame")
         res: Response = utils.generate_response(message="CSV generated")
 
         parser: Parser = Parser(df)
@@ -865,6 +876,7 @@ class API:
         if new_len == 0:
             res["status"] = "error"
             res["message"] = f"File is empty after validation ({dropped_rows}/{base_len} dropped rows), data correction required"
+            self.logger.error(res["message"])
 
             return res
 
@@ -872,6 +884,7 @@ class API:
         if dropped_rows > 0:
             rows_str: str = "rows" if dropped_rows > 1 else "row"
             res["message"] += f", dropped {dropped_rows}/{base_len} {rows_str} from file due to missing values"
+            self.logger.info(res["message"])
         
         return res
 
@@ -913,7 +926,9 @@ class API:
 
         formatters: Formatting = self.settings.get("format")
         usernames: list[str] = utils.generate_usernames(
-            dupe_names, opcos, opco_mappings,
+            dupe_names, 
+            opcos, 
+            opco_mappings,
             format_type=formatters["format_type"],
             format_case=formatters["format_case"], 
             format_style=formatters["format_style"],
@@ -1143,3 +1158,10 @@ class API:
             return utils.generate_response(status='error', message=f'File is missing {column_str}: {", ".join(missing_columns)}')
 
         return utils.generate_response(status='success', message=f"Found columns {','.join(found)}")
+
+    def _new_graph(self) -> Graph:
+        '''Creates a new Graph object.'''
+        client_id: str = self.graph_reader.get("client_id")
+        tenant_id: str = self.graph_reader.get("tenant_id")
+
+        return Graph(client_id, tenant_id, project_root=self._project_root, log=self.logger)
