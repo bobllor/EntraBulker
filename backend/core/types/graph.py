@@ -40,6 +40,7 @@ class RequestErrorResponse:
     message: str = ""
     date: str = ""
     request_id: str = ""
+    target: str = ""
 
 JsonHeaders = TypedDict("JsonHeaders",
     {
