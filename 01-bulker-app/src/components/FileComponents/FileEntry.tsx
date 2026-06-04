@@ -12,7 +12,7 @@ export default function FileEntry({file}: {file: UploadedFilesProps}): JSX.Eleme
 
     return (
         <>
-            <div className={`px-7 min-h-30 max-h-30 default-shadow rounded-xl w-[90%] flex flex-col items-center border-1 border-gray-300
+            <div className={`px-7 min-h-30 h-fit default-shadow rounded-xl w-[90%] flex flex-col items-center border-1 border-gray-300
             transition-all
             ${file.status == "none" 
                 ? "" 
@@ -54,8 +54,10 @@ export default function FileEntry({file}: {file: UploadedFilesProps}): JSX.Eleme
                         </span>
                     </div>
                 </div>
-                <div className="text-gray-600 w-full text-sm">
-                    {file.msg != undefined && file.msg}
+                <div 
+                title={file.msg != undefined ? file.msg : ""}
+                className="text-gray-600 w-125 text-sm text-ellipsis block overflow-hidden">
+                    {file.msg != undefined && file.msg} 
                 </div>
             </div>
         </>
