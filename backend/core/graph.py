@@ -58,6 +58,9 @@ def authenticate_middleware(f: Callable[P, Response]) -> Callable[P, Response]:
     def wrapper(self, *args, **kwargs):
         auth_res: Response = self.authenticate()
         if auth_res["status"] == "error":
+            # in case content is used, this ensures that the key will exist
+            if "content" not in auth_res:
+                auth_res["content"] = None
             return auth_res
 
         res: Response = f(self, *args, **kwargs)
@@ -127,6 +130,10 @@ class Graph:
         # least privilege scope that allows writing to entra, do not change!
         self._scopes: list[str] = ["User.ReadWrite.All"]
 
+        # used to track error codes that occurred
+        # this is reset at the start of create_users
+        self.user_creation_error_codes: set[str] = set()
+
     def authenticate(self) -> Response:
         '''
         Authenticates the client and retrieves the token for use in requests. This is only
@@ -147,24 +154,20 @@ class Graph:
         auth_url: str = f"https://login.microsoftonline.com/{self._tenant_id}"
 
         try:
-            app: PublicClientApplication = self.app
             if not self.app:
-                app = PublicClientApplication(
+                self.app = PublicClientApplication(
                     self._client_id,
                     authority=auth_url,
                     token_cache=self.token_cache,
                 )
 
-            result: dict[str, Any] | None = self._authenticate_with_account(app)
-            if result is not None:
-                self.log.info("Existing cached token found, extracting token")
-                self.access_token = result.get(token_key, "")
-            else:
+            cache_res: Response = self.authenticate_with_cache()
+            if cache_res["status"] != "success":
                 self.log.info("No cached token found")
                 timeout_seconds: int = 120
 
                 try:
-                    result = app.acquire_token_interactive(self._scopes, timeout=timeout_seconds)
+                    result = self.app.acquire_token_interactive(self._scopes, timeout=timeout_seconds)
                 except BrowserInteractionTimeoutError:
                     self.log.info(f"Authentication timeout reached: User did not complete the flow in time")
 
@@ -174,7 +177,7 @@ class Graph:
                     self.log.info("Successfully authenticated, extracting token")
                     self.access_token = result.get(token_key, "")
 
-                    accounts: list[dict[str, Any]] = app.get_accounts()
+                    accounts: list[dict[str, Any]] = self.app.get_accounts()
                     if len(cache["account_cache"]) != len(accounts) and len(accounts) > 0:
                         self.cache_reader.update("account_cache", accounts)
                         self.cache_reader.update("recent_username", accounts[-1].get("username"))
@@ -187,9 +190,7 @@ class Graph:
 
                     return res
                 
-                self.log.debug(f"Access token length: {len(self.access_token)}")
-
-            self.app = app
+            self.log.debug(f"Access token length: {len(self.access_token)}")
             # needs to be rewritten every authentication
             self.save_token_cache(self.token_cache.serialize())
 
@@ -200,21 +201,38 @@ class Graph:
 
             return utils.generate_response("error", message="Authentication failed due to invalid tenant")
 
-        except Exception as e:
-            self.log.error(f"An unknown exception occurred ({type(e)}): {str(e)}")
+        except Exception:
+            self.log.exception("An unknown exception occurred")
 
             return utils.generate_response("error", message="An unknown error occurred while authenticating")
     
-    def _authenticate_with_account(self, app: PublicClientApplication) -> dict[str, Any] | None:
-        '''Authenticates with the most recent account in the cache and return the result.
-        
-        If there is no result, then it will return `None`.
-        '''
-        account: dict[str, Any] = self.get_cache_account()
-        self.log.debug(f"Most recent cached account: {account}")
-        result: dict[str, Any] | None = app.acquire_token_silent(self._scopes, account)
+    def authenticate_with_cache(self) -> Response:
+        '''Authenticates with the recent account the accounts cache and the stored token cache.
+        The token will be set in this method if successful.
 
-        return result
+        If successful, it will return a successful Response.
+        If the result from acquire_token_silent is None, it will return an error Response.
+        '''
+        auth_url: str = f"https://login.microsoftonline.com/{self._tenant_id}"
+        if not self.app:
+            self.app = PublicClientApplication(
+                self._client_id,
+                authority=auth_url,
+                token_cache=self.token_cache,
+            )
+
+        account: dict[str, Any] | None= self.get_cache_account()
+        if account is not None:
+            self.log.debug("Found cached account")
+        result: dict[str, Any] | None = self.app.acquire_token_silent(self._scopes, account)
+
+        if result is not None and "access_token" in result:
+            self.log.info("Existing cached token found, extracting token")
+            self.access_token = result.get("access_token", "")
+        else:
+            return utils.generate_response("error", message="Authentication failed, unable to retrieve token from cache")
+
+        return utils.generate_response(message="Successfully authenticated")
     
     def get_cache_account(self) -> dict[str, Any] | None:
         '''Retrieves the account from the cache to use for the authentication process. 
@@ -318,7 +336,10 @@ class Graph:
         
         If all users given failed to POST for whatever reason, then it will return an *error*. 
         If there are a handful of failed POST requests, then it will return a *warning*. 
+
+        The user creation error codes are added in here if one occurs.
         '''
+        self.user_creation_error_codes = set()
         end_res: Response = utils.generate_response(message=f"Created users")
 
         headers: JsonHeaders = {
@@ -334,19 +355,21 @@ class Graph:
             "created users": {"users": created_users},
             "failed users": {"users": failed_users},
         }
+
         for user_json in users:
             post_res: requests.Response = requests.post(GRAPH_CREATE_USER_URL, json=user_json, headers=headers, timeout=REQ_TIMEOUT)
             data: dict[str, Any] = post_res.json()
 
-            self.log.debug(f"POST response: {data}")
-
             if not post_res.ok:
                 error: RequestErrorResponse = self.get_error(data)
-                self.log.warning(f"Failed to create user {user_json['userPrincipalName']}: {error.message} | Code: {error.code}")
-                failed_users.append(user_json["userPrincipalName"])
+                self.log.error(f"Failed to create user {user_json['displayName']}: {error}")
+                self.log.debug(f"Response: {data}")
+
+                failed_users.append(user_json['displayName'])
+                self.user_creation_error_codes.add(f"{error.code} ({error.target})")
             else:
-                self.log.info(f"Created user {user_json['userPrincipalName']}")
-                created_users.append(user_json['userPrincipalName'])
+                self.log.info(f"Created user {user_json['displayName']}")
+                created_users.append(user_json['displayName'])
 
         if len(failed_users) > 0:
             end_res["status"] = "warning"
@@ -367,11 +390,18 @@ class Graph:
         
         Missing values will be an None if missing.
         '''
-        code: str = utils.get_key(d, "code")
         err_msg: str = utils.get_key(d, "message")
         date: str = utils.get_key(d, "date")
         request_id: str = utils.get_key(d, "request-id")
+        target: str = ""
+        code: str = ""
 
-        err = RequestErrorResponse(code, err_msg, date, request_id)
+        details: list[dict[str, Any]] = utils.get_key(d, "details") or []
+
+        for detail in details:
+            target = detail.get("target") or ""
+            code = detail.get("code") or ""
+
+        err = RequestErrorResponse(code, err_msg, date, request_id, target)
         
         return err
