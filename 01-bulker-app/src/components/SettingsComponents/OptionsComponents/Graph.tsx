@@ -18,13 +18,15 @@ import DataText from "../../ui/DataText";
 import { useShallow } from "zustand/react/shallow";
 
 const throttleAuthenticateOnClick = throttler(() => authenticateOnClick(), 1500);
-
 const AUTH_BUTTON_WIDTH: number = 35;
-function AuthenticateButton({authStatus}: {authStatus: boolean}): JSX.Element{
+
+const CHECKBOX_NAME = "rememberMe";
+function AuthenticateButton({authStatus, reauthBoot}: {authStatus: boolean, reauthBoot: boolean}): JSX.Element{
     const isAuthenticating = useAuthStore((st) => st.isAuthenticating);
+    const setGraphValues = useGraphSettingStore(st => st.setGraphValues);
 
     return (
-        <>
+        <div className="flex flex-col gap-1">
             {!isAuthenticating 
             ? 
                 <Button disabled={authStatus} text="Sign In" 
@@ -32,7 +34,15 @@ function AuthenticateButton({authStatus}: {authStatus: boolean}): JSX.Element{
             : 
                 <Button text="Signing in..." type="button" width={AUTH_BUTTON_WIDTH} />
             } 
-        </>
+            <span className="flex justify-center gap-1">
+                <label htmlFor={CHECKBOX_NAME}>Stay signed in</label>
+                <input 
+                type="checkbox" 
+                name={CHECKBOX_NAME} 
+                onChange={() => setGraphValues("reauthenticate_on_boot", !reauthBoot)}
+                checked={reauthBoot} />
+            </span>
+        </div>
     )
 }
 
@@ -71,10 +81,11 @@ export default function Graph(): JSX.Element{
     const enableGraphStatus = useGraphSettingStore(st => st.values.enable_graph);
     const setGraphValues = useGraphSettingStore(st => st.setGraphValues);
     const userType = useGraphSettingStore(st => st.values.user_type);
-    const { clientId, tenantId, domainCsvString } = useGraphSettingStore(useShallow(st => ({
+    const { clientId, tenantId, domainCsvString, reauthBoot } = useGraphSettingStore(useShallow(st => ({
         clientId: st.values.client_id,
         tenantId: st.values.tenant_id,
         domainCsvString: st.values.member_type_domain_csv,
+        reauthBoot: st.values.reauthenticate_on_boot,
     })));
 
     const options: Array<OptionProps> = [
@@ -109,7 +120,7 @@ export default function Graph(): JSX.Element{
         },
         {
             label: "Sign In",
-            element: <AuthenticateButton authStatus={authStatus} />,
+            element: <AuthenticateButton authStatus={authStatus} reauthBoot={reauthBoot} />,
             optElement: <DataText value={authStatus ? "Authenticated" : "Not authenticated"} label="Status: "
                 optValueElement={
                 authStatus
