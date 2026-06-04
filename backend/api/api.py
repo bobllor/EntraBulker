@@ -732,7 +732,7 @@ class API:
         is_member: bool = self.graph_reader.get("user_type") == "member"
         graphres: Response = self.add_users_graph_api(user_data, is_member)
 
-        if graphres["status"] != "warning":
+        if graphres["status"] != "success":
             res["status"] = graphres["status"]
             msg: str = "had errors during processing"
             if len(self.graph.user_creation_error_codes) > 0:
