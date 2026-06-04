@@ -110,10 +110,10 @@ def generate_usernames(
     
     Parameters
     ----------
-        names: str
+        names: list[str]
             A list of names for the account to be formatted.
         
-        opcos: str, default None
+        opcos: list[str]
             A list of operating companies for each user, it determines the domain used. If an operating company
             does not exist in the map, the default value will be used.
 
@@ -149,8 +149,9 @@ def generate_usernames(
     for i, name in enumerate(names):
         name = format_hyphen_name(name.strip())
         username: str = style_dict[format_style](name)
+        domain: str = opco_map.get(opcos[i], default_opco).removeprefix("@")
 
-        usernames.append(f'{username}@{opco_map.get(opcos[i], default_opco)}')
+        usernames.append(f'{username}@{domain}')
 
     return usernames    
 
