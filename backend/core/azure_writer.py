@@ -47,7 +47,6 @@ class AzureWriter:
                 List of names of usernames.
         '''
         self.logger.info(f"Setting usernames")
-        self.logger.debug(f"Username data: {usernames}")
         self._headers_data[AZURE_HEADERS["username"]] = usernames
     
     def set_passwords(self, passwords: list[str]) -> None:
