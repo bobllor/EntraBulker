@@ -47,7 +47,6 @@ class AzureWriter:
                 List of names of usernames.
         '''
         self.logger.info(f"Setting usernames")
-        self.logger.debug(f"Username data: {usernames}")
         self._headers_data[AZURE_HEADERS["username"]] = usernames
     
     def set_passwords(self, passwords: list[str]) -> None:
@@ -148,7 +147,7 @@ class AzureWriter:
     
         return res
     
-    def write_template(self, out: Path | str, *, text: str, file_name: str = None) -> Response:
+    def write_template(self, out: Path | str, *, text: str, dir_name: str = None) -> Response:
         '''Writes the template text for each user. A Response is returned with the standard keys and
         `output_dir`, being the folder of the created files.
         
@@ -167,15 +166,15 @@ class AzureWriter:
             text: str
                 The text used in the template.
 
-            file_name: str
+            dir_name: str
                 The name of the templates folder. This is automatically generated if None, or if
                 flatten CSV is used then the same file name should be used.
         '''
         # allows us to write to the same output folder.
-        if file_name is None:
-            file_name = f"{utils.get_date()}-{utils.get_id()}"
+        if dir_name is None:
+            dir_name = f"{utils.get_date()}-{utils.get_id()}"
             
-        folder_name: str = f"templates-{file_name}"
+        folder_name: str = f"templates-{dir_name}"
 
         path: Path = out / "templates" if isinstance(out, Path) else Path(out) / "templates"
         path = path / folder_name

@@ -12,9 +12,12 @@ import HeadersMapping from "./components/SettingsComponents/OptionsComponents/He
 import OpcoMapping from "./components/SettingsComponents/OptionsComponents/OpcoMapping";
 import TextForm from "./components/SettingsComponents/OptionsComponents/TextForm";
 import Password from "./components/SettingsComponents/OptionsComponents/Password";
-import { useCheckUpdate, useDisableContext, useDisableShortcuts } from "./hooks";
+import Graph from "./components/SettingsComponents/OptionsComponents/Graph";
+import { useAuthenticateOnBoot, useCheckUpdate, useDisableContext, useDisableShortcuts, useInitializeZustand } from "./hooks";
 import { useMetaContext } from "./context/MetaContext";
 import { FaHome, FaHammer, FaCog } from "react-icons/fa";
+import { useGraphSettingStore } from "./components/SettingsComponents/store/useGraphSettingsStore";
+import About from "./components/SettingsComponents/OptionsComponents/About";
 
 const fullPageStyle = 'h-screen w-screen flex flex-col justify-center items-center overflow-hidden relative p-3'
 const navigationButtons = [
@@ -38,7 +41,17 @@ export default function App() {
     if(location.pathname.includes("settings")){
       setShowSetting(true);
     }
-  }, [location])
+  }, [location]);
+
+  const initializeGraphSettings = useGraphSettingStore((st) => st.initialize);
+
+  // initializes zustand stores, required if the data needs to be accessed from the start
+  // of the program
+  useInitializeZustand([
+    initializeGraphSettings,
+  ]);
+
+  useAuthenticateOnBoot();
 
   useDisableShortcuts();
   useDisableContext();
@@ -60,6 +73,8 @@ export default function App() {
               <Route path="opco-mapping" element={<OpcoMapping />} />
               <Route path="template" element={<TextForm />} />
               <Route path="password" element={<Password />} />
+              <Route path="graph" element={<Graph />} />
+              <Route path="about" element={<About />} />
             </Route>
           </Routes>
         }

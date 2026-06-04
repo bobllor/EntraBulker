@@ -2,8 +2,8 @@ import { JSX, useRef, useState } from "react";
 import { updateSetting } from "../../pywebviewFunctions";
 import { debouncer } from "../../utils";
 
-const minLength: number = 7;
-const maxLength: number = 30;
+const minLength: number = 8;
+const maxLength: number = 24;
 
 /**
  * A slider range component. It requires a target key, a base value, and optionally a parent to update the Settings contents. 

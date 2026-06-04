@@ -1,11 +1,16 @@
 # EntraBulker
 
-*EntraBulker* is a customizable application that generates CSV files for bulking Entra ID identities 
-without the need for API access. It is a WebView application built with Python, TypeScript, and JavaScript.
+*EntraBulker* is a customizable application that streamlines large-scale user onboarding in Microsoft Entra ID by
+transforming CSV and Excel reports into bulk user creation data. 
+It can generate *ready to use CSV bulk files* or directly *create users in a tenant* via Graph API using 
+a registered application.
+
+It is a WebView desktop application built with Python, TypeScript, and JavaScript, to assist administrators in
+automating user creation with Entra ID.
 
 ## Example
 
-An example input file:
+Below is an example of what an expected report file would look like:
 
 | Full name | Organization |
 | --- | --- |
@@ -36,6 +41,11 @@ The output file can now be uploaded to Azure Entra ID and bulk create all rows o
     - [File Uploading](#file-uploading)
     - [Manual Entries](#manual-entries)
     - [Updating](#updating)
+- [Microsoft Graph](#microsoft-graph)
+    - [Registering an Application](#registering-an-application)
+    - [Setup](#setup)
+    - [Usage](#usage-1)
+    - [Caching](#caching)
 - [Development](#development)
     - [Initializing Project](#initializing-project)
     - [Running the Application](#running-the-application)
@@ -86,6 +96,7 @@ The settings allow customization on how the application will function. There are
 3. [Organization](./docs/settings/organization.md): Key-value mapping to map a domain name to an organization key
 4. [Password](./docs/settings/password.md): Password related settings for random password generation
 5. [Text Template](./docs/settings/text_template.md): Settings for generating text templates for each entry in the file
+6. [Microsoft Graph](./docs/settings/microsoft_graph.md): Settings related to Microsoft Graph
 
 Question marks can be found in all the Setting pages, hovering over them will reveal a tooltip on what it does.
 
@@ -142,6 +153,76 @@ an automatic updating process occurs with the binary `EntraUpdater.exe`.
 Updating can be done through using the new binary installer or replacing the files with the new files from the ZIP file.
 - The default path of the application via installer is `$HOME\AppData\Programs\EntraBulker`.
 
+## Microsoft Graph
+
+The application supports Microsoft Graph API to create users directly into the tenant during a submission.
+It is a *public client* which uses *delegated permissions* to perform the tasks.
+
+To enable Graph support and start the workflow:
+- An application must be registered and configured in the tenant
+- The option `Enable Graph` in the `Microsoft Graph` settings must be enabled
+- There are valid IDs for *application (client) ID and directory (tenant) ID*
+- You have a valid access token for Graph, obtained via authentication by signing in
+
+### Registering an Application
+
+In order to use Graph, a *registered application* is required in your Entra ID tenant. Microsoft provides official
+documentation on [how to register one](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
+
+1. Register an application on Entra ID
+2. Configure a *Mobile and desktop applications* redirect URI
+    - The value of the redirect URI is dependent on your requirements, if you are unsure
+    `http://localhost:8400`, or a port of your choosing, is recommended
+3. Record the *client ID and tenant ID* 
+4. Enable delegated permissions in the application for `User.ReadWrite.All`
+
+### Setup
+
+Once an application is registered, the application will need to be setup with the values
+in order to obtain an access token. This is done through the `Microsoft Graph` *settings page*
+of the application.
+
+1. Using the *client ID and tenant ID*, input the values in their respective fields
+2. Sign in to authenticate
+
+Once authenticated, the program is ready to use Graph to create the users.
+
+### Usage
+
+With Graph, the users are directly created in the tenant. The workflow *process remains the exact same*, creating
+the CSV file and template if enabled.
+After the CSV file is generated to the output folder, Graph will run at this stage and add the users to the tenant.
+- The output files are generated for onboarding the end user and as a fallback for offline workflows.
+
+> DISCLAIMER
+>
+> Graph API require network requests and will be slower than the offline CSV processing.
+
+All errors will be logged, including the reason why the Graph POST failed and for which users.
+
+### Caching
+
+When you authenticate for the first time, your *access token is cached* to an *encrypted file*
+on the disk. This is to reauthenticate with the access token without having to go through 
+the full authentication process again.
+- If your device *does not support encryption*, then it will fall back to *plain text*
+- The cached token will be used to renew the access token, even if it is already expired
+
+If the cached access token is not available, then the system's *default browser* is opened to a page of
+your tenant's authority URI. The account used to login *must be in the same tenant* as where the
+application is registered. 
+- There is a *2 minute timeout* on the authentication process, if this timeout is reached it will
+abort the authentication
+
+Multiple accounts *are not supported*. If a different account needs to be used, then the
+*you will need to clear the cache*.
+This will remove the cached access token and the cached accounts, allowing you to authenticate
+with a different account.
+
+The authentication is revoked when the application is closed. Launching the application again
+will require you to sign back in manually. There is a checkbox `Stay signed in` that if checked,
+the program will attempt to *reauthenticate on every reboot* using the cached token.
+
 ## Development
 
 Development is supported on Linux and Windows. 
@@ -150,11 +231,13 @@ Windows is expected to ***use Git Bash***, with support scripts being written in
 *PowerShell* is used when compiling the binaries and installer.
 
 The following software are required:
-- `Node.js >= 22.11.0`
-- `npm >= 11.1.0`
-- `Python`
+- `Node.js` >= 22.11.0
+- `npm` >= 11.1.0
+- `Python` >= 3.12.6
 - `Git`
-- `InnoSetup >= 6.4.3`: Only if compiling the installer is required
+
+Optional software:
+- `InnoSetup` >= 6.4.3: Only if compiling the installer is required
 
 ### Initializing Project
 

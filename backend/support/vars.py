@@ -1,10 +1,10 @@
 from pathlib import Path
-from .types import HeaderMap, OpcoMap, APISettings, AzureHeaders, Metadata, FileNames
+from .types import OpcoMap, APISettings, AzureHeaders, Metadata, FileNames, HeaderMap, GraphMap
 from typing import Literal
 from .utils import is_prod
 import sys
 
-VERSION: str = "v1.0.1" # this must start with a "v"
+VERSION: str = "v2.0.0" # this must start with a "v"
 
 META: Metadata = {
     "version": VERSION,
@@ -77,4 +77,13 @@ DEFAULT_SETTINGS_MAP: APISettings = {
         "use_punctuations": False,
         "use_numbers": False,
     },
+}
+
+DEFAULT_GRAPH_MAP: GraphMap = {
+    "client_id": "",
+    "tenant_id": "",
+    "enable_graph": False,
+    "user_type": "guest",
+    "member_type_domain_csv": "",
+    "reauthenticate_on_boot": True,
 }

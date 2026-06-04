@@ -68,7 +68,7 @@ function TextField(): JSX.Element{
                     <span className={`${textValue.length >= maxTextLength && "text-red-500"}`}>
                         {textValue.length}/{maxTextLength}
                     </span>
-                    <Button text="Submit" type="submit" />
+                    <Button text="Submit" type="submit" width={30} />
                 </div>
             </form>
         </>

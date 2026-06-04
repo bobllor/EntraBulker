@@ -181,3 +181,29 @@ def test_invalid_arg_compare_version():
 
     for arg in args:
         assert utils.compare_version(base, arg) == False
+
+def test_get_key_from_dict():
+    target_key: str = "test5"
+    target_value: str = "found"
+    d: dict[str, Any] = {
+        "test1": {
+            "ignore": "1",
+        },
+        "test2": {
+            "yes": "2",
+            "test3": {
+                "yes": "3",
+                "list": ["3", "3", {"ignored": "3"}],
+                "test4": {
+                    "no": "4",
+                    "yes": "4",
+                    target_key: target_value
+                }
+            }
+        }
+    }
+
+    val: Any | None = utils.get_key(d, target_key)
+
+    assert val is not None
+    assert val == target_value

@@ -2,18 +2,26 @@ import { JSX } from "react";
 import { useFileContext } from "../../context/FileContext";
 import { UploadedFilesProps } from "./utils/types";
 import { deleteFileEntry } from "./utils";
-import { FaTrash, FaTimes, FaCheck, FaRegFileExcel, FaRegFileAlt } from "react-icons/fa";
+import { FaTrash, FaTimes, FaCheck, FaRegFileExcel, FaRegFileAlt, FaExclamation } from "react-icons/fa";
 
 const iconSize: number = 25;
 
 export default function FileEntry({file}: {file: UploadedFilesProps}): JSX.Element{
     const { setUploadedFiles } = useFileContext();
 
+
     return (
         <>
-            <div className={`px-7 min-h-30 max-h-30 default-shadow rounded-xl w-[90%] flex flex-col items-center border-1 border-gray-300
+            <div className={`px-7 min-h-30 h-fit default-shadow rounded-xl w-[90%] flex flex-col items-center border-1 border-gray-300
             transition-all
-            ${file.status == "none" ? "" : file.status == "success" ? "bg-green-200/90" : "bg-red-200/90"}`}>
+            ${file.status == "none" 
+                ? "" 
+                : file.status == "success" 
+                ? "bg-green-200/90" 
+                : file.status == "error" 
+                ? "bg-red-200/90" 
+                : file.status == "warning"
+                && "bg-yellow-200/50"}`}>
                 <div className="flex items-center justify-between w-full mt-5">
                     <div className="flex items-center gap-2" title={file.name}>
                         {   
@@ -28,10 +36,12 @@ export default function FileEntry({file}: {file: UploadedFilesProps}): JSX.Eleme
                             </span>
                             <span className={`transition-all ${file.status == "none" ? "opacity-0 scale-0" : "opacity-100 scale-100"}`}>
                                 {
-                                file.status == "success" 
-                                ? <FaCheck color="green" size={iconSize} /> 
-                                : file.status == "error" &&
+                                file.status == "success" ? 
+                                <FaCheck color="green" size={iconSize} /> 
+                                : file.status == "error" ?
                                 <FaTimes color="red" size={iconSize} />
+                                : file.status == "warning" &&
+                                <FaExclamation color="red" size={iconSize} />
                                 }
                             </span>
                         </div>
@@ -44,8 +54,10 @@ export default function FileEntry({file}: {file: UploadedFilesProps}): JSX.Eleme
                         </span>
                     </div>
                 </div>
-                <div className="text-gray-600 w-full text-sm">
-                    {file.msg != undefined && file.msg}
+                <div 
+                title={file.msg != undefined ? file.msg : ""}
+                className="text-gray-600 w-125 text-sm text-ellipsis block overflow-hidden">
+                    {file.msg != undefined && file.msg} 
                 </div>
             </div>
         </>

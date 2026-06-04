@@ -1,10 +1,11 @@
 from pathlib import Path
-from backend.api.api import API
-from tests.fixtures import api, df, mock
+from backend.api.api import API, AzureFileState, MAX_TEXT_SIZE
+from tests.fixtures import api, df, mock, graph
 from typing import Any
 from backend.core.parser import Parser
 from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, AZURE_HEADERS, VERSION
-from backend.support.types import ManualCSVProps, APISettings, Formatting, Response
+from backend.support.types import ManualCSVProps, APISettings, Formatting, Response, UserData
+from backend.core.graph import Graph
 from io import BytesIO
 from unittest.mock import patch, Mock
 import numpy as np
@@ -68,7 +69,7 @@ def test_generate_csv_empty_names(tmp_path: Path, api: API, df: pd.DataFrame):
 
     res: Response = api.generate_azure_csv(parser.get_df())
 
-    assert "missing values" in res["message"]
+    assert res["status"] == "success"
 
     csv_path: Path | None = ttils.get_csv(tmp_path)
 
@@ -341,15 +342,17 @@ def test_manual_generate_csv_dupe_names(tmp_path: Path, api: API, df: pd.DataFra
 def test_generate_csv_invalid_text(api: API, df: pd.DataFrame):
     # max chars is 1250 by default
     string_chars: str = string.ascii_letters
-    chars: list[str] = [string_chars[random.randint(0, len(string_chars) - 1)] for _ in range(1251)]
+    chars: list[str] = [string_chars[random.randint(0, len(string_chars) - 1)] for _ in range(1500)]
     text: str = "".join(chars)
 
     api.update_setting("text", text, "template")
     api.update_setting("enabled", True, "template")
 
     res: Response = api.generate_azure_csv(df) 
+    template_str: str = api.settings.get_search("text", parent_key="template")
 
-    assert res["status"] == "error"
+    assert len(template_str) == MAX_TEXT_SIZE
+    assert template_str == text[:MAX_TEXT_SIZE]
 
 def test_generate_csv_multiple(tmp_path: Path, api: API, df: pd.DataFrame):
     parser: Parser = Parser(df)
@@ -515,11 +518,11 @@ def test_get_value(api: API):
 
     if fail_val != "": raise AssertionError(f"Got value when expecting an empty string")
 
-def test_update_key(api: API):
+def test_update_reader(api: API):
     prev_val: str = api.get_reader_value("excel", "name")
     
     var: str = "CHANGED VALUE"
-    res: dict[str, Any] = api.update_key("excel", "name", var)
+    res: dict[str, Any] = api.update_reader("excel", "name", var)
 
     if res["status"] == "error":
         raise AssertionError(f"Failed to update key: {res}")
@@ -532,7 +535,7 @@ def test_update_default_key(api: API):
     prev_val: str = api.get_reader_value("opco", "default")
 
     var: str = "NEW DEFAULT"
-    res: dict[str, Any] = api.update_key("opco", "default", var)
+    res: dict[str, Any] = api.update_reader("opco", "default", var)
 
     new_val: str = api.get_reader_value("opco", "default")
 
@@ -627,7 +630,7 @@ def test_check_version(mock: Mock, api: API):
     mock.return_value = {
         "status": "success",
         "message": "Successfully checked version",
-        "content": "v1.1.5",
+        "content": "v101.10.53",
         "exception": None,
     }
 
@@ -675,3 +678,79 @@ def test_exception_check_version(mock: Mock, api: API):
     res: Response = api.check_version(url)
 
     assert res["status"] == "error"
+
+def test_file_state(api: API):
+    upload_id: str = "12345"
+    state: AzureFileState = api._new_azure_file_state(upload_id)
+
+    assert state.upload_id == upload_id
+
+def test_api_add_users_graph(api: API, df: pd.DataFrame, graph: Graph):
+    parse_res = api._parse_df(df)
+    assert parse_res["status"]
+
+    parser = parse_res["content"]
+    userdata = api._extract_user_data(parser)
+
+    api.graph = graph
+
+    with patch("backend.core.graph.PublicClientApplication") as mockapp:
+        mockapp.return_value.acquire_token_silent.return_value = {"access_token": "12345"}
+
+        with patch("backend.core.graph.requests.post") as mock:
+            mock.return_value.json.return_value = {}
+            mock.return_value.status_code = 200
+
+            graph_res: Response = api.add_users_graph_api(userdata, True)
+
+            assert graph_res["status"] == "success"
+
+def test_api_graph_create_json_guest(api: API, df: pd.DataFrame):
+    userdata = _get_user_data(api, df)
+    post_users = api._create_json_users(userdata, False)
+
+    for user in post_users:
+        assert user["userType"] == "guest"
+
+def test_api_graph_create_json_member(api: API, df: pd.DataFrame):
+    userdata = _get_user_data(api, df)
+    post_users = api._create_json_users(userdata, True)
+
+    for user in post_users:
+        assert user["userType"] == "member"
+    
+def test_api_graph_create_json_domain(api: API, df: pd.DataFrame):
+    companies: list[str] = ["company one", "company two", "company three", "Operating company"]
+    
+    s: pd.Series = df["operating company"].apply(lambda _: companies[random.randint(0, 3)])
+    df["operating company"] = s
+
+    userdata = _get_user_data(api, df)
+    # lets hope i dont change this in the future
+    key: str = "member_type_domain_csv"
+
+    api.graph_reader.update_search(key, "company.one.org,@companytwo.com")
+    json_users = api._create_json_users(userdata, is_member=False)
+
+    for user in json_users:
+        domain: str = user["userPrincipalName"].split("@")[-1]
+
+        if domain == "company.one.org" or domain == "companytwo.com":
+            assert user["userType"] == "member"
+
+def test_api_graph_auth_on_boot(api: API, graph: Graph):
+    api.graph = graph
+
+    with patch("backend.core.graph.PublicClientApplication") as mockapp:
+        mockapp.return_value.acquire_token_silent.return_value = {"access_token": "12345"}
+
+        res: Response = api.authenticate_graph_on_boot()
+
+        assert res["status"] == "success"
+
+def _get_user_data(api: API, df: pd.DataFrame) -> UserData:
+    '''Helper function to parse the DataFrame and get the UserData.'''
+    parse_res = api._parse_df(df)
+    parser = parse_res["content"]
+
+    return api._extract_user_data(parser)

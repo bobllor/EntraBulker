@@ -23,12 +23,13 @@ def get_bytesio(path: Path | str) -> BytesIO:
 
     return BytesIO(csv_bytes)
 
-def get_csv(path: Path, *, ignore_files: list[Path] = []) -> Path | None:
+def get_csv(dir: Path, *, ignore_files: list[Path] = []) -> Path | None:
+    '''Retrieves the CSV file from a given directory path.'''
     ext: str = ".csv"
 
     ignore: set[str] = {file.name.lower() for file in ignore_files}
 
-    for file in path.iterdir():
+    for file in dir.iterdir():
         if file.suffix.lower() == ext:
             if file.name.lower() not in ignore:
                 return file

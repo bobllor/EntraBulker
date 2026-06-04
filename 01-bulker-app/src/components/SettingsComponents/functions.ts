@@ -13,7 +13,7 @@ import { Response } from "../../pywebviewTypes";
  * @param readerType - The type to obtain the correct value from the target Reader in the backend.
  */
 export async function updateExcelReader(keyName: string, value: string, readerType: ReaderType): Promise<boolean>{
-    await window.pywebview.api.update_key(readerType, keyName, value).then((res: Response) => {
+    await window.pywebview.api.update_reader(readerType, keyName, value).then((res: Response) => {
         if(!checkRes(res)){
             toastError(res["message"]);
             return false;

@@ -7,7 +7,7 @@ export type UploadedFilesProps = {
     msg?: string,
 }
 
-export type FileStatus = "error" | "success" | "none"
+export type FileStatus = "error" | "success" | "none" | "warning"
 export type FileType = "xlsx" | "csv";
 
 export type GenerateCSVProps = {

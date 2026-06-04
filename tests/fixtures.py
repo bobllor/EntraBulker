@@ -3,8 +3,9 @@ from pathlib import Path
 from backend.core.json_reader import Reader
 from backend.api.api import API
 from backend.api.updater_api import UpdaterAPI
-from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, DEFAULT_OPCO_MAP, FILE_NAMES
+from backend.support.vars import DEFAULT_HEADER_MAP, DEFAULT_SETTINGS_MAP, DEFAULT_OPCO_MAP, FILE_NAMES, DEFAULT_GRAPH_MAP
 from backend.core.updater import Updater
+from backend.core.graph import Graph
 from unittest.mock import patch, Mock
 import pandas as pd
 import pytest
@@ -38,6 +39,7 @@ def api(tmp_path: Path):
     excel: Reader = Reader(config_path / "excel.json", defaults=DEFAULT_HEADER_MAP, is_test=True, project_root=tmp_path)
     settings: Reader = Reader(config_path / "settings.json", defaults=DEFAULT_SETTINGS_MAP, is_test=True, project_root=tmp_path)
     opcos: Reader = Reader(config_path / "opcos.json", defaults=DEFAULT_OPCO_MAP, is_test=True, project_root=tmp_path)
+    graph: Reader = Reader(config_path / "msgraph.json", defaults=DEFAULT_GRAPH_MAP, is_test=True, project_root=tmp_path)
 
     opco_map: dict[str, str] = {
         "default": DEFAULT_OPCO_MAP["default"],
@@ -48,10 +50,13 @@ def api(tmp_path: Path):
 
     opcos.insert_many(opco_map)
 
-    api: API = API(excel_reader=excel, settings_reader=settings, opco_reader=opcos, project_root=tmp_path)
-    api.set_output_dir(tmp_path)
+    with patch("backend.core.graph.requests.get") as mock:
+        # mocks the requests
+        mock.return_value.json.return_value = {}
+        api: API = API(excel_reader=excel, settings_reader=settings, opco_reader=opcos, project_root=tmp_path, graph_reader=graph)
+        api.set_output_dir(tmp_path)
 
-    yield api
+        yield api
 
 @pytest.fixture
 def updater_api(tmp_path: Path):
@@ -83,3 +88,9 @@ def updater(tmp_path: Path):
     )
 
     yield upd
+
+@pytest.fixture
+def graph(tmp_path: Path):
+    gr: Graph = Graph("", "", project_root=tmp_path)
+
+    yield gr

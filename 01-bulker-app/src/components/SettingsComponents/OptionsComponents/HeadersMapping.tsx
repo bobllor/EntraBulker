@@ -4,6 +4,7 @@ import OptionBase from "./OptionBase";
 import { updateExcelReader } from "../functions";
 import { useSettingsContext } from "../../../context/SettingsContext";
 import { ToolTip } from "../../ui/ToolTip";
+import DataText from "../../ui/DataText";
 
 function TextComponent({name, readerType, toolTipText}: TextComponentProps): JSX.Element {
     const [inputValue, setInputValue] = useState<string>("");
@@ -44,19 +45,6 @@ function TextComponent({name, readerType, toolTipText}: TextComponentProps): JSX
     )
 }
 
-function CurrentValue({currVal}: {currVal: string}): JSX.Element{
-    const maxLength: number = 20;
-    const label: string = "Value: "
-
-    return (
-        <span
-        className="text-ellipsis"
-        title={currVal.length > maxLength ? currVal : ""}>
-            {label + currVal}
-        </span>
-    )
-}
-
 const title: string = "Headers";
 const readerType: ReaderType = "excel";
 const tooltipText: string = "Modify the column names of the Excel file for parsing";
@@ -69,25 +57,25 @@ export default function HeadersMapping(): JSX.Element{
             label: "Name", 
             element: <TextComponent name={"name"} readerType={readerType}
                 toolTipText="The column for the name of the user"/>, 
-            optElement: <CurrentValue currVal={headers.name} />,
+            optElement: <DataText label="Value: " value={headers.name} maxValueLength={20} />,
         },
         {
             label: "Organization", 
             element: <TextComponent name={"opco"} readerType={readerType}
                 toolTipText="The column of the organization for the user"/>,
-            optElement: <CurrentValue currVal={headers.opco} />,
+            optElement: <DataText label="Value: " value={headers.opco} maxValueLength={20} />,
         },
         {
             label: "First Name", 
             element: <TextComponent name={"first_name"} readerType={readerType}
                 toolTipText="The column for the first name of the user"/>,
-            optElement: <CurrentValue currVal={headers.first_name} />,
+            optElement: <DataText label="Value: " value={headers.first_name} maxValueLength={20} />,
         },
         {
             label: "Last Name", 
             element: <TextComponent name={"last_name"} readerType={readerType}
                 toolTipText="The column for the last name of the user"/>,
-            optElement: <CurrentValue currVal={headers.last_name} />,
+            optElement: <DataText label="Value: " value={headers.last_name} maxValueLength={20} />,
         },
     ]
 

@@ -77,7 +77,7 @@ def check_duplicate_names(names: list[str]) -> list[str]:
     
     return new_names
 
-def generate_response(status: Literal['error', 'success'] = 'success', **kwargs) -> dict[str, Any]:
+def generate_response(status: Literal['error', 'success', 'warning'] = 'success', **kwargs) -> dict[str, Any]:
     '''Generate a response dictionary.
 
     Common keys: status, message, content
@@ -85,7 +85,7 @@ def generate_response(status: Literal['error', 'success'] = 'success', **kwargs)
     Parameters
     ----------
         status: str, default "success"
-            The status of the response. It can only be two string values, "success" or "error".
+            The status of the response. It can be "success", "error", or "warning".
 
         kwargs: dict[str, Any]
             Any keyword argument, this gets added into the response.
@@ -110,10 +110,10 @@ def generate_usernames(
     
     Parameters
     ----------
-        names: str
+        names: list[str]
             A list of names for the account to be formatted.
         
-        opcos: str, default None
+        opcos: list[str]
             A list of operating companies for each user, it determines the domain used. If an operating company
             does not exist in the map, the default value will be used.
 
@@ -149,8 +149,9 @@ def generate_usernames(
     for i, name in enumerate(names):
         name = format_hyphen_name(name.strip())
         username: str = style_dict[format_style](name)
+        domain: str = opco_map.get(opcos[i], default_opco).removeprefix("@")
 
-        usernames.append(f'{username}@{opco_map.get(opcos[i], default_opco)}')
+        usernames.append(f'{username}@{domain}')
 
     return usernames    
 
@@ -537,3 +538,37 @@ def compare_version(base_version: str, arg_version: str) -> bool:
 
     # if the loop did not return, that means both versions are equal. 
     return False
+
+def get_key(d: dict[Any, Any], k: Any) -> Any | None:
+    '''Recursively searches a dictionary for a key and return its value. 
+    
+    If the key is not found, then it will return None.
+
+    Parameters
+    ----------
+        d: dict[Any, Any]
+            The dictionary being searched in. The recursive call is used to search
+            other nested dictionaries if it exists.
+        
+        k: Any
+            The target key being looked for.
+    '''
+    if k in d:
+        return d[k]
+    
+    val: Any | None = None
+    for sv in d.values():
+        if isinstance(sv, dict):
+            val = get_key(sv, k)
+        elif isinstance(sv, list):
+            for e in sv:
+                if isinstance(e, dict):
+                    val = get_key(e, k)
+
+                    if val is not None:
+                        break
+        
+        if val is not None:
+            return val
+    
+    return val
