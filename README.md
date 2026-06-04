@@ -206,6 +206,7 @@ When you authenticate for the first time, your *access token is cached* to an *e
 on the disk. This is to reauthenticate with the access token without having to go through 
 the full authentication process again.
 - If your device *does not support encryption*, then it will fall back to *plain text*
+- The cached token will be used to renew the access token, even if it is already expired
 
 If the cached access token is not available, then the system's *default browser* is opened to a page of
 your tenant's authority URI. The account used to login *must be in the same tenant* as where the
@@ -213,10 +214,14 @@ application is registered.
 - There is a *2 minute timeout* on the authentication process, if this timeout is reached it will
 abort the authentication
 
-Multiple accounts *are not supported*. If a different account is required, then you must
-*clear the cache*.
+Multiple accounts *are not supported*. If a different account needs to be used, then the
+*you will need to clear the cache*.
 This will remove the cached access token and the cached accounts, allowing you to authenticate
 with a different account.
+
+The authentication is revoked when the application is closed. Launching the application again
+will require you to sign back in manually. There is a checkbox `Stay signed in` that if checked,
+the program will attempt to *reauthenticate on every reboot* using the cached token.
 
 ## Development
 
