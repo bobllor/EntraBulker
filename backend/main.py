@@ -4,7 +4,9 @@ from api.api import API
 from logger import Log
 from support.vars import DEFAULT_HEADER_MAP, DEFAULT_OPCO_MAP, DEFAULT_SETTINGS_MAP, PROJECT_ROOT, VERSION, DEFAULT_GRAPH_MAP
 from support.utils import init_window, is_prod
-import webview, os
+import webview
+import os
+import truststore
 
 # NOTE: main app is in the apps folder
 
@@ -20,6 +22,10 @@ GRAPH_PATH: str = f"{str(PROJECT_ROOT)}/config/{GRAPH_FILE}"
 
 # same log location with updater logs
 LOGS_PATH: str = f"{str(PROJECT_ROOT.parent)}/logs"
+
+# due to work computers often having self-signed certs,
+# this uses the certificates on windows (and others maybe)
+truststore.inject_into_ssl()
 
 if __name__ == '__main__':
     # will use the npm port, this is changed if in prod
