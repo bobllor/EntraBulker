@@ -2,8 +2,8 @@
 
 *EntraBulker* is a customizable application that streamlines large-scale user onboarding in Microsoft Entra ID by
 transforming CSV and Excel reports into bulk user creation data. 
-It can generate *ready to use CSV bulk files* or directly *create users in a tenant* via Graph API using 
-a registered application.
+It can generate *ready to use CSV bulk files* to manually provision or directly *create users in a tenant* 
+via Graph API using a registered application.
 
 It is a WebView desktop application built with Python, TypeScript, and JavaScript, to assist administrators in
 automating user creation with Entra ID.
@@ -74,8 +74,11 @@ It is *recommended* to make a shortcut of `EntraBulker.exe` in order to use it o
 
 ## Usage
 
-**NOTE**: The application does not account for existing identities in Entra ID. The application is solely used to
-bulk accounts, as it does not rely on having API access.
+> **NOTE** 
+>
+> The application does not account for existing identities in Entra ID. It is used to only create
+> users from reports into the tenant.
+> User principal name conflicts will need to be managed separately.
 
 The application has two ways to generate CSV files:
 1. **File uploading**: The home screen/default screen on first launch
