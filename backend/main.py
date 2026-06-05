@@ -24,7 +24,7 @@ GRAPH_PATH: str = f"{str(PROJECT_ROOT)}/config/{GRAPH_FILE}"
 LOGS_PATH: str = f"{str(PROJECT_ROOT.parent)}/logs"
 
 # due to work computers often having self-signed certs,
-# this uses the certificates on windows (and others maybe)
+# this uses the certificates on windows
 truststore.inject_into_ssl()
 
 if __name__ == '__main__':
