@@ -4,9 +4,14 @@ from core.updater import Updater
 from core.server import LocalServer
 from support.utils import is_prod, init_window
 from support.vars import PROJECT_ROOT, FILE_NAMES
-import webview, os
+import webview
+import os
+import truststore
 
 # NOTE: updater is located outside of the apps folder, which is where the main application is held.
+
+# handles an ssl error with self-signed certificates
+truststore.inject_into_ssl()
 
 if __name__ == "__main__":
     debug, log_path = init_window("logs")
