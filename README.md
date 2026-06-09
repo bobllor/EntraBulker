@@ -93,7 +93,7 @@ The navigation bar can be found on the right side of the application, and can ac
 
 ### Settings
 
-The settings allow customization on how the application will function. There are five tabs:
+The settings allow customization on how the application will function. There are six tabs:
 1. [General](./docs/settings/general.md): General settings of the program
 2. [Headers](./docs/settings/headers.md): Column headers mapping (column names to internal variable mappings)
 3. [Organization](./docs/settings/organization.md): Key-value mapping to map a domain name to an organization key
@@ -101,7 +101,7 @@ The settings allow customization on how the application will function. There are
 5. [Text Template](./docs/settings/text_template.md): Settings for generating text templates for each entry in the file
 6. [Microsoft Graph](./docs/settings/microsoft_graph.md): Settings related to Microsoft Graph
 
-Question marks can be found in all the Setting pages, hovering over them will reveal a tooltip on what it does.
+A 7th tab `About` is not used to modify the application.
 
 ### Side Effects
 
