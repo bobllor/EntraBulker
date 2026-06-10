@@ -53,3 +53,11 @@ export type Metadata = {
 export type FormatType = "period" | "no space";
 export type FormatCase = "title" | "upper" | "lower";
 export type FormatStyle = "first last" | "f last" | "first l";
+
+export type LogLevel = "debug" | "info" | "warn" | "critical";
+export type LogObject = {
+    level: LogLevel
+    component: string
+    msg: string
+    data?: any
+}
