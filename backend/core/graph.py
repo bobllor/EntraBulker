@@ -205,7 +205,7 @@ class Graph:
             self.log.exception("An unknown exception occurred")
 
             return utils.generate_response("error", message="An unknown error occurred while authenticating")
-    
+
     def authenticate_with_cache(self) -> Response:
         '''Authenticates with the recent account the accounts cache and the stored token cache.
         The token will be set in this method if successful.
@@ -213,24 +213,28 @@ class Graph:
         If successful, it will return a successful Response.
         If the result from acquire_token_silent is None, it will return an error Response.
         '''
-        auth_url: str = f"https://login.microsoftonline.com/{self._tenant_id}"
-        if not self.app:
-            self.app = PublicClientApplication(
-                self._client_id,
-                authority=auth_url,
-                token_cache=self.token_cache,
-            )
+        try:
+            auth_url: str = f"https://login.microsoftonline.com/{self._tenant_id}"
+            if not self.app:
+                self.app = PublicClientApplication(
+                    self._client_id,
+                    authority=auth_url,
+                    token_cache=self.token_cache,
+                )
 
-        account: dict[str, Any] | None= self.get_cache_account()
-        if account is not None:
-            self.log.debug("Found cached account")
-        result: dict[str, Any] | None = self.app.acquire_token_silent(self._scopes, account)
+            account: dict[str, Any] | None= self.get_cache_account()
+            if account is not None:
+                self.log.debug("Found cached account")
+            result: dict[str, Any] | None = self.app.acquire_token_silent(self._scopes, account)
 
-        if result is not None and "access_token" in result:
-            self.log.info("Existing cached token found, extracting token")
-            self.access_token = result.get("access_token", "")
-        else:
-            return utils.generate_response("error", message="Authentication failed, unable to retrieve token from cache")
+            if result is not None and "access_token" in result:
+                self.log.info("Existing cached token found, extracting token")
+                self.access_token = result.get("access_token", "")
+            else:
+                return utils.generate_response("error", message="Authentication failed, unable to retrieve token from cache")
+        except ValueError:
+            self.log.warning(f"Authorization URL failed to get created due to an empty tenant ID")
+            return utils.generate_response("error", message="Failed to authenticate, no tenant ID given")
 
         return utils.generate_response(message="Successfully authenticated")
     
