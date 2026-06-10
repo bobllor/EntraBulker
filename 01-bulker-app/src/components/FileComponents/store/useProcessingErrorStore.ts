@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { GraphError, Response } from "../../../pywebviewTypes";
+import "../../../pywebview";
 
 type ProcessingErrorStore = {
     errors: Array<ProcessingErrorObject>
