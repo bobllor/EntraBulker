@@ -13,6 +13,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from core.graph import Graph
 from core.types.graph import CreateUserJson, UserType
+from .types.api import LogObject, LogLevel
 import support.utils as utils
 import pandas as pd
 import webview
@@ -256,14 +257,19 @@ class API:
         if not self.graph:
             self.graph = self._new_graph()
 
-            cacheres: Response = self.graph.authenticate_with_cache()
-            if cacheres["status"] == "success":
-                return cacheres
-            else:
-                self.graph = None
+            try:
+                cacheres: Response = self.graph.authenticate_with_cache()
+
+                if cacheres["status"] != "success":
+                    self.graph = None
 
                 return cacheres
-        
+            except Exception as e:
+                self.logger.warning(f"Error while authenticating with cache: {e}")
+                self.graph = None
+
+                return utils.generate_response("error", message="Failed to authenticate")
+
         return res
     
     def authenticate_graph(self) -> Response:
@@ -578,6 +584,18 @@ class API:
         res: Response = self.graph.create_users(data)
 
         return res
+    
+    def get_user_graph_errors(self) -> Response:
+        '''Retrieves a Response containing the errors after the user creation process with Graph.
+        
+        This requires authentication and `self.graph` to be initialized. Additionally, if 
+        no errors had occurred, then it will return None to the content.
+        '''
+        res: Response = utils.generate_response(message="Successful retrieval", content=None)
+        if self.graph:
+            res["content"] = self.graph.create_graph_error
+
+        return res
 
     def _create_json_users(self, users: UserData, is_member: bool = False) -> list[CreateUserJson]:
         '''Uses the UserData and creates a list of CreateUserJson values.
@@ -669,6 +687,20 @@ class API:
         self.logger.debug(f"Version response: {res}")
         
         return res
+    
+    def log(self, obj: LogObject) -> None:
+        '''Used for logging in the front end.'''
+        level: LogLevel = obj["level"]
+
+        match level:
+            case "debug":
+                self.logger.debug(obj)
+            case "warn":
+                self.logger.warning(obj)
+            case "critical":
+                self.logger.critical(obj)
+            case _:
+                self.logger.info(obj)
 
     def run_updater(self) -> Response:
         '''Runs the Updater for the application.
@@ -734,9 +766,7 @@ class API:
 
         if graphres["status"] != "success":
             res["status"] = graphres["status"]
-            msg: str = "had errors during processing"
-            if len(self.graph.user_creation_error_codes) > 0:
-                msg += f": {', '.join(self.graph.user_creation_error_codes)}"
+            msg: str = "had Graph errors during user creation"
             
             res["message"] = msg
         
