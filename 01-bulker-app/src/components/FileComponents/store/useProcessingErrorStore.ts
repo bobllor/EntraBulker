@@ -27,7 +27,7 @@ export const useProcessingErrorStore = create<ProcessingErrorStore>((set, get) =
         const graphError: GraphError | undefined = res["content"]
 
         console.log(res);
-        if(graphError !== undefined){
+        if(graphError !== null && graphError !== undefined){
             let uuid = crypto.randomUUID();
             const obj: ProcessingErrorObject = {
                 fileName: fileName,
