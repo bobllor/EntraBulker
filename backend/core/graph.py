@@ -359,7 +359,7 @@ class Graph:
         failed_users: list[str] = []
 
         graph_error: GraphError = {
-            "timestamp": datetime.now().strftime("%a %b %Y, %H:%M:%S %p"),
+            "timestamp": datetime.now().strftime("%a %b %Y, %I:%M:%S %p"),
             "failed_users": [],
             "total_users_count": len(users),
             "failed_users_count": 0,
