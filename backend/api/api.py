@@ -612,6 +612,8 @@ class API:
 
         # removing @ and lowering for normalization
         member_type_domains: set[str] = set([e.lower().removeprefix("@") for e in csv_domains.split(",")])
+        # in case we have empty values
+        member_type_domains.discard("")
 
         for i in range(len(users["usernames"])):
             user_type: UserType = "member" if is_member else "guest"
