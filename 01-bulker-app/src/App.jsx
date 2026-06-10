@@ -15,15 +15,17 @@ import Password from "./components/SettingsComponents/OptionsComponents/Password
 import Graph from "./components/SettingsComponents/OptionsComponents/Graph";
 import { useAuthenticateOnBoot, useCheckUpdate, useDisableContext, useDisableShortcuts, useInitializeZustand } from "./hooks";
 import { useMetaContext } from "./context/MetaContext";
-import { FaHome, FaHammer, FaCog } from "react-icons/fa";
+import { FaHome, FaHammer, FaCog, FaStickyNote } from "react-icons/fa";
 import { useGraphSettingStore } from "./components/SettingsComponents/store/useGraphSettingsStore";
 import About from "./components/SettingsComponents/OptionsComponents/About";
+import ProcessingLog from "./routes/ProcessingLog";
 
 const fullPageStyle = 'h-screen w-screen flex flex-col justify-center items-center overflow-hidden relative p-3'
 const navigationButtons = [
     {label: 'Home', url: '/', icon: <FaHome size={20} />},
-    {label: 'Custom', url: '/custom', icon: <FaHammer size={20} />}
-]
+    {label: 'Custom', url: '/custom', icon: <FaHammer size={20} />},
+    {label: 'Logs', url: '/processing-logs', icon: <FaStickyNote size={20} />},
+];
 
 export default function App() {
   // used for buttons and the manual form for the unload.
@@ -98,6 +100,7 @@ export default function App() {
             <Route path='custom' element={<Custom style={fullPageStyle} 
               formState={{state: formEdited, func: setFormEdited}}/>} />
             <Route path="settings" element={<Settings setShowSetting={setShowSetting} />} />
+            <Route path="processing-logs" element={<ProcessingLog />} />
         </Routes>
         <div className="w-full flex justify-end items-center px-5 fixed bottom-0">
           {version}
