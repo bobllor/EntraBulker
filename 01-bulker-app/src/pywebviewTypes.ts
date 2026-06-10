@@ -61,3 +61,14 @@ export type LogObject = {
     msg: string
     data?: any
 }
+
+export type FailedUserObject = {
+    name: string
+    error: string
+}
+export type GraphError = {
+    timestamp: number
+    total_users_count: number
+    failed_users_count: number
+    failed_users: Array<FailedUserObject>
+}
