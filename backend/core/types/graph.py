@@ -40,7 +40,29 @@ class RequestErrorResponse:
     message: str = ""
     date: str = ""
     request_id: str = ""
+    # The property field of the Graph User that failed.
     target: str = ""
+
+    def format_error(self) -> str:
+        '''Returns a client-safe error code formatted into a string from the error data.'''
+        l_code: str = self.code.lower()
+        l_target: str = self.target.lower() if self.target != "" else "unknownTarget"
+
+        error_map: dict[tuple[str, str], str] = {
+            ("invalidvalue", "userprincipalname"): "Invalid UPN domain",
+            ("objectconflict", "userprincipalname"): "UPN already exists",
+        }
+
+        tup_key = (l_code, l_target)
+        default_error: str = f"An unknown error occurred ({self.target}, see application logs for details)"
+
+        err: str | None = error_map.get(tup_key, None)
+        if err is None:
+            err = default_error
+        else:
+            err = f"{err} ({self.target})"
+        
+        return err
 
 JsonHeaders = TypedDict("JsonHeaders",
     {
@@ -64,3 +86,21 @@ class GraphAccountCacheReader(TypedDict):
     # for example: `user@domain.com`. This is used to get the most recent
     # user if multiple users exist in the cache.
     recent_username: str
+
+class FailedUserObject(TypedDict):
+    '''Used in GraphError to represent a failed user.'''
+    name: str
+    # The error message. This will be displayed after the name,
+    # for example: John Doe: An error (target).
+    error: str
+
+class GraphError(TypedDict):
+    '''Represents an error object from Graph. This is used in the front end and
+    *should not be logged* due to the usernames.
+    '''
+    # The time of the failure in seconds.
+    timestamp: float
+    total_users_count: int
+    failed_users_count: int
+    # Users that failed to get created.
+    failed_users: list[FailedUserObject]
