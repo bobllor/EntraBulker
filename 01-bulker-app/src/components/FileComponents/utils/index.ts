@@ -5,6 +5,7 @@ import { UploadedFilesProps, FileStatus, GenerateCSVProps, FileType } from './ty
 import { Response } from '../../../pywebviewTypes.ts';
 import { generateId } from "../../../utils.ts"; 
 import { useFileSubmissionStore } from '../store/useFileSubmissionStore.ts';
+import { useProcessingErrorStore } from '../store/useProcessingErrorStore.ts';
 
 //** Updates the uploaded files state with the event file from the input element. */
 export function onFileChange(
@@ -77,6 +78,7 @@ export async function uploadFile(
     }
     
     const setProcessing = useFileSubmissionStore.getState().setProcessing;
+    const fetchGraphError = useProcessingErrorStore.getState().fetchGraphError;
 
     try{
         setProcessing(true);
@@ -126,10 +128,15 @@ export async function uploadFile(
                     uploadSuccess = false;
                 }
 
+                if(res["status"] != "success"){
+                    fetchGraphError(csvObj.fileName);
+                }
+
                 resMessage = res.message;
                 status = res.status;
             }catch(error){
                 // toast error here due to it being a critical error.
+                // this is an unhandled error that occurred.
                 if(error instanceof Error){
                     toastError(error.message);
                     status = "error";
@@ -146,6 +153,7 @@ export async function uploadFile(
                 
                 return p;
             }));
+
             if(status == "error"){
                 toastError(`Failed to process ${csvObj.fileName}`);
             }else if(status == "warning"){

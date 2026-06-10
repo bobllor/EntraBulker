@@ -6,8 +6,9 @@ import { EditCellProps, FormStateProps, InputDataProps, ManualData, SelectStateP
 import ManualTable from "./ManualTable";
 import { generateId, throttler } from "../../utils";
 import Button from "../ui/Button";
-import { toastError, toastResponse, toastSuccess } from "../../toastUtils";
+import { toastError, toastResponse } from "../../toastUtils";
 import { Response } from "../../pywebviewTypes";
+import { useProcessingErrorStore } from "../FileComponents/store/useProcessingErrorStore";
 
 const submitFormThrottle = throttler((data: ManualData[], func: (...any: any) => any) => func(data));
 
@@ -22,6 +23,8 @@ export default function ManualForm({formState, selectState, editCellState}: Manu
     const [inputData, setInputData] = useState<InputDataProps>(
         {nameValue: '', opcoValue: ''}
     );
+
+    const fetchGraphError = useProcessingErrorStore(st => st.fetchGraphError);
 
     const addEntry = async (): Promise<void> => {
         if(!divRef.current) return;
@@ -91,6 +94,8 @@ export default function ManualForm({formState, selectState, editCellState}: Manu
             if(res.status == 'success'){
                 // allows navigation without modal popup
                 formState.func(false);
+            }else{
+                fetchGraphError("Manual entry");
             }
         }catch(e){
             console.error("Unexpected error occurred:", e);
