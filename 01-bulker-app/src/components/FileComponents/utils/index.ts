@@ -5,7 +5,7 @@ import { UploadedFilesProps, FileStatus, GenerateCSVProps, FileType } from './ty
 import { Response } from '../../../pywebviewTypes.ts';
 import { generateId } from "../../../utils.ts"; 
 import { useFileSubmissionStore } from '../store/useFileSubmissionStore.ts';
-import { useProcessingErrorStore } from '../store/useProcessingErrorStore.ts';
+import { useGraphErrorStore } from '../../../context/useGraphErrorStore.ts';
 
 //** Updates the uploaded files state with the event file from the input element. */
 export function onFileChange(
@@ -78,7 +78,7 @@ export async function uploadFile(
     }
     
     const setProcessing = useFileSubmissionStore.getState().setProcessing;
-    const fetchGraphError = useProcessingErrorStore.getState().fetchGraphError;
+    const fetchGraphError = useGraphErrorStore.getState().fetchGraphError;
 
     try{
         setProcessing(true);

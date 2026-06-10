@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import { GraphError, Response } from "../../../pywebviewTypes";
-import "../../../pywebview";
+import { GraphError, Response } from "../pywebviewTypes";
+import "../pywebview";
 
-type ProcessingErrorStore = {
-    errors: Array<ProcessingErrorObject>
+type GraphErrorStore = {
+    errors: Array<GraphErrorObject>
     /**
      * Fetches a graph error to the error object of the store. If the return from
      * the content of API call is undefined, then it will do nothing.
@@ -15,13 +15,13 @@ type ProcessingErrorStore = {
     fetchGraphError: (fileName: string) => Promise<void>,
 }
 
-export type ProcessingErrorObject = {
+export type GraphErrorObject = {
     fileName: string
     id: string
     graphError: GraphError
 }
 
-export const useProcessingErrorStore = create<ProcessingErrorStore>((set, get) => ({
+export const useGraphErrorStore = create<GraphErrorStore>((set, get) => ({
     errors: [],
     fetchGraphError: async (fileName: string) => {
         const res: Response = await window.pywebview.api.get_user_graph_errors();
@@ -30,7 +30,7 @@ export const useProcessingErrorStore = create<ProcessingErrorStore>((set, get) =
         console.log(res);
         if(graphError !== null && graphError !== undefined){
             let uuid = crypto.randomUUID();
-            const obj: ProcessingErrorObject = {
+            const obj: GraphErrorObject = {
                 fileName: fileName,
                 id: uuid,
                 graphError: graphError,

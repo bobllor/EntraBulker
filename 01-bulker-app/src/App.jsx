@@ -18,7 +18,7 @@ import { useMetaContext } from "./context/MetaContext";
 import { FaHome, FaHammer, FaCog, FaStickyNote } from "react-icons/fa";
 import { useGraphSettingStore } from "./components/SettingsComponents/store/useGraphSettingsStore";
 import About from "./components/SettingsComponents/OptionsComponents/About";
-import ProcessingLog from "./routes/ProcessingLog";
+import GraphLog from "./routes/GraphLog";
 
 const fullPageStyle = 'h-screen w-screen flex flex-col justify-center items-center overflow-hidden relative p-3'
 const navigationButtons = [
@@ -100,7 +100,7 @@ export default function App() {
             <Route path='custom' element={<Custom style={fullPageStyle} 
               formState={{state: formEdited, func: setFormEdited}}/>} />
             <Route path="settings" element={<Settings setShowSetting={setShowSetting} />} />
-            <Route path="processing-logs" element={<ProcessingLog />} />
+            <Route path="processing-logs" element={<GraphLog />} />
         </Routes>
         <div className="w-full flex justify-end items-center px-5 fixed bottom-0">
           {version}

@@ -1,5 +1,5 @@
 import { JSX, useState } from "react";
-import { useProcessingErrorStore } from "../components/FileComponents/store/useProcessingErrorStore";
+import { useGraphErrorStore } from "../context/useGraphErrorStore";
 import { FaAngleDown, FaAngleRight } from "react-icons/fa";
 
 const ICON_SIZE = 15;
@@ -10,8 +10,8 @@ const ICON_SIZE = 15;
  * 
  * @returns The log page JSX element
  */
-export default function ProcessingLog(): JSX.Element{
-    const processErrors = useProcessingErrorStore(st => st.errors);
+export default function GraphLog(): JSX.Element{
+    const processErrors = useGraphErrorStore(st => st.errors);
 
     const [revealLogs, setRevealLogs] = useState(new Set<string>());
 
@@ -38,7 +38,7 @@ export default function ProcessingLog(): JSX.Element{
         <div className="default-shadow border border-black/40 rounded-2xl h-[80%] w-[70%] p-2">
             <div className="default-shadow border border-black/40 h-full rounded-xl p-2">
                 <h1 className="text-xl">
-                    Processing Logs
+                    Graph Error Logs
                 </h1>
                 <hr />
                 <div className="text-wrap overflow-y-auto h-[95%] py-2">

@@ -1,10 +1,6 @@
 import React from "react";
 import { InputDataProps } from "./types";
-import { ManualData } from "./types";
-import { toastError, toastSuccess, toastWarning } from "../../../toastUtils";
 import "../../../pywebview";
-import { Response } from "../../../pywebviewTypes";
-import { useProcessingErrorStore } from "../../FileComponents/store/useProcessingErrorStore";
 
 /**
  * Validates the form inputs to ensure no duplicates are in either field, if it fails then

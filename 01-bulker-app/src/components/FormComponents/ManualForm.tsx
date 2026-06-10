@@ -8,7 +8,7 @@ import { generateId, throttler } from "../../utils";
 import Button from "../ui/Button";
 import { toastError, toastResponse } from "../../toastUtils";
 import { Response } from "../../pywebviewTypes";
-import { useProcessingErrorStore } from "../FileComponents/store/useProcessingErrorStore";
+import { useGraphErrorStore } from "../../context/useGraphErrorStore";
 
 const submitFormThrottle = throttler((data: ManualData[], func: (...any: any) => any) => func(data));
 
@@ -24,7 +24,7 @@ export default function ManualForm({formState, selectState, editCellState}: Manu
         {nameValue: '', opcoValue: ''}
     );
 
-    const fetchGraphError = useProcessingErrorStore(st => st.fetchGraphError);
+    const fetchGraphError = useGraphErrorStore(st => st.fetchGraphError);
 
     const addEntry = async (): Promise<void> => {
         if(!divRef.current) return;
