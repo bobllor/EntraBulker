@@ -20,6 +20,8 @@ export default function InputField({preventDefault = false, readerKey, updateRea
                 }
             }}>
             <input
+            spellCheck="false"
+            autoCorrect="false"
             className="input-style rounded-xl py-1 px-2"
             onChange={(e) => setInputValue(e.currentTarget.value)}
             ref={inputRef}/>

@@ -6,7 +6,7 @@ import { Response } from "../../../pywebviewTypes";
 import { toastError, toastResponse } from "../../../toastUtils";
 import { useAuthStore } from "./store/useAuthStore";
 import { useGraphSettingStore } from "../store/useGraphSettingsStore";
-import { throttler } from "../../../utils";
+import { newLogObject, throttler } from "../../../utils";
 import Button from "../../ui/Button";
 import { FaCheck, FaCheckCircle, FaMinus, FaMinusCircle } from "react-icons/fa";
 import SliderButton from "../../ui/SliderButton";
@@ -16,6 +16,7 @@ import { DropDownOption } from "../../ui/DropDown";
 import InputField from "../../ui/InputField";
 import DataText from "../../ui/DataText";
 import { useShallow } from "zustand/react/shallow";
+import { log } from "../../../pywebviewFunctions";
 
 const throttleAuthenticateOnClick = throttler(() => authenticateOnClick(), 1500);
 const AUTH_BUTTON_WIDTH: number = 35;
@@ -29,7 +30,7 @@ function AuthenticateButton({authStatus, reauthBoot}: {authStatus: boolean, reau
         <div className="flex flex-col gap-1">
             {!isAuthenticating 
             ? 
-                <Button disabled={authStatus} text="Sign In" 
+                <Button disabled={authStatus} text="Sign in" 
                 func={() => throttleAuthenticateOnClick()} type="button" width={AUTH_BUTTON_WIDTH} />
             : 
                 <Button text="Signing in..." type="button" width={AUTH_BUTTON_WIDTH} />
@@ -52,7 +53,7 @@ const throttleClearCacheOnClick = throttler(() => clearGraphCacheOnClick(), 1500
 function LogoutButton({authStatus}: {authStatus: boolean}): JSX.Element{
     return (
         <Button disabled={!authStatus} title={!authStatus ? "Must be signed in" : ""}
-        text="Logout" type="button" width={AUTH_BUTTON_WIDTH} func={() => throttleLogoutOnClick() }/>
+        text="Sign out" type="button" width={AUTH_BUTTON_WIDTH} func={() => throttleLogoutOnClick() }/>
     )
 }
 
@@ -88,6 +89,20 @@ export default function Graph(): JSX.Element{
         reauthBoot: st.values.reauthenticate_on_boot,
     })));
 
+    const cleanCsvInput = (key: string, value: string) => {
+        const arr = value.split(",");
+        const newArr: Array<string> = [];
+
+        arr.forEach(v => {
+            if(v != ""){
+                newArr.push(v);
+            }
+        })
+
+        const newValue = newArr.join(",");
+        setGraphValues(key, newValue);
+    };
+
     const options: Array<OptionProps> = [
         {
             label: "Enable Graph",
@@ -108,7 +123,7 @@ export default function Graph(): JSX.Element{
         {
             label: "Member Type Domain CSV",
             element: <InputField preventDefault readerKey="member_type_domain_csv"
-                updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
+                updateReaderFunc={(key, value) => cleanCsvInput(key, value)} />,
             optElement: <DataText value={domainCsvString} justification="center" />
         },
         {
@@ -192,7 +207,12 @@ async function authenticateOnClick(){
         }
     }
     catch(error){
-        console.log(error);
+        const obj = newLogObject(
+            "warn",
+            "GraphAuthenticate",
+            `An uncaught error occurred: ${error}`,
+        );
+        log(obj);
         toastError("An unknown error occurred, it has been logged");
     }
     finally{
