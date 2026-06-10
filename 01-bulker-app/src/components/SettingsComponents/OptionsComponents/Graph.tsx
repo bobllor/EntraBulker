@@ -89,6 +89,20 @@ export default function Graph(): JSX.Element{
         reauthBoot: st.values.reauthenticate_on_boot,
     })));
 
+    const cleanCsvInput = (key: string, value: string) => {
+        const arr = value.split(",");
+        const newArr: Array<string> = [];
+
+        arr.forEach(v => {
+            if(v != ""){
+                newArr.push(v);
+            }
+        })
+
+        const newValue = newArr.join(",");
+        setGraphValues(key, newValue);
+    };
+
     const options: Array<OptionProps> = [
         {
             label: "Enable Graph",
@@ -109,7 +123,7 @@ export default function Graph(): JSX.Element{
         {
             label: "Member Type Domain CSV",
             element: <InputField preventDefault readerKey="member_type_domain_csv"
-                updateReaderFunc={(key, value) => setGraphValues(key, value)} />,
+                updateReaderFunc={(key, value) => cleanCsvInput(key, value)} />,
             optElement: <DataText value={domainCsvString} justification="center" />
         },
         {
