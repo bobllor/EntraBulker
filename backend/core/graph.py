@@ -4,10 +4,12 @@ from logger import Log
 from typing import Any, Callable, TypeVar, ParamSpec
 from support.types import Response
 from core.types.graph import CreateUserJson, JsonHeaders, RequestErrorResponse, GraphAccountCacheReader
+from core.types.graph import GraphError, FailedUserObject
 from core.graph_tils.writer import TokenCacheWriter
 from pathlib import Path
 from core.json_reader import Reader
 from functools import wraps
+from datetime import datetime
 import json
 import requests
 import support.utils as utils
@@ -130,9 +132,9 @@ class Graph:
         # least privilege scope that allows writing to entra, do not change!
         self._scopes: list[str] = ["User.ReadWrite.All"]
 
-        # used to track error codes that occurred
-        # this is reset at the start of create_users
-        self.user_creation_error_codes: set[str] = set()
+        # used to handle errors during user creation with Graph
+        # this is set inside the method but only if errors occurred 
+        self.create_graph_error: GraphError | None = None
 
     def authenticate(self) -> Response:
         '''
@@ -205,7 +207,7 @@ class Graph:
             self.log.exception("An unknown exception occurred")
 
             return utils.generate_response("error", message="An unknown error occurred while authenticating")
-    
+
     def authenticate_with_cache(self) -> Response:
         '''Authenticates with the recent account the accounts cache and the stored token cache.
         The token will be set in this method if successful.
@@ -213,24 +215,28 @@ class Graph:
         If successful, it will return a successful Response.
         If the result from acquire_token_silent is None, it will return an error Response.
         '''
-        auth_url: str = f"https://login.microsoftonline.com/{self._tenant_id}"
-        if not self.app:
-            self.app = PublicClientApplication(
-                self._client_id,
-                authority=auth_url,
-                token_cache=self.token_cache,
-            )
+        try:
+            auth_url: str = f"https://login.microsoftonline.com/{self._tenant_id}"
+            if not self.app:
+                self.app = PublicClientApplication(
+                    self._client_id,
+                    authority=auth_url,
+                    token_cache=self.token_cache,
+                )
 
-        account: dict[str, Any] | None= self.get_cache_account()
-        if account is not None:
-            self.log.debug("Found cached account")
-        result: dict[str, Any] | None = self.app.acquire_token_silent(self._scopes, account)
+            account: dict[str, Any] | None= self.get_cache_account()
+            if account is not None:
+                self.log.debug("Found cached account")
+            result: dict[str, Any] | None = self.app.acquire_token_silent(self._scopes, account)
 
-        if result is not None and "access_token" in result:
-            self.log.info("Existing cached token found, extracting token")
-            self.access_token = result.get("access_token", "")
-        else:
-            return utils.generate_response("error", message="Authentication failed, unable to retrieve token from cache")
+            if result is not None and "access_token" in result:
+                self.log.info("Existing cached token found, extracting token")
+                self.access_token = result.get("access_token", "")
+            else:
+                return utils.generate_response("error", message="Authentication failed, unable to retrieve token from cache")
+        except ValueError as e:
+            self.log.warning(f"Authorization URL failed to get created: {e}")
+            return utils.generate_response("error", message="Failed to authenticate")
 
         return utils.generate_response(message="Successfully authenticated")
     
@@ -337,9 +343,11 @@ class Graph:
         If all users given failed to POST for whatever reason, then it will return an *error*. 
         If there are a handful of failed POST requests, then it will return a *warning*. 
 
-        The user creation error codes are added in here if one occurs.
+        At the end of processing, if errors occurred, then this method will create a new
+        GraphError object for use to call for the Graph class. 
+        If no errors occurred, then this will be None. 
+        It can be called via `self.create_graph_error`. 
         '''
-        self.user_creation_error_codes = set()
         end_res: Response = utils.generate_response(message=f"Created users")
 
         headers: JsonHeaders = {
@@ -350,10 +358,11 @@ class Graph:
         created_users: list[str] = []
         failed_users: list[str] = []
 
-        post_user_info = {
-            "total users": len(users),
-            "created users": {"users": created_users},
-            "failed users": {"users": failed_users},
+        graph_error: GraphError = {
+            "timestamp": datetime.now().strftime("%a %b %Y, %I:%M:%S %p"),
+            "failed_users": [],
+            "total_users_count": len(users),
+            "failed_users_count": 0,
         }
 
         for user_json in users:
@@ -362,11 +371,16 @@ class Graph:
 
             if not post_res.ok:
                 error: RequestErrorResponse = self.get_error(data)
-                self.log.error(f"Failed to create user {user_json['displayName']}: {error}")
+                self.log.error(f"Failed to create user {user_json['displayName']} ({post_res.status_code}): {error}")
                 self.log.debug(f"Response: {data}")
 
                 failed_users.append(user_json['displayName'])
-                self.user_creation_error_codes.add(f"{error.code} ({error.target})")
+                user_obj: FailedUserObject = {
+                    "name": user_json['displayName'],
+                    "error": error.format_error(),
+                }
+
+                graph_error["failed_users"].append(user_obj)
             else:
                 self.log.info(f"Created user {user_json['displayName']}")
                 created_users.append(user_json['displayName'])
@@ -374,15 +388,16 @@ class Graph:
         if len(failed_users) > 0:
             end_res["status"] = "warning"
             end_res["message"] = f"Failed to add {len(failed_users)}/{len(users)} user(s) with Graph API"
+
+            graph_error["failed_users_count"] = len(failed_users)
+            self.create_graph_error = graph_error
         if len(failed_users) == len(users):
             end_res["status"] = "error"
             end_res["message"] = f"Failed to add all given user(s) with Graph API"
 
-        post_user_info["created users"]["Count"] = len(created_users)
-        post_user_info["failed users"]["Count"] = len(failed_users)
         
-        self.log.debug(f"POST users created: {post_user_info}")
-        
+        self.log.debug(f"Users created with Graph: {len(created_users)}")
+ 
         return end_res
     
     def get_error(self, d: dict[str, Any]) -> RequestErrorResponse:

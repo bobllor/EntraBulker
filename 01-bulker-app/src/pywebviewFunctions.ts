@@ -1,6 +1,6 @@
 import { ReaderType } from "./components/SettingsComponents/types";
 import "./pywebview";
-import { Metadata, Response } from "./pywebviewTypes";
+import { LogObject, Metadata, Response } from "./pywebviewTypes";
 
 /**
  * Retrieves the contents of the reader.
@@ -76,4 +76,11 @@ export async function runUpdater(): Promise<Response>{
     const res: Response = await window.pywebview.api.run_updater();
 
     return res;
+}
+
+/**
+ * Logs a message at a given level to the back end.
+ */
+export async function log(obj: LogObject): Promise<void>{
+    await window.pywebview.api.log(obj);
 }

@@ -4,7 +4,7 @@ from typing import Literal
 from .utils import is_prod
 import sys
 
-VERSION: str = "v2.1.0" # this must start with a "v"
+VERSION: str = "v3.0.0" # this must start with a "v"
 
 META: Metadata = {
     "version": VERSION,

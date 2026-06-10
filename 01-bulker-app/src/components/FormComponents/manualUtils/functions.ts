@@ -1,7 +1,5 @@
 import React from "react";
 import { InputDataProps } from "./types";
-import { ManualData } from "./types";
-import { toastError, toastSuccess } from "../../../toastUtils";
 import "../../../pywebview";
 
 /**
@@ -19,21 +17,6 @@ export function validateInput(event: React.ChangeEvent<HTMLInputElement>,
         setInputData(prev => {
             return {...prev, [elementName]: currValue}
         })
-}
-
-export async function submitManualEntry(manualData: Array<ManualData>): Promise<void>{
-    if(manualData.length == 0){
-        toastError("No entries found");
-        return;
-    }
-
-    let res: {status: string, message: string} = await window.pywebview.api.generate_manual_csv(manualData);
-
-    if(res.status == 'success'){
-        toastSuccess(res.message);
-    }else{
-        toastError(res.message);
-    }
 }
 
 export function handleDivClick(event: React.MouseEvent<HTMLDivElement, MouseEvent>, 

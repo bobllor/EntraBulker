@@ -1,4 +1,5 @@
 import "./pywebview";
+import { LogLevel, LogObject } from "./pywebviewTypes";
 
 /**
  * Checks if the values of two objects are the same or different. 
@@ -82,4 +83,13 @@ export function generateId(): string{
  */
 export function checkRes(res: Record<string, string>): boolean{
     return res["status"] == "success";
+}
+
+export function newLogObject(level: LogLevel, component: string, message: string, data?: any): LogObject{
+    return {
+        level: level,
+        component: component,
+        msg: message,
+        data: data,
+    };
 }
