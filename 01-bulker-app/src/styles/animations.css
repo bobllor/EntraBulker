@@ -19,3 +19,40 @@
     animation-iteration-count: infinite;
     animation-timing-function: ease-in-out;
 }
+
+@keyframes accordion{
+    0%{
+        max-height: 0;
+        overflow: hidden;
+    }
+    
+    100%{
+        max-height: 5000px;
+        overflow: hidden;
+    }
+}
+@keyframes hide-accordion{
+    0%{
+        max-height: 5000px;
+        overflow: hidden;
+    }
+    
+    100%{
+        max-height: 0;
+        overflow: hidden;
+        display: hidden;
+    }
+}
+
+.reveal-vertical{
+    animation-name: accordion;
+    animation-duration: 1.5s;
+    transition: ease-out;
+    animation-fill-mode: forwards;
+}
+
+.hide-accordion{
+    animation-name: hide-accordion;
+    animation-duration: .2s;
+    transition: ease-out;
+}

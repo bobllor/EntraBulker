@@ -60,9 +60,8 @@ export default function ProcessingLog(): JSX.Element{
                                 {obj.graphError.timestamp} | <strong>{obj.fileName}</strong>
                             </p> 
                         </div>
-                        {revealLogs.has(obj.id) && 
-                        <div>
-                            <ul className="list-disc list-inside">
+                        <div className={`${!revealLogs.has(obj.id) && "hidden"}`}>
+                            <ul className={`list-disc list-inside ${revealLogs.has(obj.id) && "reveal-vertical"}`}>
                                 {obj.graphError.failed_users.map((failedObj, i) => (
                                 <li 
                                 className="px-2 select-text text-sm"
@@ -72,7 +71,6 @@ export default function ProcessingLog(): JSX.Element{
                                 ))}
                             </ul>
                         </div>
-                        }
                     </div>
                     ))}
                 </div>
