@@ -46,6 +46,8 @@ The output file can now be uploaded to Azure Entra ID and bulk create all rows o
     - [Setup](#setup)
     - [Usage](#usage-1)
     - [Caching](#caching)
+    - [Authentication](#authentication)
+    - [Errors Logs](#error-logs)
 - [Development](#development)
     - [Initializing Project](#initializing-project)
     - [Running the Application](#running-the-application)
@@ -211,9 +213,14 @@ the full authentication process again.
 - If your device *does not support encryption*, then it will fall back to *plain text*
 - The cached token will be used to renew the access token, even if it is already expired
 
+The account information is cached in order to retrieve the cached access token. This is written
+to a configuration file.
+
+### Authentication
+
 If the cached access token is not available, then the system's *default browser* is opened to a page of
-your tenant's authority URI. The account used to login *must be in the same tenant* as where the
-application is registered. 
+your tenant's authority URI for authentication. 
+The account used to login *must be in the same tenant* as where the application is registered. 
 - There is a *2 minute timeout* on the authentication process, if this timeout is reached it will
 abort the authentication
 
@@ -226,12 +233,49 @@ The authentication is revoked when the application is closed. Launching the appl
 will require you to sign back in manually. There is a checkbox `Stay signed in` that if checked,
 the program will attempt to *reauthenticate on every reboot* using the cached token.
 
+### Error Logs
+
+When errors occur during Microsoft Graph requests, the card entry will be either a *warning* or
+an *error* depending on how many users failed in the process.
+- Errors are major errors or if all users in the file failed the Graph process
+- Warnings are used if at least one user creation has failed
+
+<img src="./docs/assets/graph-generation-error.png" alt="Example of a file with an error" width="600">
+
+<br>
+
+<img src="./docs/assets/graph-generation-warning.png" alt="Example of a file with warnings" width="600">
+
+Due to the length of the error responses and for security, they are not displayed in the toast and the card entry.
+Instead, a *separate page `Logs` contains the detailed errors* on which users failed for a file.
+- The *navigation button can be found under the `Custom` button*
+
+Manual entries and normal submissions will both be logged with Graph.
+The format of the logging is: `<NAME>: <MESSAGE> (<TARGET>)`
+- The `TARGET` represents what property the POST failed on
+- For example, `Bruce Wayne: Invalid UPN Domain (userPrincipalName)` means that the UPN
+(`user@domain.com`) is invalid in the tenant, such as the domain not being registered
+
+<img src="./docs/assets/graph-error-logs.png" alt="Screenshot of the Graph Errors Log page with a single entry" width="600">
+
+<br>
+
+> NOTE
+>
+> If any uncaught errors have occurred, please create an issue with the application logs of the response.
+
+Hovering over a log entry will show the full file name and how many users have failed
+out of the total users.
+
+<img src="./docs/assets/graph-error-logs-hover.png" alt="Hover text of a log entry" width="600" >
+
 ## Development
 
 Development is supported on Linux and Windows. 
 Windows is expected to ***use Git Bash***, with support scripts being written in Bash.
-
-*PowerShell* is used when compiling the binaries and installer.
+- Linux uses `pywebview GTK` by default. This can be changed if QT is preferred
+- Windows is required if you are compiling the binary and installer manually due
+to the use of PowerShell
 
 The following software are required:
 - `Node.js` >= 22.11.0

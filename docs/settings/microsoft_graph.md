@@ -2,7 +2,7 @@
 
 Starting as of `EntraBulker v2.0.0`, Microsoft Graph is supported, enabling *automated user creation*
 directly into the tenant instead of manually uploading a CSV file.
-Unlike the manual provisioning, the *member type* of the users can be toggled between
+Unlike with manual provisioning, the *member type* of the users can be toggled between
 *Guest* or *Member*.
 
 In order for Microsoft Graph to be used, you will need:
@@ -41,9 +41,9 @@ EntraBulker *creates new users* in the tenant, therefore the minumum scope requi
 Since the application uses *delegated permissions*, the account used to login for authentication *must be able*
 to perform CRUD operations on a tenant.
 
-The scope *must be configured* in the application settings, which accessed via `Expose an API` > `Add a scope`.
+The scope *must be configured* in the application settings, which accessed via `API Permissions` > `Add a permission`.
 Microsoft has an article on 
-[how to configure the scope](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-configure-app-expose-web-apis).
+[how to configure the scope](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-configure-app-access-web-apis).
 
 ## EntraBulker Settings
 
@@ -71,8 +71,9 @@ This is only applicable if the `User Type` is set to `Guest`. It is expected to 
 
 It is used to ensure that users with these domains are created with **Member type** access.
 
-This is *spelling sensitive*, and the value must match the exact ending as the domain you are
-expecting. The `@` symbol is not necessary, as long as the end string matches the given CSV strings.
+This is *spelling sensitive* but not case sensitive, and the values must match the exact ending as the 
+domains of the users.
+The `@` symbol is not necessary, as long as the end string matches the given CSV strings.
 
 ### User Type
 
@@ -107,7 +108,7 @@ you to not have to go into settings to reauthenticate. By default, this is enabl
 This option signs out your application from Graph. It does not delete the cache, and you can sign back in with
 no issue.
 
-Only used for if you want to not use Graph.
+Only used for if you want to not use Graph or want to log out.
 
 ### Clear Cache
 
@@ -115,5 +116,5 @@ Only used for if you want to not use Graph.
 >
 > This will remove the cached data and you will need to reauthenticate.
 
-Removes all cached files and force a new reauthentication. This is used if you need to login
+Removes all cached files and force a new authentication process. This is used if you need to login
 to a different account or you want to remove cached files.
