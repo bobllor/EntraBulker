@@ -4,7 +4,8 @@ from logger import Log
 from typing import Any, Callable, TypeVar, ParamSpec
 from support.types import Response
 from core.types.graph import CreateUserJson, JsonHeaders, RequestErrorResponse, GraphAccountCacheReader
-from core.types.graph import GraphError, FailedUserObject
+from core.types.graph import GraphError, FailedUserObject, BatchBody, BatchRequest, BatchResponse
+from core.types.graph import GraphBatchPostUserInfo
 from core.graph_tils.writer import TokenCacheWriter
 from pathlib import Path
 from core.json_reader import Reader
@@ -13,27 +14,31 @@ from datetime import datetime
 import json
 import requests
 import support.utils as utils
+import time
+import math
 
 GRAPH_BASE_URL: str = "https://graph.microsoft.com/v1.0"
 GRAPH_CREATE_USER_URL: str = f"{GRAPH_BASE_URL}/users"
-GRAPH_ME_URL: str = f"{GRAPH_BASE_URL}/me"
+MAX_BATCH_REQUESTS = 20
 
 REQ_TIMEOUT: int = 20
 P = ParamSpec("P")
 T = TypeVar("T")
 
 def requests_handler(f: Callable[P, T]) -> Callable[P, T]:
-    '''Decorator used to wrap requests methods in a try-except and logs with
+    '''Decorator used to wrap requests functions in a try-except and logs with
     errors if one occurs.
 
-    The method must be a class with a logging instance self.log, and the method must return a Response.
+    The function must be a method of a class with a logging instance named self.log.
+    The return value of the function does not matter, but if this is used as a decorator
+    then it is expected to return a Response.
 
     Any error exceptions will return the error `status`, the error `message`, and a None `content`.
     '''
     @wraps(f)
     def wrapper(self, *args, **kwargs):
         try:
-            res: Response = f(self, *args, **kwargs)
+            res: Any = f(self, *args, **kwargs)
 
             return res
         except requests.exceptions.Timeout:
@@ -135,6 +140,10 @@ class Graph:
         # used to handle errors during user creation with Graph
         # this is set inside the method but only if errors occurred 
         self.create_graph_error: GraphError | None = None
+
+        # set at the end of create_users, it represents the batch
+        # information.
+        self.create_batch_info: GraphBatchPostUserInfo | None = None
 
     def authenticate(self) -> Response:
         '''
@@ -355,61 +364,228 @@ class Graph:
             "content-type": "application/json"
         }
 
+        user_batch = self._create_batch(users, "POST", "/users", headers)
+
+        # the post response, this is shaped similar to the batch
+        # each dict is the response, similar to a single request response
+        batch_post_responses = self._post_batch(user_batch, headers)
+        if batch_post_responses is None:
+            self.log.warning("Not authenticated, aborting batch user creation")
+            return utils.generate_response("error", message="Unauthorized")
+
+        batch_res_info = self._parse_batch_create_user_responses(batch_post_responses, users)
+        if len(batch_res_info.retry_users) > 0:
+            self.log.info(f"Retrying user creations, got {len(batch_res_info.retry_users)} users")
+            retry_res: GraphBatchPostUserInfo | None = self._create_users_retry(batch_res_info.retry_users, batch_res_info.retry_time)
+
+            # because 429 errors do not get added to any of the other fields of the object,
+            # this will add the data to the original data for logging purposes.
+            if retry_res is not None:
+                batch_res_info.created_users.extend(retry_res.created_users)
+                batch_res_info.failed_users.extend(retry_res.failed_users)
+                batch_res_info.failed_parses += retry_res.failed_parses
+
+                # only failed users and failed users count are needed.
+                batch_res_info.graph_error["failed_users"].extend(retry_res.graph_error["failed_users"])
+                batch_res_info.graph_error["failed_users_count"] += retry_res.graph_error["failed_users_count"]
+
+            # remove this for logging purposes 
+            batch_res_info.retry_users = []
+
+        if len(batch_res_info.failed_users) > 0:
+            end_res["status"] = "warning"
+            end_res["message"] = f"Failed to add {len(batch_res_info.failed_users)}/{len(users)} user(s) with Graph API"
+
+            batch_res_info.graph_error["failed_users_count"] = len(batch_res_info.failed_users)
+            # reset after every app creation
+            self.create_graph_error = batch_res_info.graph_error
+        if len(batch_res_info.failed_users) == len(users):
+            end_res["status"] = "error"
+            end_res["message"] = f"Failed to add all given user(s) with Graph API"
+        
+        self.log.debug(f"Users created with Graph: {len(batch_res_info.created_users)}")
+        self.create_batch_info = batch_res_info
+        self.log.debug(f"Batch user creation result: {batch_res_info}")
+ 
+        return end_res
+    
+    def _parse_batch_create_user_responses(self, 
+        batch_post_responses: list[BatchResponse],
+        users: list[CreateUserJson],
+        *,
+        ignore_retry_status: bool = False) -> GraphBatchPostUserInfo:
+        '''Parses the batch responses for creating users. It will return an object used
+        to hold information of the batch responses after parsing.
+
+        Parameters
+        ----------
+            batch_post_responses: list[BatchResponse]
+                A list of batch responses after a POST request to the batch endpoint.
+            
+            users: list[CreateUserJson]
+                The list of users to to create with Graph. Required for logging and
+                retry logic.
+            
+            ignore_retry_status: bool
+                If true, it will treat 429 status codes as an error. By default it is
+                False, attempting a retry with the responses that has a 429 status code.
+        '''
         created_users: list[str] = []
         failed_users: list[str] = []
-
         graph_error: GraphError = {
             "timestamp": datetime.now().strftime("%a %b %Y, %I:%M:%S %p"),
             "failed_users": [],
             "total_users_count": len(users),
             "failed_users_count": 0,
         }
+        retry_users: list[CreateUserJson] = []
 
-        for user_json in users:
-            post_res: requests.Response = requests.post(GRAPH_CREATE_USER_URL, json=user_json, headers=headers, timeout=REQ_TIMEOUT)
-            data: dict[str, Any] = post_res.json()
+        batch_info = GraphBatchPostUserInfo(created_users, failed_users, retry_users, graph_error)
 
-            if not post_res.ok:
-                error: RequestErrorResponse = self.get_error(data)
-                self.log.error(f"Failed to create user {user_json['displayName']} ({post_res.status_code}): {error}")
-                self.log.debug(f"Response: {data}")
+        RETRY_STATUS = 429
 
-                failed_users.append(user_json['displayName'])
-                user_obj: FailedUserObject = {
-                    "name": user_json['displayName'],
-                    "error": error.format_error(),
-                }
+        # used to extract the users for logging
+        start = 0
+        end = MAX_BATCH_REQUESTS
+        for b_res in batch_post_responses:
+            responses = b_res["responses"]
+            if end > len(users):
+                end = len(users)
+            # due to the batch responses having IDs and no users,
+            # this must be used to extract the information for logging purposes
+            users_slice = users[start:end]
 
-                graph_error["failed_users"].append(user_obj)
-            else:
-                self.log.info(f"Created user {user_json['displayName']}")
-                created_users.append(user_json['displayName'])
+            for d in responses:
+                try:
+                    # let these fail with the exception
+                    id: str = d["id"]
+                    status: int = d["status"]
 
-        if len(failed_users) > 0:
-            end_res["status"] = "warning"
-            end_res["message"] = f"Failed to add {len(failed_users)}/{len(users)} user(s) with Graph API"
+                    self.log.debug(f"POST response {id}: {d}")
+                    # the request IDs are 1-indexed
+                    index_pos: int = int(id) - 1
+                    user = users_slice[index_pos]
 
-            graph_error["failed_users_count"] = len(failed_users)
-            self.create_graph_error = graph_error
-        if len(failed_users) == len(users):
-            end_res["status"] = "error"
-            end_res["message"] = f"Failed to add all given user(s) with Graph API"
+                    if status < 400:
+                        self.log.info(f"Created user {user['displayName']}")
+                        batch_info.created_users.append(user['displayName'])
+                    else:
+                        if status == RETRY_STATUS and not ignore_retry_status:
+                            self.log.info(f"POST response {status} found for user {user['displayName']}")
 
+                            # im not sure if this will be a string or int, probably an int
+                            # but converting just to be safe
+                            retry_time = int(utils.get_key(d, "Retry-After") or -1)
+                            # backup recursive key finder in case it is case sensitive
+                            # based on the documentations though it is the above. just to be sure though.
+                            if retry_time == -1:
+                                retry_time = int(utils.get_key(d, "retry-after") or 0)
+                            batch_info.retry_time = max(retry_time, batch_info.retry_time)
+                            
+                            batch_info.retry_users.append(user)
+                        else:
+                            err = self.get_error(d)
+
+                            batch_info.failed_users.append(user["displayName"])
+                            user_obj: FailedUserObject = {
+                                "name": user["displayName"],
+                                "error": err.format_error()
+                            }
+
+                            self.log.error(f"Failed to create user {user['displayName']}: {user_obj}")
+                            batch_info.graph_error["failed_users"].append(user_obj)
+                            batch_info.graph_error["failed_users_count"] += 1
+                except ValueError as e:
+                    self.log.error(f"ID is not an integer from response: {e}")
+                    batch_info.failed_parses += 1
+                except IndexError as e:
+                    self.log.critical(f"Failed to get user from slice (index {id}): {e} | Users slice length: {len(users_slice)}")
+                    batch_info.failed_parses += 1
+                except KeyError as e:
+                    self.log.critical(f"Failed to retrieve key from response: {e}")
+                    batch_info.failed_parses += 1
+
+        return batch_info
+
+    @requests_handler 
+    def _create_users_retry(self, retry_users: list[CreateUserJson], retry_time: int) -> GraphBatchPostUserInfo | None:
+        '''Used to retry users with a 429 response. If the users continue to fail with a 429 response and
+        the max retries have been reached, then the user will fail with a 429 error.
+
+        It will return a new GraphBatchPostUserInfo for use or None if all retries were either succesful
+        or a 401 unauthroized occurs.
+
+        The users given in `retry_users` will be added back into the batch_info if errors occur. Ensure
+        that 429 errors are not added to the batch before this call, otherwise duplicate users will appear.
+
+        If a 401 unauthorized occurs, it will return None.
         
-        self.log.debug(f"Users created with Graph: {len(created_users)}")
- 
-        return end_res
+        Parameters
+        ----------
+            retry_users: list[CreateUserJson]
+                A list of users that need to be retried. This will be modified in-place to reduce
+                the users to retry, assuming they were successful in creation.
+            
+            retry_time: int
+                The wait time before a retry occurs.
+        '''
+        MAX_RETRIES = 3
+
+        headers: JsonHeaders = {
+            "authorization": f"Bearer {self.access_token}",
+            "content-type": "application/json"
+        }
+
+        batch_info = None
+
+        for attempt in range(MAX_RETRIES):
+            self.log.info(f"Retry attempt #{attempt + 1} for {len(retry_users)} users, retry wait time: {retry_time} seconds")
+            # doesn't block the whole thread in pywebview, before you ask.
+            time.sleep(retry_time)
+            # reset back to 0 as the max retry_time has been consumed,
+            # after the new batch info is obtained, the retry_time will
+            # be set to the next batch info- only if we continue to get
+            # 429 errors.
+            retry_time = 0
+
+            batch_users = self._create_batch(retry_users, "POST", "/users", headers)
+            batch_responses = self._post_batch(batch_users, headers)
+            if batch_responses is None:
+                self.log.warning(f"Unauthorized 401 during retry attempt #{attempt + 1}")
+                return None
+
+            new_batch_info = self._parse_batch_create_user_responses(
+                batch_responses, 
+                retry_users, 
+                ignore_retry_status=attempt == MAX_RETRIES - 1,
+            )
+            # assuming we have some success and some failures, the retry_users will be
+            # reduced.
+            retry_users = new_batch_info.retry_users
+            retry_time = new_batch_info.retry_time
+
+            # either success or fail. it depends on the batch info.
+            if len(retry_users) == 0:
+                return new_batch_info
+
+            # means we are at the end of the range, set the batch_info and move on.
+            if attempt == MAX_RETRIES - 1:
+                batch_info = new_batch_info
+            
+        return batch_info
     
     def get_error(self, d: dict[str, Any]) -> RequestErrorResponse:
-        '''Parses a dictionary and creates a new RequestErrorResponse.
+        '''Parses a dictionary and creates a new RequestErrorResponse. The dictionary is expected
+        to be the dictionary from a batch response.
         
-        Missing values will be an None if missing.
+        Missing values will be an empty string if missing.
         '''
-        err_msg: str = utils.get_key(d, "message")
-        date: str = utils.get_key(d, "date")
-        request_id: str = utils.get_key(d, "request-id")
+        err_msg: str = utils.get_key(d, "message") or ""
+        date: str = utils.get_key(d, "date") or ""
+        request_id: str = utils.get_key(d, "request-id") or ""
         target: str = ""
         code: str = ""
+        status: int = utils.get_key(d, "status") or -1
 
         details: list[dict[str, Any]] = utils.get_key(d, "details") or []
 
@@ -417,6 +593,104 @@ class Graph:
             target = detail.get("target") or ""
             code = detail.get("code") or ""
 
-        err = RequestErrorResponse(code, err_msg, date, request_id, target)
+        err = RequestErrorResponse(code, err_msg, date, request_id, target, status)
         
         return err
+
+    @requests_handler
+    def _post_batch(
+        self,
+        batches: list[BatchBody],
+        headers: dict[str, str]) -> list[BatchResponse] | None:
+        '''Performs POST requests on the batch API endpoint and returns
+        a list of batch responses.
+
+        If a 401 unauthorized error occurs, this will return None. It must be
+        handled.
+        '''
+        batch_url = GRAPH_BASE_URL + "/$batch"
+        batch_post_responses: list[BatchResponse] = []
+        for batch in batches:
+            post_res: requests.Response = requests.post(batch_url, json=batch, headers=headers, timeout=REQ_TIMEOUT)
+            data: dict[str, Any] = post_res.json()
+
+            if post_res.status_code == 429:
+                max_attempt = 3
+                for _ in range(max_attempt):
+                    retry: int = int(post_res.headers.get("retry-after", 0))
+                    self.log.warning(f"POST batch response throttled ({post_res.status_code}), Retry-After time {retry}, response: {post_res}")
+
+                    # this is OK in pywebview
+                    time.sleep(retry)
+                    post_res = requests.post(batch_url, json=batch, headers=headers, timeout=REQ_TIMEOUT)
+                    data = post_res.json()
+
+                    if post_res.status_code != 429:
+                        break
+
+            if post_res.status_code == 401:
+                self.log.warning(f"Failed to POST batch, 401 unauthorized: {data}")
+
+                # i tried doing a custom exception but it kept getting bypassed,
+                # instead just going to handle it with None.
+                return None
+
+            batch_post_responses.append(data)
+         
+        return batch_post_responses
+    
+    def _create_batch(self, 
+        data: list[CreateUserJson], 
+        method: str,
+        resource_url: str,
+        headers: dict[str, str]) -> list[BatchBody]:
+        '''Prepares a list of POST batch requests for user creation. Each batch request will consist
+        of only 20 requests maximum.
+
+        Parameters
+        ----------
+            data: list[Any]
+                Any data used as the body. This must match the content-type given in
+                the headers.
+            
+            method: str
+                The method type for the request. For example, `POST`.
+
+            resource_url: str
+                The *relative URL* to the Graph resource. It cannot be an absolute URL.
+            
+            headers: dict[str, str]
+                The headers used for the POST. Required for the token and Content-Type.
+        '''
+        batches: list[BatchBody] = []
+
+        total_batches: int = math.ceil(len(data) / MAX_BATCH_REQUESTS)
+        self.log.info(f"Creating {total_batches} batch requests for {len(data)} data")
+
+        start = 0
+        end = MAX_BATCH_REQUESTS
+        for _ in range(total_batches):
+            requests: list[BatchRequest] = []
+            if end > len(data):
+                end = len(data)
+            temp_data = data[start:end]
+
+            for i, d in enumerate(temp_data):
+                # not 0-indexed
+                id_: str = str(i + 1)
+
+                req: BatchRequest = {
+                    "id": id_,
+                    "headers": headers,
+                    "body": d,
+                    "method": method,
+                    "url": resource_url,
+                }
+
+                requests.append(req)
+            
+            batches.append({"requests": requests})
+            start += MAX_BATCH_REQUESTS
+            end += MAX_BATCH_REQUESTS
+
+        return batches

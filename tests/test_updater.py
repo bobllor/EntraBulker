@@ -95,7 +95,6 @@ def test_normal_update(mock: Mock, tmp_path: Path, updater: Updater):
         path: Path = Path(file)
         file_name: str = path.name.lower()
 
-        print(path)
         if file_name == FILE_NAMES["app_exe"].lower():
             found = True
         
