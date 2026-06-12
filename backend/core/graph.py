@@ -580,6 +580,20 @@ class Graph:
             post_res: requests.Response = requests.post(batch_url, json=batch, headers=headers, timeout=REQ_TIMEOUT)
             data: dict[str, Any] = post_res.json()
 
+            if post_res.status_code == 429:
+                max_attempt = 3
+                for _ in range(max_attempt):
+                    retry: int = int(post_res.headers.get("retry-after", 0))
+                    self.log.warning(f"POST batch response throttled ({post_res.status_code}), Retry-After time {retry}, response: {post_res}")
+
+                    # this is OK in pywebview
+                    time.sleep(retry)
+                    post_res = requests.post(batch_url, json=batch, headers=headers, timeout=REQ_TIMEOUT)
+                    data = post_res.json()
+
+                    if post_res.status_code != 429:
+                        break
+
             if post_res.status_code == 401:
                 self.log.warning(f"Failed to POST batch, 401 unauthorized: {data}")
 
@@ -588,9 +602,6 @@ class Graph:
                 return None
 
             batch_post_responses.append(data)
-            # yes this works in pywebview.
-            # delaying each request in order to not blow up anything lol
-            time.sleep(.7)
         
         return batch_post_responses
     
