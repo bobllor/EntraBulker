@@ -698,7 +698,7 @@ def test_api_add_users_graph(api: API, df: pd.DataFrame, graph: Graph):
         mockapp.return_value.acquire_token_silent.return_value = {"access_token": "12345"}
 
         with patch("backend.core.graph.requests.post") as mock:
-            mock.return_value.json.return_value = {}
+            mock.return_value.json.return_value = {"responses": []}
             mock.return_value.status_code = 200
 
             graph_res: Response = api.add_users_graph_api(userdata, True)
