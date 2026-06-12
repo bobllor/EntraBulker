@@ -42,6 +42,7 @@ class RequestErrorResponse:
     request_id: str = ""
     # The property field of the Graph User that failed.
     target: str = ""
+    status_code: int = -1
 
     def format_error(self) -> str:
         '''Returns a client-safe error code formatted into a string from the error data.'''
@@ -51,13 +52,17 @@ class RequestErrorResponse:
         error_map: dict[tuple[str, str], str] = {
             ("invalidvalue", "userprincipalname"): "Invalid UPN domain",
             ("objectconflict", "userprincipalname"): "UPN already exists",
+            ("invalidauthenticationtoken", ""): "Token is invalid",
         }
 
         tup_key = (l_code, l_target)
         default_error: str = f"An unknown error occurred ({self.target}, see application logs for details)"
 
         err: str | None = error_map.get(tup_key, None)
-        if err is None:
+        # handles 429 errors only.
+        if self.status_code == 429:
+            err = f"Max retry attempt failed (429 status code)"
+        elif err is None:
             err = default_error
         else:
             err = f"{err} ({self.target})"
@@ -99,8 +104,36 @@ class GraphError(TypedDict):
     *should not be logged* due to the usernames.
     '''
     # The time of the failure in seconds.
-    timestamp: float
+    timestamp: str
     total_users_count: int
     failed_users_count: int
     # Users that failed to get created.
     failed_users: list[FailedUserObject]
+
+@dataclass
+class GraphBatchPostUserInfo:
+    '''An object holding information of the batch responses from batch requests.'''
+    created_users: list[str]
+    failed_users: list[str]
+    retry_users: list[CreateUserJson]
+    graph_error: GraphError
+    # The amount of failed parses of the batch response. This is only used for exceptions, and
+    # does not represent the batch response contents itself.
+    failed_parses: int = 0
+
+class BatchRequest(TypedDict):
+    '''A request inside a BatchBody.'''
+    id: str
+    method: str
+    url: str
+    body: Any
+    headers: dict[str, str]
+
+class BatchBody(TypedDict):
+    '''A batch body request for batching Graph requests.'''
+    # An array of requests to send to the batch endpoint. There can only
+    # be a maximum of 20 requests per request.
+    requests: list[BatchRequest]
+
+class BatchResponse(TypedDict):
+    responses: list[dict[str, Any]]
