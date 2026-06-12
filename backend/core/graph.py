@@ -141,6 +141,10 @@ class Graph:
         # this is set inside the method but only if errors occurred 
         self.create_graph_error: GraphError | None = None
 
+        # set at the end of create_users, it represents the batch
+        # information.
+        self.create_batch_info: GraphBatchPostUserInfo | None = None
+
     def authenticate(self) -> Response:
         '''
         Authenticates the client and retrieves the token for use in requests. This is only
@@ -366,11 +370,13 @@ class Graph:
         # each dict is the response, similar to a single request response
         batch_post_responses = self._post_batch(user_batch, headers)
         if batch_post_responses is None:
+            self.log.warning("Not authenticated, aborting batch user creation")
             return utils.generate_response("error", message="Unauthorized")
 
         batch_res_info = self._parse_batch_create_user_responses(batch_post_responses, users)
         if len(batch_res_info.retry_users) > 0:
-            retry_res = self._create_users_retry(batch_res_info.retry_users)
+            self.log.info(f"Retrying user creations, got {len(batch_res_info.retry_users)} users")
+            retry_res: GraphBatchPostUserInfo | None = self._create_users_retry(batch_res_info.retry_users, batch_res_info.retry_time)
 
             # because 429 errors do not get added to any of the other fields of the object,
             # this will add the data to the original data for logging purposes.
@@ -379,9 +385,12 @@ class Graph:
                 batch_res_info.failed_users.extend(retry_res.failed_users)
                 batch_res_info.failed_parses += retry_res.failed_parses
 
-                # only failed users and failed users count is needed.
+                # only failed users and failed users count are needed.
                 batch_res_info.graph_error["failed_users"].extend(retry_res.graph_error["failed_users"])
                 batch_res_info.graph_error["failed_users_count"] += retry_res.graph_error["failed_users_count"]
+
+            # remove this for logging purposes 
+            batch_res_info.retry_users = []
 
         if len(batch_res_info.failed_users) > 0:
             end_res["status"] = "warning"
@@ -395,12 +404,16 @@ class Graph:
             end_res["message"] = f"Failed to add all given user(s) with Graph API"
         
         self.log.debug(f"Users created with Graph: {len(batch_res_info.created_users)}")
+        self.create_batch_info = batch_res_info
+        self.log.debug(f"Batch user creation result: {batch_res_info}")
  
         return end_res
     
     def _parse_batch_create_user_responses(self, 
         batch_post_responses: list[BatchResponse],
-        users: list[CreateUserJson]) -> GraphBatchPostUserInfo:
+        users: list[CreateUserJson],
+        *,
+        ignore_retry_status: bool = False) -> GraphBatchPostUserInfo:
         '''Parses the batch responses for creating users. It will return an object used
         to hold information of the batch responses after parsing.
 
@@ -412,6 +425,10 @@ class Graph:
             users: list[CreateUserJson]
                 The list of users to to create with Graph. Required for logging and
                 retry logic.
+            
+            ignore_retry_status: bool
+                If true, it will treat 429 status codes as an error. By default it is
+                False, attempting a retry with the responses that has a 429 status code.
         '''
         created_users: list[str] = []
         failed_users: list[str] = []
@@ -421,10 +438,9 @@ class Graph:
             "total_users_count": len(users),
             "failed_users_count": 0,
         }
-        failed_parses: int = 0
         retry_users: list[CreateUserJson] = []
 
-        batch_info = GraphBatchPostUserInfo(created_users, failed_users, retry_users, graph_error, failed_parses)
+        batch_info = GraphBatchPostUserInfo(created_users, failed_users, retry_users, graph_error)
 
         RETRY_STATUS = 429
 
@@ -441,19 +457,31 @@ class Graph:
 
             for d in responses:
                 try:
+                    # let these fail with the exception
                     id: str = d["id"]
                     status: int = d["status"]
+
+                    self.log.debug(f"POST response {id}: {d}")
                     # the request IDs are 1-indexed
                     index_pos: int = int(id) - 1
                     user = users_slice[index_pos]
-                    self.log.debug(f"POST response {id}: {d}")
 
                     if status < 400:
                         self.log.info(f"Created user {user['displayName']}")
                         batch_info.created_users.append(user['displayName'])
                     else:
-                        if status == RETRY_STATUS:
-                            self.log.info(f"POST response {status}, adding retry for user {user['displayName']}")
+                        if status == RETRY_STATUS and not ignore_retry_status:
+                            self.log.info(f"POST response {status} found for user {user['displayName']}")
+
+                            # im not sure if this will be a string or int, probably an int
+                            # but converting just to be safe
+                            retry_time = int(utils.get_key(d, "Retry-After") or -1)
+                            # backup recursive key finder in case it is case sensitive
+                            # based on the documentations though it is the above. just to be sure though.
+                            if retry_time == -1:
+                                retry_time = int(utils.get_key(d, "retry-after") or 0)
+                            batch_info.retry_time = max(retry_time, batch_info.retry_time)
+                            
                             batch_info.retry_users.append(user)
                         else:
                             err = self.get_error(d)
@@ -466,11 +494,12 @@ class Graph:
 
                             self.log.error(f"Failed to create user {user['displayName']}: {user_obj}")
                             batch_info.graph_error["failed_users"].append(user_obj)
+                            batch_info.graph_error["failed_users_count"] += 1
                 except ValueError as e:
                     self.log.error(f"ID is not an integer from response: {e}")
                     batch_info.failed_parses += 1
                 except IndexError as e:
-                    self.log.critical(f"Failed to get user from slice: {e} | Users slice length: {len(users_slice)}")
+                    self.log.critical(f"Failed to get user from slice (index {id}): {e} | Users slice length: {len(users_slice)}")
                     batch_info.failed_parses += 1
                 except KeyError as e:
                     self.log.critical(f"Failed to retrieve key from response: {e}")
@@ -479,7 +508,7 @@ class Graph:
         return batch_info
 
     @requests_handler 
-    def _create_users_retry(self, retry_users: list[CreateUserJson]) -> GraphBatchPostUserInfo | None:
+    def _create_users_retry(self, retry_users: list[CreateUserJson], retry_time: int) -> GraphBatchPostUserInfo | None:
         '''Used to retry users with a 429 response. If the users continue to fail with a 429 response and
         the max retries have been reached, then the user will fail with a 429 error.
 
@@ -496,15 +525,11 @@ class Graph:
             retry_users: list[CreateUserJson]
                 A list of users that need to be retried. This will be modified in-place to reduce
                 the users to retry, assuming they were successful in creation.
+            
+            retry_time: int
+                The wait time before a retry occurs.
         '''
         MAX_RETRIES = 3
-        # increments with every attempt, this is a fixed number
-        # due to the batch responses not including a retry-after or related information
-        # NOTE: i do not know what the response actually looks like for a 429, so for now
-        # this is a temporary work around until i can confirm the structure, if it includes the
-        # retry-after information in the batch response. but based on the microsoft docs,
-        # it does not include a retry number. 
-        delay = 3
 
         headers: JsonHeaders = {
             "authorization": f"Bearer {self.access_token}",
@@ -514,25 +539,34 @@ class Graph:
         batch_info = None
 
         for attempt in range(MAX_RETRIES):
-            batch_users = self._create_batch(retry_users, "POST", "/users", headers)
+            self.log.info(f"Retry attempt #{attempt + 1} for {len(retry_users)} users, retry wait time: {retry_time} seconds")
+            # doesn't block the whole thread in pywebview, before you ask.
+            time.sleep(retry_time)
+            # reset back to 0 as the max retry_time has been consumed,
+            # after the new batch info is obtained, the retry_time will
+            # be set to the next batch info- only if we continue to get
+            # 429 errors.
+            retry_time = 0
 
+            batch_users = self._create_batch(retry_users, "POST", "/users", headers)
             batch_responses = self._post_batch(batch_users, headers)
             if batch_responses is None:
                 self.log.warning(f"Unauthorized 401 during retry attempt #{attempt + 1}")
                 return None
 
-            new_batch_info = self._parse_batch_create_user_responses(batch_responses, retry_users)
+            new_batch_info = self._parse_batch_create_user_responses(
+                batch_responses, 
+                retry_users, 
+                ignore_retry_status=attempt == MAX_RETRIES - 1,
+            )
             # assuming we have some success and some failures, the retry_users will be
             # reduced.
             retry_users = new_batch_info.retry_users
+            retry_time = new_batch_info.retry_time
 
-            # success
+            # either success or fail. it depends on the batch info.
             if len(retry_users) == 0:
-                return None
-
-            # yes, you can time sleep pywebview and not block the thread.
-            time.sleep(delay)
-            delay += 3
+                return new_batch_info
 
             # means we are at the end of the range, set the batch_info and move on.
             if attempt == MAX_RETRIES - 1:
@@ -602,7 +636,7 @@ class Graph:
                 return None
 
             batch_post_responses.append(data)
-        
+         
         return batch_post_responses
     
     def _create_batch(self, 

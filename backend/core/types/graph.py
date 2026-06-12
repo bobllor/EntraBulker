@@ -56,7 +56,7 @@ class RequestErrorResponse:
         }
 
         tup_key = (l_code, l_target)
-        default_error: str = f"An unknown error occurred ({self.target}, see application logs for details)"
+        default_error: str = f"An unknown error occurred (see application logs for details)"
 
         err: str | None = error_map.get(tup_key, None)
         # handles 429 errors only.
@@ -113,13 +113,19 @@ class GraphError(TypedDict):
 @dataclass
 class GraphBatchPostUserInfo:
     '''An object holding information of the batch responses from batch requests.'''
+    # A list of created users. This must be their display name only.
     created_users: list[str]
+    # A list of failed users. This must be their display name only.
     failed_users: list[str]
+    # A list of users to retry, this will be used to recreate the batch information.
     retry_users: list[CreateUserJson]
     graph_error: GraphError
     # The amount of failed parses of the batch response. This is only used for exceptions, and
     # does not represent the batch response contents itself.
     failed_parses: int = 0
+    # The retry time. It is the maximum amount of time used given by the Retry-After header
+    # in any of the responses. Only used if retry_users has at least one user.
+    retry_time: int = 0
 
 class BatchRequest(TypedDict):
     '''A request inside a BatchBody.'''
