@@ -18,6 +18,17 @@ import support.utils as utils
 import pandas as pd
 import webview
 
+# TODO: look into adding a rate limiter for the Graph calls
+# as of 6/11/2026 i do not know what the exact structure looks like
+# for throttling when it occurs. i will ignore this for now until
+# one shows up. because of this, i don't know how to code it and
+# trying to code it will just waste time.
+#
+# for now there is a simple time.sleep (it works in pywebview) in the
+# post call.
+#
+# TL;DR: if it works don't fix it
+
 ReaderType = Literal["excel", "opco", "settings", "graph"]
 MAX_TEXT_SIZE: int = 1250
 
