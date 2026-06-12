@@ -160,14 +160,24 @@ Updating can be done through using the new binary installer or replacing the fil
 
 ## Microsoft Graph
 
-The application supports Microsoft Graph API to create users directly into the tenant during a submission.
+EntraBulker supports Microsoft Graph API to create users directly into the tenant during a submission.
 It is a *public client* which uses *delegated permissions* to perform the tasks.
+Microsoft Graph supports both parsing a file and manual user entries.
 
 To enable Graph support and start the workflow:
 - An application must be registered and configured in the tenant
 - The option `Enable Graph` in the `Microsoft Graph` settings must be enabled
 - There are valid IDs for *application (client) ID and directory (tenant) ID*
 - You have a valid access token for Graph, obtained via authentication by signing in
+
+EntraBulker performs the *user creation in batches* by default, which will speed up the user creation
+and reduce the overhead of network requests for the Graph API.
+
+> DISCLAIMER
+>
+> Graph API is slower than offline CSV generation due to network requests.
+> Additionally, if the application is throttled, this will slow down the processing
+> more due to retries and respecting the `Retry-After` header.
 
 ### Registering an Application
 
@@ -199,11 +209,19 @@ the CSV file and template if enabled.
 After the CSV file is generated to the output folder, Graph will run at this stage and add the users to the tenant.
 - The output files are generated for onboarding the end user and as a fallback for offline workflows.
 
-> DISCLAIMER
->
-> Graph API require network requests and will be slower than the offline CSV processing.
-
 All errors will be logged, including the reason why the Graph POST failed and for which users.
+
+### Throttling and Retries
+
+If EntraBulker is throttled, the batch responses will be returned with `429` status codes. If this occurs,
+then *retries will be attempted*.
+
+This will slow down the processing speed of the user creation to the header's `Retry-After` value. It will attempt
+to create users with `429` status codes a *maximum of three times*. After the third attempt, it will be considered
+a failure and return the information back to the client.
+
+EntraBulker is written to use batch requests on the users endpoint, throttling is minimized as much as possible.
+It may still occur if a large amount of users are being created.
 
 ### Caching
 
@@ -268,6 +286,9 @@ Hovering over a log entry will show the full file name and how many users have f
 out of the total users.
 
 <img src="./docs/assets/graph-error-logs-hover.png" alt="Hover text of a log entry" width="600" >
+
+If the log entries do not provide enough information, detailed logs of the Graph
+operation can be found in the application log files.
 
 ## Development
 
