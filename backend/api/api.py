@@ -296,8 +296,9 @@ class API:
         res: Response = utils.generate_response(message="Successfully authenticated")
         client_id: str = self.graph_reader.get("client_id")
         tenant_id: str = self.graph_reader.get("tenant_id")
+        delegated_auth: bool = self.graph_reader.get("authenticate_with_delegated_access")
 
-        if client_id == "":
+        if client_id == "" and not delegated_auth:
             self.logger.info(f"Missing client application ID, aborting authentication")
             return utils.generate_response("error", message="Missing client application ID")
         if tenant_id == "":
@@ -309,7 +310,13 @@ class API:
             # recreates it, initially it has nil values.
             # reauthenication will create a new token which creates a new Graph
             self.graph = Graph(client_id, tenant_id, log=self.logger, project_root=self._project_root)
-            auth_res_two: Response = self.graph.authenticate()
+            auth_res_two: Response = None
+
+            if not delegated_auth:
+                auth_res_two = self.graph.authenticate()
+            else:
+                auth_res_two = self.graph.authenticate_delegated_access()
+
             self.logger.debug(f"Auth response: {auth_res_two}")
             
             if auth_res_two["status"] == "error":
