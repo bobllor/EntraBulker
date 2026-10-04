@@ -53,6 +53,9 @@ DEFAULT_HEADER_MAP: HeaderMap = {
     'last_name': 'last name',
 }
 
+# NOTE: any changes to the maps below this will automatically update
+# the required values in the stored settings
+
 # no @ is used here because it is added in to the username generator
 DEFAULT_OPCO_MAP: OpcoMap = {
     'default': 'placeholder.com',
@@ -85,5 +88,8 @@ DEFAULT_GRAPH_MAP: GraphMap = {
     "enable_graph": False,
     "user_type": "guest",
     "member_type_domain_csv": "",
+    "authenticate_with_delegated_access": False,
+    # if authenticate with delegated access is enabled,
+    # this will not be used
     "reauthenticate_on_boot": True,
 }
