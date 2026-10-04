@@ -80,6 +80,7 @@ const userTypeDropOptions: Array<DropDownOption> = [
 export default function Graph(): JSX.Element{
     const authStatus = useAuthStore((st) => st.auth);
     const enableGraphStatus = useGraphSettingStore(st => st.values.enable_graph);
+    const enableDelegatedAccess = useGraphSettingStore(st => st.values.authenticate_with_delegated_access);
     const setGraphValues = useGraphSettingStore(st => st.setGraphValues);
     const userType = useGraphSettingStore(st => st.values.user_type);
     const { clientId, tenantId, domainCsvString, reauthBoot } = useGraphSettingStore(useShallow(st => ({
@@ -132,6 +133,11 @@ export default function Graph(): JSX.Element{
                 updateReaderFunc={(key, value) => setGraphValues(key, value)} readerKey="user_type" />,
             optElement: <ToolTip text={`Applies to all created users whose domain is not listed in "Member Type Domain CSV"`} />,
             optElementDirection: "row",
+        },
+        {
+            label: "Delegated Access",
+            element: <SliderButton func={(status) => setGraphValues("authenticate_with_delegated_access", !status)} 
+                status={enableDelegatedAccess} />,
         },
         {
             label: "Sign In",

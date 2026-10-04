@@ -30,6 +30,7 @@ type GraphSettingValues = {
     member_type_domain_csv: string
     user_type:  GraphUserType
     reauthenticate_on_boot: boolean
+    authenticate_with_delegated_access: boolean
 }
 
 export const useGraphSettingStore = create<GraphSettingStore>(set => ({
@@ -40,6 +41,7 @@ export const useGraphSettingStore = create<GraphSettingStore>(set => ({
         member_type_domain_csv: "",
         user_type: "guest",
         reauthenticate_on_boot: true,
+        authenticate_with_delegated_access: false,
     },
     initialize: async () => {
         const graphSettings = await getReaderContent("graph") as GraphSettingValues;
