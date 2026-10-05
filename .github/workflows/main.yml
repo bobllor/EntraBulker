@@ -62,9 +62,19 @@ jobs:
             echo "Failed to create ZIP file"
             exit 1
           }
+      - name: Set GitHub outputs
+        id: latest_output
+        run: |
+          make_latest=true
+          if ! grep -qE "^v([0-9]+)\.([0-9]+)\.([0-9]+)$" <<< "${{ github.ref_name }}"; then
+            make_latest=false
+          fi
+
+          echo "make_latest=$make_latest" >> $GITHUB_OUTPUT
       - name: Artifact upload
         uses: softprops/action-gh-release@v2
         with:
           files: |
             *.zip
             ./Output/*.exe
+          make_latest: "${{ steps.latest_output.outputs.make_latest }}"
