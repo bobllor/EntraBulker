@@ -19,6 +19,19 @@ def test_check_version(mock: Mock, updater_api: UpdaterAPI):
 
     assert res["status"] == "success" and res["content"] == True
 
+@patch("backend.api.updater_api.utils.get_version")
+def test_check_version_with_letters(mock: Mock, updater_api: UpdaterAPI):
+    mock.return_value = {
+        "status": "success",
+        "message": "Successful execution",
+        "content": "v2.0.3-beta",
+        "exception": None,
+    }
+
+    res: Response = updater_api.check_version("https://someurl.com/api/version", version="v1.0.0")
+
+    assert res["status"] == "success" and res["content"] == False
+
 @patch("backend.support.utils.requests.get", side_effect=requests.exceptions.HTTPError("HTTP error occurred"))
 def test_error_check_version(mock: Mock, updater_api: UpdaterAPI):
     res: Response = updater_api.check_version("https://someurl.com/api/version")
