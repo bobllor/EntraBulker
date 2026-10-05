@@ -65,12 +65,12 @@ jobs:
       - name: Set GitHub outputs
         id: latest_output
         run: |
-          make_latest=true
-          if ! grep -qE "^v([0-9]+)\.([0-9]+)\.([0-9]+)$" <<< "${{ github.ref_name }}"; then
-            make_latest=false
-          fi
+          $make_latest = true
+          if("${{ github.ref_name }}" -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$'){ 
+            $make_latest = false
+          }
 
-          echo "make_latest=$make_latest" >> $GITHUB_OUTPUT
+          echo "make_latest=$make_latest" >> $env:$GITHUB_OUTPUT
       - name: Artifact upload
         uses: softprops/action-gh-release@v3
         with:
