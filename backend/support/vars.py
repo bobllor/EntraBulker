@@ -88,6 +88,8 @@ DEFAULT_GRAPH_MAP: GraphMap = {
     "tenant_id": "",
     "enable_graph": False,
     "user_type": "guest",
+    # used with a comma-delimiter (,) to list out domains that
+    # are to be created as member type only, regardless of the user_type value
     "member_type_domain_csv": "",
     "authenticate_with_delegated_access": False,
     # if authenticate with delegated access is enabled,
