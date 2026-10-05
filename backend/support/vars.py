@@ -91,7 +91,7 @@ DEFAULT_GRAPH_MAP: GraphMap = {
     # used with a comma-delimiter (,) to list out domains that
     # are to be created as member type only, regardless of the user_type value
     "member_type_domain_csv": "",
-    "authenticate_with_delegated_access": False,
+    "authenticate_with_delegated_access": True,
     # if authenticate with delegated access is enabled,
     # this will not be used
     "reauthenticate_on_boot": True,
