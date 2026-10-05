@@ -86,6 +86,14 @@ This options allows you to toggle between the two types for all users created fr
 By default it will create users as `Guest`, for least privilege. You can change this to `Member` or for more advanced
 filtering, use the `Member Type Domain CSV` to keep both `Guest` and `Member` type assignments.
 
+### Delegated Access
+
+By default this value is enabled. `Delegated Access` button is used during the authentication process
+to choose the two types of access for the program.
+
+If enabled, it will use delegated access which uses the *signed-in user's permissions*. If it is disabled,
+then it will use the app-only access.
+
 ### Sign In
 
 A login button used to start the authentication process for the application and your delegated permissions.
