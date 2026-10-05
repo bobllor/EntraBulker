@@ -109,11 +109,12 @@ A 7th tab `About` is not used to modify the application.
 
 Before the CSV file is generated, there are side effects during the data parsing process:
 1. **Duplicate names**: If duplicate names are found in the files (e.g. `John Doe` and `John Doe`), 
-a number will be attached to *their username*: `John.Doe@domain.com` and `John.Doe1@domain.com`.
+a number will be attached to *their username*: `John.Doe@domain.com` and `John.Doe1@domain.com`. During
+Graph mode, an error/warning will appear showing which users failed to get added
 2. **Empty name entries**: If *empty names* are found in any of the three name columns, then *that row
-will be dropped*.
+will be dropped*
 3. **Passwords**: Password generation is built in, random, and cannot be disabled. The output password
-can be modified in the *Password settings tab*.
+can be modified in the *Password settings tab*
 
 ### File Uploading
 
