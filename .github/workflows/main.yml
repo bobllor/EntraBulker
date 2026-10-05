@@ -70,7 +70,7 @@ jobs:
             $make_latest = false
           }
 
-          echo "make_latest=$make_latest" >> $env:$GITHUB_OUTPUT
+          "make_latest=$make_latest" >> $env:GITHUB_OUTPUT
       - name: Artifact upload
         uses: softprops/action-gh-release@v3
         with:
