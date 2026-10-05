@@ -52,7 +52,7 @@ jobs:
           .\build.ps1
       - name: Rename installer to version release
         run: |
-          rename-item -path .\Output\entrabulker-installer.exe -newname "entrabulker-installer-${{ github.ref_name }}.exe"
+          rename-item -path .\Output\entrabulker-installer.exe -newname "entrabulker-${{ github.ref_name }}-installer.exe"
       - name: ZIP packaging
         run: |
           compress-archive .\entrabulker\ ".\entrabulker-${{ github.ref_name }}.zip" -compressionlevel fastest
