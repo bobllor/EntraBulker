@@ -56,13 +56,14 @@ If not authenticated, then this will do nothing.
 
 ### Client Application ID
 
-The client ID of the registered application. This is required in order to authenticate
-the application for Graph use.
+The client ID of the registered application.
+
+This is *required if app-only access* is used. Otherwise, this does not need a value.
 
 ### Tenant ID
 
 The ID of the tenant the application is registered in and the users you are attempting to
-create in. This is required for authorization.
+create in. This is *required for authentication*.
 
 ### Member Only Domains CSV
 
