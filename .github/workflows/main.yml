@@ -65,9 +65,9 @@ jobs:
       - name: Set GitHub outputs
         id: latest_output
         run: |
-          $make_latest = true
+          $make_latest = "true"
           if("${{ github.ref_name }}" -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$'){ 
-            $make_latest = false
+            $make_latest = "false"
           }
 
           "make_latest=$make_latest" >> $env:GITHUB_OUTPUT
