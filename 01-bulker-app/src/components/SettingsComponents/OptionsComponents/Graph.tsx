@@ -122,7 +122,7 @@ export default function Graph(): JSX.Element{
             optElement: <DataText value={tenantId} enableCopy={clientId != ""} justification="center" />,
         },
         {
-            label: "Member Type Domain CSV",
+            label: "Member Only Domains CSV",
             element: <InputField preventDefault readerKey="member_type_domain_csv"
                 updateReaderFunc={(key, value) => cleanCsvInput(key, value)} />,
             optElement: <DataText value={domainCsvString} justification="center" />
@@ -131,13 +131,15 @@ export default function Graph(): JSX.Element{
             label: "User Type",
             element: <DropDown defaultValue={userType} dropOptions={userTypeDropOptions} 
                 updateReaderFunc={(key, value) => setGraphValues(key, value)} readerKey="user_type" />,
-            optElement: <ToolTip text={`Applies to all created users whose domain is not listed in "Member Type Domain CSV"`} />,
+            optElement: <ToolTip text={`Applies to all created users whose domain is not listed in "Member Only Domains CSV"`} />,
             optElementDirection: "row",
         },
         {
             label: "Delegated Access",
             element: <SliderButton func={(status) => setGraphValues("authenticate_with_delegated_access", !status)} 
                 status={enableDelegatedAccess} />,
+            optElement: <ToolTip text="Authenticates with a signed-in user's permissions, this does not support caching" />,
+            optElementDirection: "row",
         },
         {
             label: "Sign In",
