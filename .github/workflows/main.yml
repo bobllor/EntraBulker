@@ -50,12 +50,15 @@ jobs:
         run: |
           echo "Current directory: $(pwd)"
           .\build.ps1
+      - name: Rename installer to version release
+        run: |
+          rename-item -path .\Output\entrabulker-installer.exe -newname "entrabulker-installer-${{ github.ref_name }}.exe"
       - name: ZIP packaging
         run: |
-          compress-archive .\entrabulker\ ".\entrabulker-$(type .\VERSION.txt).zip" -compressionlevel fastest
+          compress-archive .\entrabulker\ ".\entrabulker-${{ github.ref_name }}.zip" -compressionlevel fastest
       - name: File confirmation
         run: |
-          if(!(test-path ".\entrabulker-$(type .\VERSION.txt).zip")){
+          if(!(test-path ".\entrabulker-${{ github.ref_name }}.zip")){
             echo "Failed to create ZIP file"
             exit 1
           }
