@@ -53,7 +53,14 @@ def api(tmp_path: Path):
     with patch("backend.core.graph.requests.get") as mock:
         # mocks the requests
         mock.return_value.json.return_value = {}
-        api: API = API(excel_reader=excel, settings_reader=settings, opco_reader=opcos, project_root=tmp_path, graph_reader=graph)
+        api: API = API(
+            excel_reader=excel,
+            settings_reader=settings, 
+            opco_reader=opcos, 
+            project_root=tmp_path, 
+            graph_reader=graph,
+            version="v1.0.0",
+        )
         api.set_output_dir(tmp_path)
 
         yield api
