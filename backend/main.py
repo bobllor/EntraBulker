@@ -56,7 +56,8 @@ if __name__ == '__main__':
         opco_reader=opco_reader,
         graph_reader=graph_reader,
         logger=logger,
-        project_root=PROJECT_ROOT
+        project_root=PROJECT_ROOT,
+        version=VERSION,
     )
     size: tuple[int, int] = (1080, 720)
 
