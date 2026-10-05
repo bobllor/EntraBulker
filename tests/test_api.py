@@ -626,7 +626,7 @@ def test_generate_bad_password(api: API):
         and len(res["content"]) == DEFAULT_SETTINGS_MAP["password"]["length"]
 
 @patch("backend.api.api.utils.get_version")
-def test_check_version(mock: Mock, api: API):
+def test_check_version_new(mock: Mock, api: API):
     mock.return_value = {
         "status": "success",
         "message": "Successfully checked version",
@@ -640,13 +640,17 @@ def test_check_version(mock: Mock, api: API):
 
     assert res["content"] == True
 
+@patch("backend.api.api.utils.get_version")
+def test_check_version_old(mock: Mock, api: API):
+    version_value = "v0.0.5"
     mock.return_value = {
         "status": "success",
         "message": "Successfully checked version",
-        "content": VERSION,
+        "content": version_value,
         "exception": None,
     }
 
+    url: str = "https://afakeurl-goeshere.com/api/text.txt"
     res = api.check_version(url)
 
     assert res["content"] == False

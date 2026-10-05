@@ -4,7 +4,8 @@ from typing import Literal
 from .utils import is_prod
 import sys
 
-VERSION: str = "v3.1.0" # this must start with a "v"
+# NOTE: i think i am stupid for doing this. alas, it is what it is. (10-4-26)
+VERSION: str = "v4.0.0-beta" # this must start with a "v"
 
 META: Metadata = {
     "version": VERSION,
@@ -53,6 +54,9 @@ DEFAULT_HEADER_MAP: HeaderMap = {
     'last_name': 'last name',
 }
 
+# NOTE: any changes to the maps below this will automatically update
+# the required values in the stored settings
+
 # no @ is used here because it is added in to the username generator
 DEFAULT_OPCO_MAP: OpcoMap = {
     'default': 'placeholder.com',
@@ -84,6 +88,11 @@ DEFAULT_GRAPH_MAP: GraphMap = {
     "tenant_id": "",
     "enable_graph": False,
     "user_type": "guest",
+    # used with a comma-delimiter (,) to list out domains that
+    # are to be created as member type only, regardless of the user_type value
     "member_type_domain_csv": "",
+    "authenticate_with_delegated_access": False,
+    # if authenticate with delegated access is enabled,
+    # this will not be used
     "reauthenticate_on_boot": True,
 }

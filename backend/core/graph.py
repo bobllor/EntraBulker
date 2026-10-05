@@ -1,5 +1,7 @@
 from msal import PublicClientApplication, SerializableTokenCache
 from msal.oauth2cli.oauth2 import BrowserInteractionTimeoutError
+from azure.identity import InteractiveBrowserCredential
+from azure.core.exceptions import ClientAuthenticationError
 from logger import Log
 from typing import Any, Callable, TypeVar, ParamSpec
 from support.types import Response
@@ -63,12 +65,13 @@ def authenticate_middleware(f: Callable[P, Response]) -> Callable[P, Response]:
     '''
     @wraps(f)
     def wrapper(self, *args, **kwargs):
-        auth_res: Response = self.authenticate()
-        if auth_res["status"] == "error":
-            # in case content is used, this ensures that the key will exist
-            if "content" not in auth_res:
-                auth_res["content"] = None
-            return auth_res
+        if not self.is_authenticated:
+            auth_res: Response = self.authenticate()
+            if auth_res["status"] == "error":
+                # in case content is used, this ensures that the key will exist
+                if "content" not in auth_res:
+                    auth_res["content"] = None
+                return auth_res
 
         res: Response = f(self, *args, **kwargs)
 
@@ -113,6 +116,8 @@ class Graph:
 
         # set inside authenticate
         self.app: PublicClientApplication = None
+        # used to indicate authentication status
+        self.is_authenticated = False
         
         config_path: Path = project_root / "config"
 
@@ -204,6 +209,7 @@ class Graph:
             self.log.debug(f"Access token length: {len(self.access_token)}")
             # needs to be rewritten every authentication
             self.save_token_cache(self.token_cache.serialize())
+            self.is_authenticated = True
 
             return res
 
@@ -216,6 +222,63 @@ class Graph:
             self.log.exception("An unknown exception occurred")
 
             return utils.generate_response("error", message="An unknown error occurred while authenticating")
+        
+    def authenticate_delegated_access(self) -> Response:
+        '''Authenticates with an interactive browser using delegated access of
+        the signed-in user. This does not require the `client_id` but does require
+        the `tenant_id`.
+
+        If a registered application is used instead, use authenticate(). The front end
+        will have authentication methods for both ways.
+
+        Caching is not used with this method, as it uses the permissions of the signed-in
+        user which is dependent on organizational policies. However, in a standard organization
+        access is non-persistent, expiring after the policy time set.
+        Due to this, if the program is exited, the user will have to re-authenticate.
+        '''
+        res: Response = utils.generate_response(message="Successfully authenticated")
+        self.log.info("Starting delegated access authentication for Graph API")
+        TIMEOUT = 60
+
+        try:
+            cred = InteractiveBrowserCredential(
+                timeout=TIMEOUT,
+            )
+            # returned object has no requirements
+            cred.authenticate()
+        except ClientAuthenticationError:
+            self.log.exception("Failed to authenticate delegated access with Graph")
+            res["status"] = "error"
+            res["message"] = "Failed to authenticate"
+
+            return res
+        except Exception:
+            self.log.exception("An uncaught error has occurred")
+            res["status"] = "error"
+            res["message"] = "An unknown error has occurred"
+
+            return res
+
+        acc_token = cred.get_token(
+            self._scopes[0],
+            tenant_id=self._tenant_id
+        )
+
+        self.access_token = acc_token.token
+        self.log.debug(f"Access token length: {len(self.access_token)}")
+
+        if self.access_token.strip() == "":
+            res["message"] = "An error occurred while authenticating"
+            res["status"] = "error"
+
+            self.log.warning("Failed to retrieve access token from delegated access")
+
+            return res
+
+        self.log.info("Successfully authenticated with delegated access")
+        self.is_authenticated = True
+
+        return res
 
     def authenticate_with_cache(self) -> Response:
         '''Authenticates with the recent account the accounts cache and the stored token cache.
@@ -247,6 +310,7 @@ class Graph:
             self.log.warning(f"Authorization URL failed to get created: {e}")
             return utils.generate_response("error", message="Failed to authenticate")
 
+        self.is_authenticated = True
         return utils.generate_response(message="Successfully authenticated")
     
     def get_cache_account(self) -> dict[str, Any] | None:
@@ -339,6 +403,11 @@ class Graph:
 
         self.cache_reader.write(account_cache)
         self.token_cache_writer.save("")
+
+        # in the API call, the cache is cleared and self.graph is set to None,
+        # so effectively this does nothing.
+        # but its a safe guard, who knows?
+        self.is_authenticated = False
 
         return utils.generate_response("success", message="Successfully signed out from Graph")
     

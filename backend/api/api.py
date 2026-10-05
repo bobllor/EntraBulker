@@ -8,7 +8,7 @@ from io import BytesIO
 from logger import Log
 from pathlib import Path
 from typing import Any, Literal, Callable
-from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH, VERSION
+from support.vars import DEFAULT_SETTINGS_MAP, PROJECT_ROOT, META, UPDATER_PATH
 from copy import deepcopy
 from dataclasses import dataclass
 from core.graph import Graph
@@ -58,6 +58,7 @@ class API:
             graph_reader: Reader,
             logger: Log = None,
             project_root: Path = PROJECT_ROOT,
+            version: str = "",
             window: webview.Window = None,
         ):
         '''API class.
@@ -83,6 +84,9 @@ class API:
                 The project root folder. This is only used for writing to files,
                 it ensures that the files are working in the same file system. 
             
+            version: str, default ""
+                The version of the program. By default it is an empty string.
+            
             window: webview.Window, default None
                 The window of webview. By default it is None, and can be set
                 via the method set_window.
@@ -92,6 +96,8 @@ class API:
         self.opco: Reader = opco_reader
         self.graph_reader: Reader = graph_reader
         self.logger: Log = logger or Log()
+
+        self.version = version
 
         # pywebview, not added in due to CI fails
         self._window: webview.Window = window
@@ -296,8 +302,9 @@ class API:
         res: Response = utils.generate_response(message="Successfully authenticated")
         client_id: str = self.graph_reader.get("client_id")
         tenant_id: str = self.graph_reader.get("tenant_id")
+        delegated_auth: bool = self.graph_reader.get("authenticate_with_delegated_access")
 
-        if client_id == "":
+        if client_id == "" and not delegated_auth:
             self.logger.info(f"Missing client application ID, aborting authentication")
             return utils.generate_response("error", message="Missing client application ID")
         if tenant_id == "":
@@ -309,7 +316,13 @@ class API:
             # recreates it, initially it has nil values.
             # reauthenication will create a new token which creates a new Graph
             self.graph = Graph(client_id, tenant_id, log=self.logger, project_root=self._project_root)
-            auth_res_two: Response = self.graph.authenticate()
+            auth_res_two: Response = None
+
+            if not delegated_auth:
+                auth_res_two = self.graph.authenticate()
+            else:
+                auth_res_two = self.graph.authenticate_delegated_access()
+
             self.logger.debug(f"Auth response: {auth_res_two}")
             
             if auth_res_two["status"] == "error":
@@ -685,7 +698,7 @@ class API:
             url = META["version_url"]
 
         out_res: Response = utils.get_version(url)
-        res["content"] = utils.compare_version(VERSION, out_res["content"])
+        res["content"] = utils.compare_version(self.version, out_res["content"])
 
         self.logger.debug(f"Check version response: {out_res}")
 

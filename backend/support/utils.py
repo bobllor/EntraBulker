@@ -508,6 +508,11 @@ def compare_version(base_version: str, arg_version: str) -> bool:
 
     If it returns True, then the argument is greater than the base.
 
+    It is expected that the versions match the following structure: `v.1.0.0`.
+    If a given version does not match, then it will not be considered a new version.
+    This can be useful for releasing beta or other versions of a program that isn't
+    a major release.
+
     Parameters
     ----------
         base_version: str
@@ -522,6 +527,7 @@ def compare_version(base_version: str, arg_version: str) -> bool:
     arg_version = arg_version.strip().lower()
 
     # if for some reason the versions are incorrect, always return False.
+    # this will also ignore any letters or other releases with words in them
     if any([re.fullmatch(pattern, version) is None for version in [base_version, arg_version]]):
         return False
     

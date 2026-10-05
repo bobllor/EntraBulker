@@ -177,7 +177,7 @@ def test_compare_version():
 
 def test_invalid_arg_compare_version():
     base: str = "v1.0.0"
-    args: list[str] = ["v.1.0.0", "v1.0.0aa", "", "test_example", "v1.0.b"]
+    args: list[str] = ["v.1.0.0", "v1.0.0aa", "", "test_example", "v1.0.b", "v1.0.0-beta"]
 
     for arg in args:
         assert utils.compare_version(base, arg) == False
