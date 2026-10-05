@@ -72,7 +72,7 @@ jobs:
 
           echo "make_latest=$make_latest" >> $GITHUB_OUTPUT
       - name: Artifact upload
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             *.zip
