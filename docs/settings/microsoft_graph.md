@@ -64,7 +64,7 @@ the application for Graph use.
 The ID of the tenant the application is registered in and the users you are attempting to
 create in. This is required for authorization.
 
-### Member Type Domain CSV
+### Member Only Domains CSV
 
 This is only applicable if the `User Type` is set to `Guest`. It is expected to be a
 *CSV style string* of domain names, e.g. `company.one.com,@company.two.com,company.three.com`.
