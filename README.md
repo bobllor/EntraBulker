@@ -109,11 +109,12 @@ A 7th tab `About` is not used to modify the application.
 
 Before the CSV file is generated, there are side effects during the data parsing process:
 1. **Duplicate names**: If duplicate names are found in the files (e.g. `John Doe` and `John Doe`), 
-a number will be attached to *their username*: `John.Doe@domain.com` and `John.Doe1@domain.com`.
+a number will be attached to *their username*: `John.Doe@domain.com` and `John.Doe1@domain.com`. During
+Graph mode, an error/warning will appear showing which users failed to get added
 2. **Empty name entries**: If *empty names* are found in any of the three name columns, then *that row
-will be dropped*.
+will be dropped*
 3. **Passwords**: Password generation is built in, random, and cannot be disabled. The output password
-can be modified in the *Password settings tab*.
+can be modified in the *Password settings tab*
 
 ### File Uploading
 
@@ -164,11 +165,17 @@ EntraBulker supports Microsoft Graph API to create users directly into the tenan
 It is a *public client* which uses *delegated permissions* to perform the tasks.
 Microsoft Graph supports both parsing a file and manual user entries.
 
-To enable Graph support and start the workflow:
-- An application must be registered and configured in the tenant
-- The option `Enable Graph` in the `Microsoft Graph` settings must be enabled
-- There are valid IDs for *application (client) ID and directory (tenant) ID*
-- You have a valid access token for Graph, obtained via authentication by signing in
+To start using Microsoft Graph in the user creation, enable the `Enable Graph` option
+in the `Microsoft Graph` settings.
+
+In order to use Microsoft Graph, the program must be *authenticated*. There are
+two ways to do so:
+1. Delegated access: Acts on behalf of a signed-in user
+2. App-only access: Access without a user, requires a *registered application* in Entra
+
+*Entrabulker* supports both authentication types. *Delegated access* is the default access
+used with Entrabulker. To enable app-only access, the `Delegated Access` button must be
+disabled.
 
 EntraBulker performs the *user creation in batches* by default, which will speed up the user creation
 and reduce the overhead of network requests for the Graph API.
@@ -181,9 +188,12 @@ and reduce the overhead of network requests for the Graph API.
 
 ### Registering an Application
 
-In order to use Graph, a *registered application* is required in your Entra ID tenant. Microsoft provides official
+> This does not apply to *delegated access*.
+
+In order to use *app-only access*, a *registered application* is required in your Entra ID tenant. Microsoft provides official
 documentation on [how to register one](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
 
+Quick steps to get register an app:
 1. Register an application on Entra ID
 2. Configure a *Mobile and desktop applications* redirect URI
     - The value of the redirect URI is dependent on your requirements, if you are unsure
@@ -193,14 +203,15 @@ documentation on [how to register one](https://learn.microsoft.com/en-us/entra/i
 
 ### Setup
 
-Once an application is registered, the application will need to be setup with the values
+Once an application is registered, the application will need to be setup with the ID values
 in order to obtain an access token. This is done through the `Microsoft Graph` *settings page*
 of the application.
 
-1. Using the *client ID and tenant ID*, input the values in their respective fields
-2. Sign in to authenticate
+The *tenant ID* is required for both access modes. The *client ID* is only required for
+*app-only access*.
 
-Once authenticated, the program is ready to use Graph to create the users.
+Pressing the `Sign In` button will begin the authentication process. Upon success, you will be
+authenticated and Graph API is ready to use.
 
 ### Usage
 
@@ -225,14 +236,17 @@ It may still occur if a large amount of users are being created.
 
 ### Caching
 
+> Caching only applies to *app-only access*. Delegated access does not
+> use caching.
+
 When you authenticate for the first time, your *access token is cached* to an *encrypted file*
 on the disk. This is to reauthenticate with the access token without having to go through 
 the full authentication process again.
 - If your device *does not support encryption*, then it will fall back to *plain text*
 - The cached token will be used to renew the access token, even if it is already expired
 
-The account information is cached in order to retrieve the cached access token. This is written
-to a configuration file.
+Clearing the cache will remove the cache and *sign you out* of the account.
+
 
 ### Authentication
 

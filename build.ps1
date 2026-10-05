@@ -82,6 +82,7 @@ if(!($SkipExe)){
             & "$isccPath" ".\entrabulker.iss" "/DSrcPath=$($pwd.path)" "/DMyAppVersion=$(type ".\VERSION.txt")"
         }else{
             echo "Inno Setup is not installed on the device"
+            exit 1
         }
     }
 }

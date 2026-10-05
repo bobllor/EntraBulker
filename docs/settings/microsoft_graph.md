@@ -56,15 +56,16 @@ If not authenticated, then this will do nothing.
 
 ### Client Application ID
 
-The client ID of the registered application. This is required in order to authenticate
-the application for Graph use.
+The client ID of the registered application.
+
+This is *required if app-only access* is used. Otherwise, this does not need a value.
 
 ### Tenant ID
 
 The ID of the tenant the application is registered in and the users you are attempting to
-create in. This is required for authorization.
+create in. This is *required for authentication*.
 
-### Member Type Domain CSV
+### Member Only Domains CSV
 
 This is only applicable if the `User Type` is set to `Guest`. It is expected to be a
 *CSV style string* of domain names, e.g. `company.one.com,@company.two.com,company.three.com`.
@@ -85,6 +86,14 @@ This options allows you to toggle between the two types for all users created fr
 
 By default it will create users as `Guest`, for least privilege. You can change this to `Member` or for more advanced
 filtering, use the `Member Type Domain CSV` to keep both `Guest` and `Member` type assignments.
+
+### Delegated Access
+
+By default this value is enabled. `Delegated Access` button is used during the authentication process
+to choose the two types of access for the program.
+
+If enabled, it will use delegated access which uses the *signed-in user's permissions*. If it is disabled,
+then it will use the app-only access.
 
 ### Sign In
 
