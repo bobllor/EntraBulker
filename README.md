@@ -322,6 +322,9 @@ The following software are required:
 Optional software:
 - `InnoSetup` >= 6.4.3: Only if compiling the installer is required
 
+For detailed development documentation, visit their respective docs:
+- [Backend/API/Python](./docs/dev/python.md)
+
 ### Initializing Project
 
 ```shell
