@@ -8,6 +8,27 @@ via Graph API using a registered application.
 It is a WebView desktop application built with Python, TypeScript, and JavaScript, to assist administrators in
 automating user creation with Entra ID.
 
+## Table of Contents
+
+- [Example](#example)
+- [Installation](#installation)
+- [Usage](#usage)
+    - [Settings](#settings)
+    - [Side Effects](#side-effects)
+    - [File Uploading](#file-uploading)
+    - [Manual Entries](#manual-entries)
+    - [Updating](#updating)
+- [Microsoft Graph](#microsoft-graph)
+    - [Registering an Application](#registering-an-application)
+    - [Setup](#setup)
+    - [Graph Usage](#graph-usage)
+    - [Caching](#caching)
+    - [Authentication](#authentication)
+    - [Errors Logs](#error-logs)
+- [Development](#development)
+    - [Initializing Project](#initializing-project)
+    - [Development Quickstart](#development-quickstart)
+
 ## Example
 
 Below is an example of what an expected report file would look like:
@@ -31,26 +52,6 @@ The output file (version row excluded):
 | Kyle Shanks | Kyle.Shanks@company.one.org | =?y[tYsSiRQA4UxJ | No | Kyle | Shanks |
 
 The output file can now be uploaded to Azure Entra ID and bulk create all rows of the file.
-
-## Table of Contents
-
-- [Installation](#installation)
-- [Usage](#usage)
-    - [Settings](#settings)
-    - [Side Effects](#side-effects)
-    - [File Uploading](#file-uploading)
-    - [Manual Entries](#manual-entries)
-    - [Updating](#updating)
-- [Microsoft Graph](#microsoft-graph)
-    - [Registering an Application](#registering-an-application)
-    - [Setup](#setup)
-    - [Usage](#usage-1)
-    - [Caching](#caching)
-    - [Authentication](#authentication)
-    - [Errors Logs](#error-logs)
-- [Development](#development)
-    - [Initializing Project](#initializing-project)
-    - [Running the Application](#running-the-application)
 
 ## Installation
 
@@ -213,7 +214,7 @@ The *tenant ID* is required for both access modes. The *client ID* is only requi
 Pressing the `Sign In` button will begin the authentication process. Upon success, you will be
 authenticated and Graph API is ready to use.
 
-### Usage
+### Graph Usage
 
 With Graph, the users are directly created in the tenant. The workflow *process remains the exact same*, creating
 the CSV file and template if enabled.
@@ -337,7 +338,7 @@ pip install -r requirements.txt
 bash npm-install.sh
 ```
 
-### Running the Application
+### Development Quickstart
 
 There are two folders for the frontend, each used for a different application:
 1. `01-bulker-app`: The main application
