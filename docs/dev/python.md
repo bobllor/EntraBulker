@@ -36,8 +36,13 @@ and is used with `last name`
 - `Last Name` (internal `last_name`): The last name of the user, this must be enabled, cannot be used with `full name`,
 and is used with `first name`
 
-There are primary ways the data is processed:
-1. The front end sends an object (`GenerateCSVProps`) containing the file name and 
-the content in a base64 string of an *Excel/CSV file*
-2. The front end sends a list of objects (`ManualCSVProps`) containing the name, 
+There are two primary ways the data gets processed:
+1. *Excel/CSV file:* The front end sends an object (`GenerateCSVProps`) containing the file name and 
+the content in a base64 string of the file
+2. *Manual input:* The front end sends a list of objects (`ManualCSVProps`) containing the name, 
 operating company, and a unique ID associated with the object 
+
+In order to create the final CSV output and the objects used in Graph (if Graph is enabled), both
+data gets validated and processed as a *pandas DataFrame*.
+- The manual input gets converted into a DataFrame to use the same logic as the automated
+file version
