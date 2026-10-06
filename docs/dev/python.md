@@ -11,8 +11,9 @@ the context library
 
 ## JSON Files
 
-Program configurations are stored as *JSON files*. In order to read and write to these files efficiently,
+Program configurations are stored as *JSON files*. In order to read and write to these files,
 a class named `Reader` is used to perform these operations, found at `backend/core/json_reader.py`.
+- `Reader` supports recursive search and recursive modification of keys
 
 There are four types of categories used with the configuration files:
 1. Microsoft Graph
@@ -20,7 +21,23 @@ There are four types of categories used with the configuration files:
 3. Settings: General settings of the program
 4. Excel Mapping: The mapping of the CSV/Excel headers to the internal names used in the program
 
-By default if these do not exist, it will be *re-created upon launch*. It is also stored in-memory, which will *re-create*
-the file if it is missing.
+By default if these files do not exist, it will be *re-created upon launch*. It is also stored in-memory, 
+which will *re-create* the file if it is missing during runtime.
 The default values for these configuration files can be found at `support/vars.py`. If a key is added or removed from
-the default mapping, it will *automatically be updated upon relaunch*.
+the default mapping, it will *automatically be updated upon relaunch* in the new version.
+
+## Parsing Data
+
+By default the data is expected to have these columns (can be changed):
+- `Full Name` (internal: `name`): The full name of the user, can include the middle name
+- `Operating Company` (internal `opco`): The operating company/organization of the user (used for setting domains)
+- `First Name` (internal `first_name`): The first name of the user, this must be enabled, cannot be used with `full name`,
+and is used with `last name`
+- `Last Name` (internal `last_name`): The last name of the user, this must be enabled, cannot be used with `full name`,
+and is used with `first name`
+
+There are primary ways the data is processed:
+1. The front end sends an object (`GenerateCSVProps`) containing the file name and 
+the content in a base64 string of an *Excel/CSV file*
+2. The front end sends a list of objects (`ManualCSVProps`) containing the name, 
+operating company, and a unique ID associated with the object 
